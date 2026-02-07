@@ -13,6 +13,7 @@ from .version import VersionIdentifier, VersionInfo
 
 type ESP3Callback = Callable[[ESP3Packet], None]
 type ERP1Callback = Callable[[ERP1Telegram], None]
+type ResponseCallback = Callable[[ResponseTelegram], None]
 # type UTECallback = Callable[[UTE], None]
 
 
@@ -30,8 +31,10 @@ class ESP3(asyncio.Protocol):
         self.__buffer = bytearray()
 
         # callbacks
-        self.__esp3_callbacks: list[ESP3Callback] = []
-        self.__erp1_callbacks: list[ERP1Callback] = []
+        self.__esp3_receive_callbacks: list[ESP3Callback] = []
+        self.__erp1_receive_callbacks: list[ERP1Callback] = []
+        self.esp3_send_callbacks: list[ESP3Callback] = []
+        self.response_callbacks: list[ResponseCallback] = []
 
         # UTE callbacks
         # self._ute_callbacks: list[UTECallback] = []
@@ -66,10 +69,10 @@ class ESP3(asyncio.Protocol):
     # ------------------------------------------------------------------
 
     def add_packet_callback(self, cb: ESP3Callback):
-        self.__esp3_callbacks.append(cb)
+        self.__esp3_receive_callbacks.append(cb)
 
     def add_erp1_callback(self, cb: ERP1Callback):
-        self.__erp1_callbacks.append(cb)
+        self.__erp1_receive_callbacks.append(cb)
 
     def __emit(self, callbacks, obj):
         """Emit an object to all registered callbacks of the given type."""
@@ -149,7 +152,7 @@ class ESP3(asyncio.Protocol):
 
     def __process_esp3_packet(self, packet: ESP3Packet):
         """Process a received ESP3 packet. This includes emitting the raw packet to registered callbacks and further processing based on packet type."""
-        self.__emit(self.__esp3_callbacks, packet)
+        self.__emit(self.__esp3_receive_callbacks, packet)
 
         match packet.packet_type:
             case ESP3PacketType.RESPONSE:
@@ -160,6 +163,8 @@ class ESP3(asyncio.Protocol):
 
     def __process_response_packet(self, packet: ESP3Packet):
         """Process a received RESPONSE packet. If we are currently awaiting a response, try to parse it and store it for the send() method to retrieve."""
+        self.__emit(self.response_callbacks, ResponseTelegram.from_esp3_packet(packet))
+
         if not self.__awaiting_response:
             return
 
@@ -188,7 +193,7 @@ class ESP3(asyncio.Protocol):
         else:
             try:
                 erp1 = ERP1Telegram.from_esp3(pkt)
-                self.__emit(self.__erp1_callbacks, erp1)
+                self.__emit(self.__erp1_receive_callbacks, erp1)
             except Exception as e:
                 print(f"Failed to parse ERP1 packet: {pkt}, error: {e}")
                 pass
@@ -199,6 +204,8 @@ class ESP3(asyncio.Protocol):
 
     async def send(self, packet: ESP3Packet) -> ResponseTelegram:
         """Send an ESP3 packet to the EnOcean module and wait for a response."""
+
+        self.__emit(self.esp3_send_callbacks, packet)
 
         # construct header
         header = bytes(

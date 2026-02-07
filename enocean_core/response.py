@@ -30,6 +30,9 @@ class ResponseCode(IntEnum):
     BASEID_OUT_OF_RANGE = 0x90
     BASEID_MAX_REACHED = 0x91
 
+    def __repr__(self) -> str:
+        return f"{self.name} (0x{self.value:02X})"
+
 
 @dataclass
 class ResponseTelegram:

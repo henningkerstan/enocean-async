@@ -8,8 +8,10 @@ from ..protocol import ESP3
 async def main():
     print("Starting EnOcean module ...")
     protocol = await ESP3.open_serial_port("/dev/tty.usbserial-EO8FD3C6")
-    protocol.add_packet_callback(lambda pkt: print(f"Received ESP3 packet: {pkt}"))
-    protocol.add_erp1_callback(lambda erp1: print(f"Received ERP1 telegram: {erp1}"))
+    protocol.add_packet_callback(lambda pkt: print(f"Received {pkt}"))
+    protocol.add_erp1_callback(lambda erp1: print(f" - parsed to {erp1}"))
+    protocol.esp3_send_callbacks.append(lambda pkt: print(f"Sending {pkt}"))
+    protocol.response_callbacks.append(lambda resp: print(f"- parsed to {resp}"))
 
     await protocol.ready()
     print("EnOcean module is ready!")

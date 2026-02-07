@@ -32,14 +32,12 @@ class ERP1Telegram:
 
     def __repr__(self) -> str:
         return (
-            f"ERP1Telegram(rorg={self.rorg.name}, "
+            f"ERP1Telegram({self.sender.to_string()}->{self.destination.to_string() if self.destination and not self.destination.is_broadcast() else '*'}, RORG={self.rorg.name}, "
             f"payload={self.payload.hex().upper()}, "
-            f"sender={self.sender.to_string()}, "
             f"status=0x{self.status:02X}, "
             f"sub_tel_num={self.sub_tel_num}, "
             f"dBm={self.dBm}, "
-            f"sec_level={self.sec_level}, "
-            f"destination={self.destination.to_string() if self.destination else None})"
+            f"sec_level={self.sec_level})"
         )
 
     @classmethod
