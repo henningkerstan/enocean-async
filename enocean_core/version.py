@@ -10,6 +10,7 @@ class VersionIdentifier:
     alpha: int = 0
     build: int = 0
 
+    @property
     def version_string(self) -> str:
         return f"{self.main}.{self.beta}.{self.alpha}{f'b{self.build}' if self.build else ''}"
 

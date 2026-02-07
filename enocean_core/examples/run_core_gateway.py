@@ -13,17 +13,17 @@ async def main():
     protocol.esp3_send_callbacks.append(lambda pkt: print(f"Sending {pkt}"))
     protocol.response_callbacks.append(lambda resp: print(f"- parsed to {resp}"))
 
-    await protocol.ready()
+    await protocol.ready
     print("EnOcean module is ready!")
-    print(f"EURID: {await protocol.eurid()}")
+    print(f"EURID: {await protocol.eurid}")
     print(
-        f"Base ID: {await protocol.base_id()} (remaining write cycles: {await protocol.base_id_remaining_write_cycles()})"
+        f"Base ID: {await protocol.base_id} (remaining write cycles: {await protocol.base_id_remaining_write_cycles})"
     )
-    version_info = await protocol.version_info()
+    version_info = await protocol.version_info
 
     print(f"App description: {version_info.app_description}")
-    print(f"App version: {version_info.app_version.version_string()}")
-    print(f"API version: {version_info.api_version.version_string()}")
+    print(f"App version: {version_info.app_version.version_string}")
+    print(f"API version: {version_info.api_version.version_string}")
     print(f"Device version: {version_info.device_version}")
 
     # Keep the event loop running

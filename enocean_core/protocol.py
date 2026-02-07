@@ -97,6 +97,9 @@ class ESP3(asyncio.Protocol):
     def eof_received(self, exc):
         pass
 
+    # ------------------------------------------------------------------
+    # process incoming data
+    # ------------------------------------------------------------------
     def __process_buffer(self):
         """Process the internal buffer to extract complete ESP3 packets and emit them."""
         while True:
@@ -199,9 +202,8 @@ class ESP3(asyncio.Protocol):
                 pass
 
     # ------------------------------------------------------------------
-    # Sending packets
+    # sending
     # ------------------------------------------------------------------
-
     async def send(self, packet: ESP3Packet) -> ResponseTelegram:
         """Send an ESP3 packet to the EnOcean module and wait for a response."""
 
@@ -250,6 +252,7 @@ class ESP3(asyncio.Protocol):
         self.__response = None
         return response
 
+    @property
     async def version_info(self) -> VersionInfo | None:
         """Get the version information of the connected EnOcean module."""
         if self.__version_info is not None:
@@ -291,6 +294,7 @@ class ESP3(asyncio.Protocol):
 
         return self.__version_info
 
+    @property
     async def base_id(self) -> BaseAddress | None:
         """Get the base ID of the connected EnOcean module."""
         if self.__base_id is not None:
@@ -317,25 +321,28 @@ class ESP3(asyncio.Protocol):
 
         return self.__base_id
 
+    @property
     async def base_id_remaining_write_cycles(self) -> int | None:
         """Get the remaining write cycles for the base ID of the connected EnOcean module."""
         if self.__base_id_remaining_write_cycles is not None:
             return self.__base_id_remaining_write_cycles
 
         await (
-            self.base_id()
+            self.base_id
         )  # base_id() will fetch the remaining write cycles as optional data
         return self.__base_id_remaining_write_cycles
 
+    @property
     async def eurid(self) -> EURID:
         """Get the EURID of the connected EnOcean module."""
         if self.__eurid is not None:
             return self.__eurid
 
-        self.__eurid = (await self.version_info()).eurid
+        self.__eurid = (await self.version_info).eurid
         return self.__eurid
 
+    @property
     async def ready(self) -> None:
-        """Wait until the EURID is known."""
+        """Wait until the transport is available."""
         while self.transport is None:
             await asyncio.sleep(0.1)
