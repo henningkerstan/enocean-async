@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from enocean_core.address import EURID
+from async_enocean.address import EURID
 
 
 @dataclass
