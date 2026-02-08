@@ -1,15 +1,15 @@
 # ask for base id
 
 import asyncio
+import sys
 
 from async_enocean.address import BaseAddress
+from async_enocean.protocol import ESP3
 
-from ..protocol import ESP3
 
-
-async def main():
-    print("Starting EnOcean module ...")
-    protocol = await ESP3.open_serial_port("/dev/tty.usbserial-EO8FD3C6")
+async def main(port: str):
+    print(f"Trying to connect to EnOcean module on {port}...")
+    protocol = await ESP3.open_serial_port(port)
     protocol.add_packet_callback(lambda pkt: print(f"Received {pkt}"))
     protocol.add_erp1_callback(lambda erp1: print(f" - parsed to {erp1}"))
     protocol.esp3_send_callbacks.append(lambda pkt: print(f"Sending {pkt}"))
@@ -29,18 +29,21 @@ async def main():
     print(f"Device version: {version_info.device_version}")
 
     print(
-        "Please enter a new base ID (hex string in range FF:80:00:00 to FF:FF:FF:80):"
+        "Enter a new base ID (hex string in range FF:80:00:00 to FF:FF:FF:80): ",
+        end="",
     )
     new_base_id_str = input().strip()
     try:
         new_base_id = BaseAddress(new_base_id_str)
         print(
-            f"Are you sure you want to change this module's base ID to {new_base_id}? (y/n)"
+            f"Are you sure you want to change this module's base ID to {new_base_id}? Type 'y' to confirm: ",
+            end="",
         )
         confirmation = input().strip().lower()
         if confirmation == "y":
             print(
-                f"Are you really sure? After this change, you will only be able to change this module's base ID {await protocol.base_id_remaining_write_cycles - 1} more times. Type 'yes' to confirm."
+                f"Are you really sure? After this change, you will only be able to change this module's base ID {await protocol.base_id_remaining_write_cycles - 1} more times. Type 'yes' to confirm: ",
+                end="",
             )
             final_confirmation = input().strip().lower()
             if final_confirmation == "yes":
@@ -63,4 +66,9 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    first_arg = sys.argv[1] if len(sys.argv) > 1 else None
+    if first_arg is None:
+        print("Usage: python change_base_id.py <serial_port>")
+        print("Example: python change_base_id.py /dev/tty.usbserial-XYZ")
+        sys.exit(1)
+    asyncio.run(main(first_arg))

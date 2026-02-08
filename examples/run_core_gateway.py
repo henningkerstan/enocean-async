@@ -1,13 +1,14 @@
 # ask for base id
 
 import asyncio
+import sys
 
-from ..protocol import ESP3
+from async_enocean.protocol import ESP3
 
 
-async def main():
-    print("Starting EnOcean module ...")
-    protocol = await ESP3.open_serial_port("/dev/tty.usbserial-EO8FD3C6")
+async def main(port: str):
+    print(f"Trying to connect to EnOcean module on {port}...")
+    protocol = await ESP3.open_serial_port(port)
     protocol.add_packet_callback(lambda pkt: print(f"Received {pkt}"))
     protocol.add_erp1_callback(lambda erp1: print(f"╰─ parsed to {erp1}"))
     protocol.esp3_send_callbacks.append(lambda pkt: print(f"Sending {pkt}"))
@@ -34,4 +35,9 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    first_arg = sys.argv[1] if len(sys.argv) > 1 else None
+    if first_arg is None:
+        print("Usage: python run_core_gateway.py <serial_port>")
+        print("Example: python run_core_gateway.py /dev/tty.usbserial-XYZ")
+        sys.exit(1)
+    asyncio.run(main(first_arg))
