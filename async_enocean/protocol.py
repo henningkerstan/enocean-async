@@ -1,9 +1,8 @@
 import asyncio
 from typing import Callable
 
-import serial_asyncio_fast as serial_asyncio
-
 from enocean_core.response import ResponseCode, ResponseTelegram
+import serial_asyncio_fast as serial_asyncio
 
 from .address import EURID, BaseAddress
 from .common_command import CommonCommandTelegram
