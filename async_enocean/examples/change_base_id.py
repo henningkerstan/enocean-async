@@ -2,7 +2,7 @@
 
 import asyncio
 
-from enocean_core.address import BaseAddress
+from async_enocean.address import BaseAddress
 
 from ..protocol import ESP3
 
