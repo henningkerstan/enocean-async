@@ -3,7 +3,7 @@ from typing import Callable
 
 import serial_asyncio_fast as serial_asyncio
 
-from async_enocean.response import ResponseCode, ResponseTelegram
+from enocean_async.response import ResponseCode, ResponseTelegram
 
 from .address import EURID, BaseAddress
 from .common_command import CommonCommandTelegram

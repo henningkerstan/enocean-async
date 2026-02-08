@@ -3,8 +3,8 @@
 import asyncio
 import sys
 
-from async_enocean.address import BaseAddress
-from async_enocean.protocol import ESP3
+from enocean_async.address import BaseAddress
+from enocean_async.protocol import ESP3
 
 
 async def main(port: str):

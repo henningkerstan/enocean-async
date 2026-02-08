@@ -1,4 +1,4 @@
-# async-enocean
+# enocean-async
 This is a light-weight, asynchronous Python implementation of the EnOcean Serial Protocol Version 3 (ESP3) based on 'pyserial-asyncio-fast'. 
 
 It is currently still a proof of concept (PoC) implementation loosely based on my previous [Node.js implementation](https://www.npmjs.com/package/enocean-core), so anything may change at anytime.

@@ -52,7 +52,7 @@ jobs:
     
     environment:
       name: pypi
-      url: https://pypi.org/project/homeassistant-enocean
+      url: https://pypi.org/project/enocean-async
 
     steps:
       - name: Retrieve release distributions

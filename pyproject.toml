@@ -1,5 +1,5 @@
 [project]
-name = "async_enocean"
+name = "enocean_async"
 version = "0.0.0"
 authors = [
   { name="Henning Kerstan", email="mail@henningkerstan.de" },
@@ -20,20 +20,20 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/henningkerstan/async-enocean"
-Issues = "https://github.com/henningkerstan/async-enocean/issues"
+Homepage = "https://github.com/henningkerstan/enocean-async"
+Issues = "https://github.com/henningkerstan/enocean-async/issues"
 
 [build-system]
 requires = ["setuptools >= 77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
-version = { attr = "async_enocean.__version__" }
+version = { attr = "enocean_async.__version__" }
 readme = { file = [ "README.md" ], content-type = "text/markdown" }
 
 [tool.setuptools.packages.find]
 where = [ "." ]
-include = [ "async_enocean*" ]
+include = [ "enocean_async*" ]
 
 [tool.setuptools.package-data]
 "*" = [ "*.xml", ]
@@ -53,7 +53,7 @@ select = ["I"]
 
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
-known-first-party = ["async_enocean"]
+known-first-party = ["enocean_async"]
 combine-as-imports = true
 split-on-trailing-comma = false
 case-sensitive = true
@@ -82,11 +82,11 @@ post_commit_hooks = []
 
 # Update version in __init__.py
 [[tool.bumpversion.files]]
-filename = "async_enocean/__init__.py"
+filename = "enocean_async/__init__.py"
 
 # Update date in __init__.py
 [[tool.bumpversion.files]]
-filename = 'async_enocean/__init__.py'
+filename = 'enocean_async/__init__.py'
 search = "__date__ = \"\\d{{4}}-\\d{{2}}-\\d{{2}}\""
 replace = "__date__ = \"{now:%Y-%m-%d}\""
 regex = true
