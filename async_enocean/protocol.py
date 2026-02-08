@@ -17,6 +17,10 @@ type ResponseCallback = Callable[[ResponseTelegram], None]
 # type UTECallback = Callable[[UTE], None]
 
 
+class BaseIDChangeError(Exception):
+    pass
+
+
 class ESP3(asyncio.Protocol):
     """
     Minimal asynchronous EnOcean Serial Protocol Version 3 (ESP3).
@@ -264,7 +268,7 @@ class ESP3(asyncio.Protocol):
             return self.__version_info
 
         if self.transport is None:
-            raise ConnectionError("Not connected to EnOcean gateway")
+            raise ConnectionError("Not connected to EnOcean module")
 
         # Send GET VERSION request
         cmd = CommonCommandTelegram.CO_RD_VERSION()
@@ -306,7 +310,7 @@ class ESP3(asyncio.Protocol):
             return self.__base_id
 
         if self.transport is None:
-            raise ConnectionError("Not connected to EnOcean gateway")
+            raise ConnectionError("Not connected to EnOcean module")
 
         # Send GET ID base id request
         cmd = CommonCommandTelegram.CO_RD_IDBASE()
@@ -328,14 +332,66 @@ class ESP3(asyncio.Protocol):
 
     async def change_base_id(
         self, new_base_id: BaseAddress, safety_flag: int = 0
-    ) -> bool:
+    ) -> BaseAddress | None:
         """Change the base ID of the connected EnOcean module. Returns True if successful, False otherwise.
 
         To prevent accidental changes, this function requires a safety flag to be provided. The safety_flag must be set to 0x7B, otherwise the function will return False without sending the command."""
-        if self.transport is None:
-            raise ConnectionError("Not connected to EnOcean gateway")
 
-        return False
+        if safety_flag != 0x7B:
+            raise ValueError(
+                "Invalid safety flag. To change the base ID, you must provide a safety flag of 0x7B to confirm that you understand the consequences of this action."
+            )
+
+        if self.transport is None:
+            raise ConnectionError("Not connected to EnOcean module")
+
+        base_id_before_change = (
+            await self.base_id
+        )  # store previous base ID for error message in case the change failed
+
+        if new_base_id == base_id_before_change:
+            raise ValueError("New base ID is the same as the current base ID")
+
+        # send WR ID base id request
+        cmd = CommonCommandTelegram.CO_WR_IDBASE(new_base_id)
+        response = await self.send(cmd.to_esp3_packet())
+
+        # check response for errors; if we got a response, but it indicates an error, we can be pretty sure that the base ID change failed, so we can raise an exception with the error message
+        if response is not None and response.return_code != ResponseCode.OK:
+            match response.return_code:
+                case ResponseCode.NOT_SUPPORTED:
+                    raise BaseIDChangeError(
+                        "Base ID change is not supported by this module"
+                    )
+                case ResponseCode.BASEID_OUT_OF_RANGE:
+                    raise BaseIDChangeError(
+                        "Base ID change failed: provided base ID is out of allowed range (must be in range FF:80:00:00 to FF:FF:FF:80)"
+                    )
+                case ResponseCode.BASEID_MAX_REACHED:
+                    raise BaseIDChangeError(
+                        "Base ID change failed: maximum number of allowed base ID changes has been reached"
+                    )
+                case _:
+                    raise BaseIDChangeError(
+                        f"Base ID change failed with error code: {response.return_code.name} ({response.return_code.value})"
+                    )
+
+        # now either we got a successful response, or no response at all (timeout). In both cases, we should check if the base ID was actually changed by reading it again, because the module might have accepted the command but failed to send a response.
+        self.__base_id = None  # reset cached base ID to force re-fetching it
+        self.__base_id_remaining_write_cycles = (
+            None  # reset cached remaining write cycles as well
+        )
+        reported_base_id = await self.base_id
+        if reported_base_id == new_base_id:
+            return reported_base_id
+        elif reported_base_id == base_id_before_change:
+            raise BaseIDChangeError(
+                "Base ID change failed: after sending the command, the base ID of the module is still the same as before"
+            )
+        else:
+            raise BaseIDChangeError(
+                f"Base ID change failed: after sending the command, the module reports a different base ID ({reported_base_id}) than the one we tried to set ({new_base_id}) and the one that was set before ({base_id_before_change}), which is very unexpected and likely indicates a communication error or a bug in the module's firmware."
+            )
 
     @property
     async def base_id_remaining_write_cycles(self) -> int | None:

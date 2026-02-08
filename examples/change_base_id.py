@@ -48,9 +48,12 @@ async def main(port: str):
             )
             final_confirmation = input().strip().lower()
             if final_confirmation == "yes":
-                # await protocol.set_base_id(new_base_id)
-                # print("Base ID changed successfully!")
-                pass
+                try:
+                    confirmed_base_id = await protocol.change_base_id(new_base_id, safety_flag=0x7B)
+                    print("Base ID changed successfully; intended new base ID:", new_base_id, "and actual new base ID after change_base_id command: ", confirmed_base_id)
+                except Exception as e:
+                    print(f"Failed to change base ID: {e}")
+   
             else:
                 print("Base ID change cancelled.")
         else:
