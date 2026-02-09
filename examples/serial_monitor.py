@@ -3,14 +3,30 @@
 import asyncio
 import sys
 
+from enocean_async.erp1 import RORG
 from enocean_async.protocol import ESP3
+
+
+def erp1_callback(erp1):
+    print(f"╰─ successfully parsed to {erp1}")
+   
+    if erp1.rorg == RORG.RORG_VLD:
+        command = erp1.raw_value(4,4)
+        print(f"  ├─ command: {command}")
+
+        if command == 0x01:
+            print(f"  ├─ dim value: {erp1.raw_value(8,3)}")
+            print(f"  ├─ I/O channel: {erp1.raw_value(11,5)}")
+            print(f"  └─ output value: {erp1.raw_value(17,7)}")
+        #print(f"  ├─ I/O channel: {erp1.raw_value(11,5)}")
+        #print(f"  └─ sender: {erp1.sender.to_string()}")
 
 
 async def main(port: str):
     print(f"Trying to connect to EnOcean module on {port}...")
     protocol = await ESP3.open_serial_port(port)
     protocol.add_packet_callback(lambda pkt: print(f"Received {pkt}"))
-    protocol.add_erp1_callback(lambda erp1: print(f"╰─ successfully parsed to {erp1}"))
+    protocol.add_erp1_callback(erp1_callback)
     protocol.esp3_send_callbacks.append(lambda pkt: print(f"Sending {pkt}"))
     protocol.response_callbacks.append(lambda resp: print(f"╰─ successfully parsed to {resp}"))
 
@@ -37,7 +53,7 @@ async def main(port: str):
 if __name__ == "__main__":
     first_arg = sys.argv[1] if len(sys.argv) > 1 else None
     if first_arg is None:
-        print("Usage: python run_core_gateway.py <serial_port>")
-        print("Example: python run_core_gateway.py /dev/tty.usbserial-XYZ")
+        print("Usage: python serial_monitor <serial_port>")
+        print("Example: python serial_monitor /dev/tty.usbserial-XYZ")
         sys.exit(1)
     asyncio.run(main(first_arg))
