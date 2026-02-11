@@ -51,18 +51,11 @@ class Gateway:
     # ------------------------------------------------------------------
     # Callback registration
     # ------------------------------------------------------------------
-
     def add_packet_callback(self, cb: ESP3Callback):
         self.__esp3_receive_callbacks.append(cb)
 
     def add_erp1_callback(self, cb: ERP1Callback):
         self.__erp1_receive_callbacks.append(cb)
-
-    def __emit(self, callbacks, obj):
-        """Emit an object to all registered callbacks of the given type."""
-        loop = asyncio.get_running_loop()
-        for cb in callbacks:
-            loop.call_soon(cb, obj)
 
     async def start(self) -> None:
         """Open the serial connection to the EnOcean module and start processing incoming packets."""
@@ -271,7 +264,7 @@ class Gateway:
     @property
     async def eurid(self) -> EURID | None:
         """Get the EURID of the connected EnOcean module."""
-        return self.version_info.eurid
+        return (await self.version_info).eurid
 
     def process_esp3_packet(self, packet: ESP3Packet):
         """Process a received ESP3 packet. This includes emitting the raw packet to registered callbacks and further processing based on packet type."""
@@ -283,6 +276,12 @@ class Gateway:
 
             case ESP3PacketType.RADIO_ERP1:
                 self.__process_erp1_packet(packet)
+
+    def __emit(self, callbacks, obj):
+        """Emit an object to all registered callbacks of the given type."""
+        loop = asyncio.get_running_loop()
+        for cb in callbacks:
+            loop.call_soon(cb, obj)
 
     def __process_response_packet(self, packet: ESP3Packet):
         """Process a received RESPONSE packet. If we are currently awaiting a response, try to parse it and store it for the send() method to retrieve."""
@@ -301,11 +300,11 @@ class Gateway:
             self.__awaiting_response = False
             pass
 
-    def __handle_erp1telegram(self, telegram: ERP1Telegram):
+    def __process_erp1_packet(self, packet: ESP3Packet):
         rorg: RORG | None = None
 
         try:
-            rorg = RORG(pkt.data[0])
+            rorg = RORG(packet.data[0])
         except ValueError:
             return
 
@@ -321,10 +320,10 @@ class Gateway:
         # Normal ERP1 telegram
         else:
             try:
-                erp1 = ERP1Telegram.from_esp3(pkt)
+                erp1 = ERP1Telegram.from_esp3(packet)
                 self.__emit(self.__erp1_receive_callbacks, erp1)
             except Exception as e:
-                print(f"Failed to parse ERP1 packet: {pkt}, error: {e}")
+                print(f"Failed to parse ERP1 packet: {packet}, error: {e}")
                 pass
 
     def __handle_eep_message(self, msg: EEPMessage):
