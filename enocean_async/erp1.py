@@ -28,35 +28,69 @@ class ERP1Telegram:
     rorg: RORG
     telegram_data: bytes
     sender: EURID | BaseAddress
-    status: int
+    status: int = 0x00
 
-    sub_tel_num: int | None = None
-    dBm: int | None = None
+    sub_tel_num: int | None = 0x03
+    dBm: int | None = 0xFF
     sec_level: int | None = None
     destination: EURID | BroadcastAddress | None = None
 
-    def bitstring_raw_value(self, offset: int=0, size: int=1) -> int:
+    def bitstring_raw_value(self, offset: int = 0, size: int = 1) -> int:
         """Extract an integer value from a bitstring within the telegram data given by the offset and size in bits (as in the EEP specification)."""
-        
+
         total_bits = 8 * len(self.telegram_data)
 
         if offset < 0 or size < 1 or offset + size > total_bits:
             raise ValueError("Invalid offset or length for raw_value")
-        
+
         # convert the telegram data to a single integer (treating the bytes as a big-endian bitstring)
         data_bits = int.from_bytes(self.telegram_data, "big")
-        
+
         # calculate how many bits we need to shift right to get the desired bits at the least significant position
         shift = total_bits - (offset + size)
 
-        # create a mask with exatly 'size' bits set to 1 (by shifting 1 left 'size' times and subtracting 1)
+        # create a mask with exactly 'size' bits set to 1 (by shifting 1 left 'size' times and subtracting 1)
         mask = (1 << size) - 1
 
         # shift right and apply the mask to extract the desired bits
         return (data_bits >> shift) & mask
-    
 
-    def bitstring_scaled_value(self, offset: int=0, size: int=1, scale_min: float=0.0, scale_max: float=1.0) -> float:
+    def set_bitstring_raw_value(
+        self, offset: int = 0, size: int = 1, value: int = 0
+    ) -> None:
+        """Set an integer value in a bitstring within the telegram data given by the offset and size in bits (as in the EEP specification)."""
+
+        total_bits = 8 * len(self.telegram_data)
+
+        if offset < 0 or size < 1 or offset + size > total_bits:
+            raise ValueError("Invalid offset or length for raw_value")
+
+        max_value = (1 << size) - 1
+        if value < 0 or value > max_value:
+            raise ValueError(f"Value must be between 0 and {max_value} for size {size}")
+
+        # convert the telegram data to a single integer (treating the bytes as a big-endian bitstring)
+        data_bits = int.from_bytes(self.telegram_data, "big")
+
+        # calculate how many bits we need to shift right to get the desired bits at the least significant position
+        shift = total_bits - (offset + size)
+
+        # create a mask with exactly 'size' bits set to 1 (by shifting 1 left 'size' times and subtracting 1), then shift it to the correct position
+        mask = ((1 << size) - 1) << shift
+
+        # clear the bits at the desired position and set them to the new value
+        data_bits = (data_bits & ~mask) | ((value << shift) & mask)
+
+        # convert back to bytes and update telegram_data
+        self.telegram_data = data_bits.to_bytes(len(self.telegram_data), "big")
+
+    def bitstring_scaled_value(
+        self,
+        offset: int = 0,
+        size: int = 1,
+        scale_min: float = 0.0,
+        scale_max: float = 1.0,
+    ) -> float:
         """Extract a scaled float value from the telegram data."""
 
         if scale_max <= scale_min:
@@ -65,10 +99,9 @@ class ERP1Telegram:
         raw = self.bitstring_raw_value(offset, size)
 
         # maximum value that can be represented with 'size' bits is 2^size - 1; due to the parameter checks in bitstring_raw_value, size > 0, hence max_raw >= 1
-        max_raw = (1 << size) - 1  
+        max_raw = (1 << size) - 1
 
         return scale_min + (raw / max_raw) * (scale_max - scale_min)
-
 
     def __repr__(self) -> str:
         return (
@@ -183,4 +216,29 @@ class ERP1Telegram:
             dBm=dBm,
             sec_level=sec_level,
             destination=destination,
+        )
+
+    def to_esp3(self) -> ESP3Packet:
+        data = (
+            bytes([self.rorg])
+            + self.telegram_data
+            + bytes(self.sender.to_bytelist())
+            + bytes([self.status])
+        )
+        optional = bytes()
+        optional += (
+            bytes([self.sub_tel_num]) if self.sub_tel_num is not None else bytes([0x03])
+        )
+        optional += (
+            bytes(self.destination.to_bytelist())
+            if self.destination is not None
+            else bytes(BroadcastAddress().to_bytelist())
+        )
+        optional += bytes([self.dBm]) if self.dBm is not None else bytes([0xFF])
+        optional += (
+            bytes([self.sec_level]) if self.sec_level is not None else bytes([0x00])
+        )
+
+        return ESP3Packet(
+            packet_type=ESP3PacketType.RADIO_ERP1, data=data, optional=optional
         )

@@ -4,12 +4,12 @@ import asyncio
 import sys
 
 from enocean_async.address import BaseAddress
-from enocean_async.protocol import ESP3
+from enocean_async.protocol import EnOceanSerialProtocol3
 
 
 async def main(port: str):
     print(f"Trying to connect to EnOcean module on {port}...")
-    protocol = await ESP3.open_serial_port(port)
+    protocol = await EnOceanSerialProtocol3.open_serial_port(port)
     protocol.add_packet_callback(lambda pkt: print(f"Received {pkt}"))
     protocol.add_erp1_callback(lambda erp1: print(f"╰─ successfully parsed to {erp1}"))
     protocol.esp3_send_callbacks.append(lambda pkt: print(f"Sending {pkt}"))

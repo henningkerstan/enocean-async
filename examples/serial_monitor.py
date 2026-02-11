@@ -4,39 +4,37 @@ import asyncio
 import sys
 
 from enocean_async.erp1 import RORG
-from enocean_async.protocol import ESP3
+from enocean_async.gateway import Gateway
 
 
 def erp1_callback(erp1):
     print(f"╰─ successfully parsed to {erp1}")
    
     if erp1.rorg == RORG.RORG_VLD:
-        command = erp1.raw_value(4,4)
+        command = erp1.bitstring_raw_value(4,4)
         print(f"  ├─ command: {command}")
 
         if command == 0x01:
-            print(f"  ├─ dim value: {erp1.raw_value(8,3)}")
-            print(f"  ├─ I/O channel: {erp1.raw_value(11,5)}")
-            print(f"  └─ output value: {erp1.raw_value(17,7)}")
-        #print(f"  ├─ I/O channel: {erp1.raw_value(11,5)}")
-        #print(f"  └─ sender: {erp1.sender.to_string()}")
-
+            print(f"  ├─ dim value: {erp1.bitstring_raw_value(8,3)}")
+            print(f"  ├─ I/O channel: {erp1.bitstring_raw_value(11,5)}")
+            print(f"  └─ output value: {erp1.bitstring_raw_value(17,7)}")
 
 async def main(port: str):
-    print(f"Trying to connect to EnOcean module on {port}...")
-    protocol = await ESP3.open_serial_port(port)
-    protocol.add_packet_callback(lambda pkt: print(f"Received {pkt}"))
-    protocol.add_erp1_callback(erp1_callback)
-    protocol.esp3_send_callbacks.append(lambda pkt: print(f"Sending {pkt}"))
-    protocol.response_callbacks.append(lambda resp: print(f"╰─ successfully parsed to {resp}"))
+    print(f"Setting up EnOcean Gateway for module on {port}...")
+    gateway = Gateway(port)
+    gateway.add_packet_callback(lambda pkt: print(f"Received {pkt}"))
+    gateway.add_erp1_callback(erp1_callback)
+    gateway.esp3_send_callbacks.append(lambda pkt: print(f"Sending {pkt}"))
+    gateway.response_callbacks.append(lambda resp: print(f"╰─ successfully parsed to {resp}"))
 
-    await protocol.ready
+    print("Starting gateway...")
+    await gateway.start()
     print("EnOcean module is ready!")
-    print(f"EURID: {await protocol.eurid}")
+    print(f"EURID: {await gateway.eurid}")
     print(
-        f"Base ID: {await protocol.base_id} (remaining write cycles: {await protocol.base_id_remaining_write_cycles})"
+        f"Base ID: {await gateway.base_id} (remaining write cycles: {await gateway.base_id_remaining_write_cycles})"
     )
-    version_info = await protocol.version_info
+    version_info = await gateway.version_info
 
     print(f"App description: {version_info.app_description}")
     print(f"App version: {version_info.app_version.version_string}")
@@ -48,6 +46,7 @@ async def main(port: str):
         await asyncio.Event().wait()
     except KeyboardInterrupt:
         print("\nShutting down...")
+        gateway.close()
 
 
 if __name__ == "__main__":

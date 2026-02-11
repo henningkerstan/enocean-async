@@ -74,3 +74,28 @@ class ESP3Packet:
             f"data={self.data.hex().upper()}, "
             f"optional={self.optional.hex().upper()})"
         )
+
+    def to_bytes(self) -> bytes:
+        """Serialize the ESP3Packet to bytes, including sync byte and CRCs."""
+        data_len = len(self.data)
+        opt_len = len(self.optional)
+
+        header = bytearray()
+        header.append((data_len >> 8) & 0xFF)
+        header.append(data_len & 0xFF)
+        header.append(opt_len & 0xFF)
+        header.append(self.packet_type.value)
+
+        header_crc = crc8(header)
+
+        packet_bytes = bytearray()
+        packet_bytes.append(SYNC_BYTE)
+        packet_bytes.extend(header)
+        packet_bytes.append(header_crc)
+        packet_bytes.extend(self.data)
+        packet_bytes.extend(self.optional)
+
+        data_crc = crc8(self.data + self.optional)
+        packet_bytes.append(data_crc)
+
+        return bytes(packet_bytes)
