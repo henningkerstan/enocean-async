@@ -26,15 +26,17 @@ class Gateway:
 
     def __init__(self, port: str, baudrate: int = 57600):
         """Create an instance of an EnOcean gateway that connects to the supplied port at supplied baudrate (optional) and processes incoming ESP3 packets."""
+
+        # serial connection, transport and protocol parameters
         self.__port: str = port
         self.__baudrate: int = baudrate
         self.__transport: serial_asyncio.SerialTransport | None = None
         self.__protocol: EnOceanSerialProtocol3 | None = None
 
+        # cached information about the connected module (to avoid unnecessary requests for information that doesn't change)
         self.__version_info: VersionInfo | None = None
         self.__base_id_remaining_write_cycles: int | None = None
         self.__base_id: BaseAddress | None = None
-        self.__eurid: EURID | None = None
 
         # callbacks
         self.__esp3_receive_callbacks: list[ESP3Callback] = []
@@ -118,18 +120,10 @@ class Gateway:
         return response
 
     def connection_made(self) -> None:
-        print(
-            f"Connected to EnOcean module on {self.__port} at {self.__baudrate} baud."
-        )
+        pass
 
     def connection_lost(self, exc: Exception | None) -> None:
-        print(f"Connection to EnOcean module on {self.__port} lost: {exc}")
         self.__transport = None
-
-    @property
-    def is_connected(self) -> bool:
-        """Check if the gateway is currently connected to the EnOcean module."""
-        return self.__transport is not None
 
     @property
     async def base_id(self) -> BaseAddress | None:
@@ -137,7 +131,7 @@ class Gateway:
         if self.__base_id is not None:
             return self.__base_id
 
-        if not self.is_connected:
+        if self.__transport is None:
             raise ConnectionError("Not connected to EnOcean module")
 
         # Send GET ID base id request
@@ -170,7 +164,7 @@ class Gateway:
                 "Invalid safety flag. To change the base ID, you must provide a safety flag of 0x7B to confirm that you understand the consequences of this action."
             )
 
-        if self.transport is None:
+        if self.__transport is None:
             raise ConnectionError("Not connected to EnOcean module")
 
         base_id_before_change = (
@@ -227,7 +221,7 @@ class Gateway:
         if self.__version_info is not None:
             return self.__version_info
 
-        if self.transport is None:
+        if self.__transport is None:
             raise ConnectionError("Not connected to EnOcean module")
 
         # Send GET VERSION request
@@ -275,13 +269,9 @@ class Gateway:
         return self.__base_id_remaining_write_cycles
 
     @property
-    async def eurid(self) -> EURID:
+    async def eurid(self) -> EURID | None:
         """Get the EURID of the connected EnOcean module."""
-        if self.__eurid is not None:
-            return self.__eurid
-
-        self.__eurid = (await self.version_info).eurid
-        return self.__eurid
+        return self.version_info.eurid
 
     def process_esp3_packet(self, packet: ESP3Packet):
         """Process a received ESP3 packet. This includes emitting the raw packet to registered callbacks and further processing based on packet type."""
@@ -307,7 +297,8 @@ class Gateway:
             self.__awaiting_response = False
 
         except Exception as e:
-            print(f"Failed to parse response packet: {e}")
+            self.__response = None
+            self.__awaiting_response = False
             pass
 
     def __handle_erp1telegram(self, telegram: ERP1Telegram):

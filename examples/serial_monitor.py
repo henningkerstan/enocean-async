@@ -46,7 +46,7 @@ async def main(port: str):
         await asyncio.Event().wait()
     except KeyboardInterrupt:
         print("\nShutting down...")
-        gateway.close()
+        gateway.stop()
 
 
 if __name__ == "__main__":
