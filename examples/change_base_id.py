@@ -4,25 +4,24 @@ import asyncio
 import sys
 
 from enocean_async.erp1.address import BaseAddress
-from enocean_async.esp3.protocol import EnOceanSerialProtocol3
+from enocean_async.gateway import Gateway
 
 
 async def main(port: str):
-    print(f"Trying to connect to EnOcean module on {port}...")
-    protocol = await EnOceanSerialProtocol3.open_serial_port(port)
-    protocol.add_packet_callback(lambda pkt: print(f"Received {pkt}"))
-    protocol.add_erp1_callback(lambda erp1: print(f"╰─ successfully parsed to {erp1}"))
-    protocol.esp3_send_callbacks.append(lambda pkt: print(f"Sending {pkt}"))
-    protocol.response_callbacks.append(lambda resp: print(f"╰─ successfully parsed to {resp}"))
+    gateway = Gateway(port)
+    gateway.add_packet_callback(lambda pkt: print(f"Received {pkt}"))
+    gateway.add_erp1_callback(lambda erp1: print(f"╰─ successfully parsed to {erp1}"))
+    gateway.esp3_send_callbacks.append(lambda pkt: print(f"Sending {pkt}"))
+    gateway.response_callbacks.append(lambda resp: print(f"╰─ successfully parsed to {resp}"))
 
-
-    await protocol.ready
+    print("Starting gateway...")
+    await gateway.start()
     print("EnOcean module is ready!")
-    print(f"EURID: {await protocol.eurid}")
+    print(f"EURID: {await gateway.eurid}")
     print(
-        f"Base ID: {await protocol.base_id} (remaining write cycles: {await protocol.base_id_remaining_write_cycles})"
+        f"Base ID: {await gateway.base_id} (remaining write cycles: {await gateway.base_id_remaining_write_cycles})"
     )
-    version_info = await protocol.version_info
+    version_info = await gateway.version_info
 
     print(f"App description: {version_info.app_description}")
     print(f"App version: {version_info.app_version.version_string}")
@@ -43,13 +42,13 @@ async def main(port: str):
         confirmation = input().strip().lower()
         if confirmation == "y":
             print(
-                f"Are you really sure? After this change, you will only be able to change this module's base ID {await protocol.base_id_remaining_write_cycles - 1} more times. Type 'yes' to confirm: ",
+                f"Are you really sure? After this change, you will only be able to change this module's base ID {await gateway.base_id_remaining_write_cycles - 1} more times. Type 'yes' to confirm: ",
                 end="",
             )
             final_confirmation = input().strip().lower()
             if final_confirmation == "yes":
                 try:
-                    confirmed_base_id = await protocol.change_base_id(new_base_id, safety_flag=0x7B)
+                    confirmed_base_id = await gateway.change_base_id(new_base_id, safety_flag=0x7B)
                     print("Base ID changed successfully; intended new base ID:", new_base_id, "and actual new base ID after change_base_id command: ", confirmed_base_id)
                 except Exception as e:
                     print(f"Failed to change base ID: {e}")
