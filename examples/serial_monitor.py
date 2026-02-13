@@ -28,7 +28,7 @@ def erp1_callback(erp1: ERP1Telegram):
             decoded = F602XXDecoder()(erp1)
             print(f"  └─ decoded to {decoded}")
         except Exception as e:
-            print(f"  ├└─ failed to decode F6-02-xx: {e}")
+            print(f"  └─ FAILED to decode F6-02-xx: {e}")
 
     
     elif erp1.rorg == RORG.RORG_UTE:
@@ -36,7 +36,7 @@ def erp1_callback(erp1: ERP1Telegram):
             ute_message = UTEMessage.from_erp1(erp1)
             print(f"  └─ decoded to {ute_message}")
         except Exception as e:
-            print(f"  ├└─ failed to decode UTE message: {e}")
+            print(f"  └─ FAILED to decode UTE message: {e}")
 
 
 async def main(port: str):
