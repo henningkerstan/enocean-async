@@ -18,6 +18,15 @@ class ERP1Telegram:
     sec_level: int | None = None
     destination: EURID | BroadcastAddress | None = None
 
+    def data_byte(self, index: int) -> int:
+        """Get the byte in the telegram data at the given index, counting from the end of the telegram data (as in the EEP specification).
+
+        Thus, data_byte(i) = telegram_data[len(telegram_data) - 1 - i].
+        """
+        if index < 0 or index >= len(self.telegram_data):
+            raise IndexError("Telegram data index out of range")
+        return self.telegram_data[len(self.telegram_data) - 1 - index]
+
     def bitstring_raw_value(self, offset: int = 0, size: int = 1) -> int:
         """Extract an integer value from a bitstring within the telegram data given by the offset and size in bits (as in the EEP specification)."""
 

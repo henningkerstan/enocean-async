@@ -10,9 +10,10 @@ What works:
 - Changing the Base ID
 - Sending ERP1 telegrams
 - Parsing EEPs (with F6-02-01 as tested/implemented example)
+- Parse Universal Teach-In (UTE) Queries
 
 What is missing/untested:
-- Universal Teach-In (UTE) telegrams
+-  create and send Universal Teach-In (UTE) responses
 
 
 ## Development
