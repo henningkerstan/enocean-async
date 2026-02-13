@@ -16,8 +16,9 @@ What is missing/untested:
 -  create and send Universal Teach-In (UTE) responses
 
 
-## Development
-After cloning this repository, execute the provided [scripts/setup.sh](scripts/setup.sh) to set up the development environment.
+## Contributing
+See [CONTRIBUTING](./CONTRIBUTING.md).
+
 
 ## Dependencies
 This library only has one dependency, namely
