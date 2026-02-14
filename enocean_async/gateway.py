@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import dataclass
+import logging
 import time
 from typing import Callable, Optional
 
@@ -96,6 +97,13 @@ class Gateway:
         self.__learning_timeout_task: asyncio.Task | None = None
         self.__allow_teach_out: bool = False
 
+        # logging
+        self._logger = logging.getLogger(__name__)
+
+        self._logger.info(
+            f"Gateway initialized for port {self.__port} at baudrate {self.__baudrate}"
+        )
+
     # ------------------------------------------------------------------
     # callback registration
     # ------------------------------------------------------------------
@@ -154,7 +162,14 @@ class Gateway:
                 self.__port,
                 baudrate=self.__baudrate,
             )
+
+            self._logger.info(
+                f"Successfully connected to EnOcean module on {self.__port} at baudrate {self.__baudrate}"
+            )
         except Exception as e:
+            self._logger.error(
+                f"Failed to connect to EnOcean module on {self.__port} at baudrate {self.__baudrate}: {e}"
+            )
             raise ConnectionError(
                 f"Failed to connect to EnOcean module on {self.__port}: {e}"
             )
@@ -164,6 +179,9 @@ class Gateway:
         if self.__transport is not None:
             self.__transport.close()
             self.__transport = None
+            self._logger.info(
+                f"Serial connection to EnOcean module on {self.__port} closed"
+            )
 
     def start_learning(
         self, timeout_seconds: int = 60, allow_teach_out: bool = False
@@ -172,7 +190,7 @@ class Gateway:
         self.__is_learning = True
         self.__allow_teach_out = allow_teach_out
 
-        print(
+        self._logger.info(
             f"Learning mode started. Will automatically stop after {timeout_seconds} seconds."
         )
         if self.__learning_timeout_task is not None:
@@ -184,7 +202,7 @@ class Gateway:
     def stop_learning(self) -> None:
         """Stop learning mode."""
         self.__is_learning = False
-        print("Learning mode stopped.")
+        self._logger.info("Learning mode stopped.")
         if self.__learning_timeout_task is not None:
             self.__learning_timeout_task.cancel()
             self.__learning_timeout_task = None

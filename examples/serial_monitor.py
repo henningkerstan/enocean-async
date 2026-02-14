@@ -1,6 +1,7 @@
 # ask for base id
 
 import asyncio
+import logging
 import sys
 
 from enocean_async.eep.f602xx.decoder import F602XXDecoder
@@ -9,6 +10,23 @@ from enocean_async.erp1.telegram import ERP1Telegram
 from enocean_async.erp1.ute import UTEMessage, UTEResponseType
 from enocean_async.esp3.packet import ESP3Packet, ESP3PacketType
 from enocean_async.gateway import Gateway
+
+
+class ColorFormatter(logging.Formatter):
+    COLORS = {
+        logging.DEBUG:    "\033[37m",  # white/gray
+        logging.INFO:     "\033[36m",  # cyan
+        logging.WARNING:  "\033[33m",  # yellow
+        logging.ERROR:    "\033[31m",  # red
+        logging.CRITICAL: "\033[41m",  # red background
+    }
+    RESET = "\033[0m"
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelno, self.RESET)
+        message = super().format(record)
+        return f"{color}{message}{self.RESET}"
+
 
 
 def erp1_callback(erp1: ERP1Telegram):
@@ -32,6 +50,14 @@ def erp1_callback(erp1: ERP1Telegram):
 
 
 async def main(port: str):
+    handler = logging.StreamHandler()
+    handler.setFormatter(ColorFormatter( "%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S" ))
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        handlers=[handler]
+)
+
     print(f"Setting up EnOcean Gateway for module on {port}...")
     gateway = Gateway(port)
     gateway.add_esp3_received_callback(lambda pkt: print(f"\nReceived {pkt}"))
