@@ -13,7 +13,9 @@ What works:
 - Parse Universal Teach-In (UTE) Queries
 
 What is missing/untested:
--  create and send Universal Teach-In (UTE) responses
+- create and send Universal Teach-In (UTE) responses
+- handle Teach-in (UTE, 4BS, 1BS)
+- logging (only very basic logging available as of yet)
 
 
 ## Contributing
