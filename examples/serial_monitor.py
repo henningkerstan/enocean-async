@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import signal
 import sys
 
 from enocean_async.eep.f602xx.decoder import F602XXDecoder
@@ -50,6 +51,12 @@ def erp1_callback(erp1: ERP1Telegram):
 
 
 async def main(port: str):
+    
+    loop = asyncio.get_running_loop() 
+    stop_event = asyncio.Event() 
+    loop.add_signal_handler(signal.SIGINT, stop_event.set) 
+    loop.add_signal_handler(signal.SIGTERM, stop_event.set)
+
     handler = logging.StreamHandler()
     handler.setFormatter(ColorFormatter( "%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S" ))
 
@@ -85,11 +92,12 @@ async def main(port: str):
     gateway.start_learning(timeout_seconds=5)
 
     # Keep the event loop running
-    try:
-        await asyncio.Event().wait()
-    except KeyboardInterrupt:
-        print("\nShutting down...")
-        gateway.stop()
+    print("Running... Press Ctrl+C to exit.") 
+    await stop_event.wait() 
+
+    print("Shutting down...")
+    gateway.stop()
+
 
 
 if __name__ == "__main__":
@@ -98,4 +106,6 @@ if __name__ == "__main__":
         print("Usage: python serial_monitor <serial_port>")
         print("Example: python serial_monitor /dev/tty.usbserial-XYZ")
         sys.exit(1)
+
     asyncio.run(main(first_arg))
+   
