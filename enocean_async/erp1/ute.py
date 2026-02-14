@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Optional
 
+from enocean_async.eep.manufacturers import Manufacturers
 from enocean_async.erp1.errors import ERP1ParseError
 from enocean_async.esp3.packet import ESP3Packet, ESP3PacketType
 
@@ -48,7 +49,7 @@ class UTEMessage:
     request_type: UTEQueryRequestType | UTEResponseType
     command: CommandIdentifier
     number_of_channels_to_be_taught_in: int
-    manufacturer_id: int
+    manufacturer: Manufacturers
     eep: EEPID
 
     @classmethod
@@ -81,6 +82,16 @@ class UTEMessage:
 
         number_of_channels_to_be_taught_in = telegram.data_byte(5)
 
+        manufacturer_id_lsb = telegram.data_byte(4)
+        manufacturer_id_msb = telegram.data_byte(3) & 0b00000111
+        manufacturer_id = (manufacturer_id_msb << 8) | manufacturer_id_lsb
+
+        manufacturer: Manufacturers
+        try:
+            manufacturer = Manufacturers(manufacturer_id)
+        except ValueError:
+            manufacturer = Manufacturers.Reserved
+
         eep = EEPID(
             type_=telegram.data_byte(2),
             func=telegram.data_byte(1),
@@ -93,7 +104,7 @@ class UTEMessage:
             request_type=request_type,
             command=command,
             number_of_channels_to_be_taught_in=number_of_channels_to_be_taught_in,
-            manufacturer_id=0,
+            manufacturer=manufacturer,
             eep=eep,
         )
 
@@ -110,6 +121,6 @@ class UTEMessage:
             request_type=response_type,
             command=CommandIdentifier.TEACH_IN_RESPONSE,
             number_of_channels_to_be_taught_in=query.number_of_channels_to_be_taught_in,
-            manufacturer_id=query.manufacturer_id,
+            manufacturer=query.manufacturer,
             eep=query.eep,
         )
