@@ -55,6 +55,8 @@ async def main(port: str):
     print(f"API version: {version_info.api_version.version_string}")
     print(f"Device version: {version_info.device_version}")
 
+    gateway.start_learning(timeout_seconds=5)
+
     # Keep the event loop running
     try:
         await asyncio.Event().wait()

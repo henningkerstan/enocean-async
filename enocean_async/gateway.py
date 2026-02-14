@@ -86,6 +86,10 @@ class Gateway:
         self.__send_lock: asyncio.Lock = asyncio.Lock()
         self.__send_future: asyncio.Future | None = None
 
+        # learning
+        self.__is_learning: bool = False
+        self.__learning_timeout_task: asyncio.Task | None = None
+
     # ------------------------------------------------------------------
     # callback registration
     # ------------------------------------------------------------------
@@ -148,6 +152,34 @@ class Gateway:
         if self.__transport is not None:
             self.__transport.close()
             self.__transport = None
+
+    def start_learning(self, timeout_seconds: int = 60) -> None:
+        """Start learning mode."""
+        self.__is_learning = True
+        print(
+            f"Learning mode started. Will automatically stop after {timeout_seconds} seconds."
+        )
+        if self.__learning_timeout_task is not None:
+            self.__learning_timeout_task.cancel()
+        self.__learning_timeout_task = asyncio.create_task(
+            self.__learning_timeout(timeout_seconds)
+        )
+
+    def stop_learning(self) -> None:
+        """Stop learning mode."""
+        self.__is_learning = False
+        print("Learning mode stopped.")
+        if self.__learning_timeout_task is not None:
+            self.__learning_timeout_task.cancel()
+            self.__learning_timeout_task = None
+
+    async def __learning_timeout(self, timeout_seconds: int):
+        try:
+            await asyncio.sleep(timeout_seconds)
+            if self.__is_learning:
+                self.stop_learning()
+        except asyncio.CancelledError:
+            pass
 
     # ------------------------------------------------------------------
     # sending commands and receiving responses
