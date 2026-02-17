@@ -41,7 +41,7 @@ async def main(port: str):
     handler = logging.StreamHandler()
     handler.setFormatter(ColorFormatter( "%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S" ))
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.WARNING,
         handlers=[handler]
 )
 
@@ -62,6 +62,8 @@ async def main(port: str):
     print("Starting gateway...")
     await gateway.start()
     print("EnOcean module is ready!")
+
+    # print module info
     print(f"EURID: {await gateway.eurid}")
     print(
         f"Base ID: {await gateway.base_id} (remaining write cycles: {await gateway.base_id_remaining_write_cycles})"
@@ -74,18 +76,17 @@ async def main(port: str):
     print(f"Device version: {version_info.device_version}")
 
     # add some devices - adopt to your own devices and EEPs
-    gateway.add_device(EURID.from_string("00:00:00:01"), EEPID.from_string("F6-02-02"))
+    gateway.add_device(EURID.from_string("00:00:00:01"), EEPID.from_string("F6-02-01"))
     gateway.add_device(EURID.from_string("00:00:00:02"), EEPID.from_string("F6-02-01"))
 
+    # start learning mode
     gateway.start_learning(timeout_seconds=5)
 
-    # Keep the event loop running
+    # Keep the event loop running until CTRL+C is pressed
     print("Running... Press Ctrl+C to exit.") 
     await stop_event.wait() 
-
     print("Shutting down...")
     gateway.stop()
-
 
 
 if __name__ == "__main__":

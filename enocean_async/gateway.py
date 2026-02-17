@@ -110,10 +110,6 @@ class Gateway:
         # logging
         self._logger = logging.getLogger(__name__)
 
-        self._logger.info(
-            f"Gateway initialized for port {self.__port} at baudrate {self.__baudrate}"
-        )
-
     # ------------------------------------------------------------------
     # callback registration
     # ------------------------------------------------------------------
