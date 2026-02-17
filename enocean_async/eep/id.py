@@ -33,3 +33,6 @@ class EEPID:
 
     def __repr__(self) -> str:
         return f"EEP({self.to_string()}{'.' + str(self.manufacturer) if self.manufacturer is not None else ''})"
+
+    def __hash__(self):
+        return hash((self.rorg, self.func, self.type, self.manufacturer))

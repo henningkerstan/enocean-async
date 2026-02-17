@@ -5,11 +5,11 @@ import logging
 import signal
 import sys
 
-from enocean_async.eep.f602xx.decoder import F602XXDecoder
+from enocean_async.eep.db import EEP_DATABASE
+from enocean_async.eep.handler import EEPHandler
+from enocean_async.eep.id import EEPID
 from enocean_async.erp1.rorg import RORG
 from enocean_async.erp1.telegram import ERP1Telegram
-from enocean_async.erp1.ute import UTEMessage, UTEResponseType
-from enocean_async.esp3.packet import ESP3Packet, ESP3PacketType
 from enocean_async.gateway import Gateway
 
 
@@ -44,10 +44,10 @@ def erp1_callback(erp1: ERP1Telegram):
 
     elif erp1.rorg == RORG.RORG_RPS:
         try:
-            decoded = F602XXDecoder()(erp1)
+            decoded = EEPHandler(EEP_DATABASE.get(EEPID.from_string("F6-02-01")))(erp1)
             print(f"╰─ decoded to {decoded}")
         except Exception as e:
-            print(f"╰─ FAILED to decode F6-02-xx: {e}")
+            print(f"╰─ FAILED to decode F6-02-01: {e}")
 
 
 async def main(port: str):
