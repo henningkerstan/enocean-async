@@ -6,6 +6,8 @@ from typing import Callable, Optional
 
 import serial_asyncio_fast as serial_asyncio
 
+from enocean_async.eep.db import EEP_DATABASE
+
 from .eep.handler import EEPHandler
 from .eep.id import EEPID
 from .eep.message import EEPMessage
@@ -260,6 +262,41 @@ class Gateway:
 
     def connection_lost(self, exc: Exception | None) -> None:
         self.__transport = None
+
+    # ------------------------------------------------------------------
+    # device registry
+    # ------------------------------------------------------------------
+    def add_device(self, address: EURID | BaseAddress, eepid: EEPID) -> None:
+        """Register a device with its sender address (EURID or Base ID) and its EEPID.
+
+        This allows the gateway to recognize incoming messages from this device and decode them according to the registered EEP (if a handler for that EEP is found).
+        """
+        self.__known_devices[address] = eepid
+        self._logger.info(f"Added device with address {address} and EEPID {eepid}")
+
+        # get the EEP handler for this EEPID
+        if not eepid in self.__eep_handlers:
+            # try to load
+            if eepid not in EEP_DATABASE:
+                self._logger.warning(
+                    f"EEP {eepid} is not supported. Messages from device {address} will not be decoded."
+                )
+                return
+            else:
+                self.__eep_handlers[eepid] = EEPHandler(EEP_DATABASE[eepid])
+                self._logger.info(f"Loaded EEP handler for EEPID {eepid}")
+        else:
+            self._logger.debug(f"EEP handler for EEPID {eepid} already loaded.")
+
+    def remove_device(self, address: EURID | BaseAddress) -> None:
+        """Deregister a device by its sender address (EURID or Base ID). This removes the device from the registry of known devices, so that incoming messages from this address will no longer be recognized as coming from a known device and will not be decoded as EEP messages."""
+        if address in self.__known_devices:
+            del self.__known_devices[address]
+            self._logger.info(f"Removed device with address {address}")
+        else:
+            self._logger.warning(
+                f"Tried to remove device with address {address}, but it was not found in the registry of known devices."
+            )
 
     # ------------------------------------------------------------------
     # Gateway properties and methods
