@@ -3,3 +3,5 @@ dist/
 .venv/
 *.egg-info/
 __pycache__/
+trace
+.coverage
