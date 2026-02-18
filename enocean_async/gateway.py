@@ -183,7 +183,7 @@ class Gateway:
                 f"Failed to connect to EnOcean module on {self.__port} at baudrate {self.__baudrate}: {e}"
             )
             raise ConnectionError(
-                f"Failed to connect to EnOcean module on {self.__port}: {e}"
+                f"Failed to connect to EnOcean module on {self.__port} at baudrate {self.__baudrate}: {e}"
             )
 
     def stop(self) -> None:
