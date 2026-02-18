@@ -1,21 +1,23 @@
-from enocean_async.erp1.address import Address
+import pytest
+
+from enocean_async.eep.id import EEPID
+from enocean_async.eep.manufacturer import Manufacturer
 
 
-def test_conversion():
-    for i in range(0, 4294967295, 100000):
-        assert Address.from_number(i).to_number() == i
-        assert Address.from_string(Address.from_number(i).to_string()).to_number() == i
+def test_from_and_to_string():
+    assert EEPID.from_string("F6-02-01").to_string() == "F6-02-01"
 
-def test_known_values():
-    assert Address.from_number(0).to_string() == "00:00:00:00"
 
-def test_is_eurid():
-    assert Address.from_number(0).is_eurid()
-    assert Address.from_string("FF:7F:FF:FF").is_eurid()
-    assert Address.from_string("FF:80:00:00").is_eurid() == False
-    assert Address.broadcast().is_eurid() == False
+def test_wrong_string():
+    with pytest.raises(ValueError):
+        EEPID.from_string("F6-0201")
 
-def test_broadcast():
-    assert Address.broadcast().to_string() == "FF:FF:FF:FF"
-    assert Address.broadcast().is_broadcast() 
-    assert Address.broadcast().is_base_address() == False
+    with pytest.raises(ValueError):
+        EEPID.from_string("FZ-06-01")
+
+def test_hash():
+    assert EEPID.from_string("F6-02-01").__hash__() == hash((0xF6, 0x02, 0x01, None))
+
+def test_repr():
+    id = EEPID(0xF6,0x02,0x01, Manufacturer.ENOCEAN_GMBH)
+    assert id.__repr__() == "EEP(F6-02-01.11)"
