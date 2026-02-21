@@ -65,7 +65,7 @@ async def main(port: str) -> None:
 
 
     gateway.add_state_change_callback(on_state_change)
-    gateway.add_eep_message_received_callback(lambda msg: print(f"├─ {MESSAGEMARK} {msg}"))
+    gateway.add_eep_message_received_callback(lambda msg: print(f"├─ {MESSAGEMARK}  {msg}"))
     gateway.add_ute_received_callback(lambda ute: print(f"╰─ {MESSAGEMARK} successfully parsed to UTE message: {ute}"))
     gateway.add_response_callback(lambda resp: print(f"╰─ {MESSAGEMARK} {resp}"))
     gateway.add_parsing_failed_callback(lambda msg: print(f"╰─ {CROSSMARK} Further parsing failed: {msg}"))
