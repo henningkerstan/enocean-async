@@ -165,8 +165,8 @@ EEP_DATABASE: dict[EEPID, EEP] = {
                     ),
                 ],
             ),
-            2: EEPTelegram(
-                name="Stop",
+            3: EEPTelegram(
+                name="Query Position and Angle",
                 datafields=[
                     EEPDataField(
                         id="CHN",
