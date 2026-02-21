@@ -77,6 +77,16 @@ async def main(port: str):
     gateway.add_device(EnOceanUniqueRadioID.from_string("00:00:00:01"), EEPID.from_string("F6-02-01"))
     gateway.add_device(EnOceanUniqueRadioID.from_string("00:00:00:02"), EEPID.from_string("F6-02-01"))
 
+
+    try:
+        from devices import DEVICE_EEP_MAP
+        print("Registering devices from device EEP map...")
+        for device_id, eep_id in DEVICE_EEP_MAP:
+            gateway.add_device(device_id, eep_id)
+    except ImportError:
+        print("No 'devices.py' file found, skipping device registration.")
+    
+
     # start learning mode
     gateway.start_learning(timeout_seconds=5)
 
