@@ -1,6 +1,5 @@
 """Device types for D2 (VLD) telegram profiles."""
 
-# Placeholder for VLD profiles
-# Add device types here as capabilities are implemented
+from .d2_05_00 import DEVICE_TYPE_D2_05_00
 
-__all__ = []
+__all__ = ["DEVICE_TYPE_D2_05_00"]
