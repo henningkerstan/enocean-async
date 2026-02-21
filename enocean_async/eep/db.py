@@ -367,7 +367,7 @@ EEP_DATABASE: dict[EEPID, EEP] = {
                 ],
             ),
             1: EEPTelegram(
-                name="Fan Control Message",
+                name="Fan Status Message",
                 datafields=[
                     EEPDataField(
                         id="HCS",
