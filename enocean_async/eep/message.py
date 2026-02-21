@@ -31,9 +31,9 @@ class EEPMessage:
     """A dictionary of values extracted from the message according to the EEP profile's data fields. The keys are the data field IDs (e.g., 'R1', 'POS'), and the values are the corresponding values extracted from the message."""
 
     def __repr__(self) -> str:
-        msg = f"<EEPMessage {self.eepid} ({self.message_type if self.message_type else 'default'}) from {self.sender.to_string()}"
+        msg = f"EEPMessage(sender={self.sender.to_string()}, eepid={self.eepid}, message_type={self.message_type if self.message_type else 'default'}"
         if self.destination is not None and not self.destination.is_broadcast():
-            msg += f" to {self.destination.to_string()}"
+            msg += f", destination={self.destination.to_string()}"
 
-        msg += f": {self.values}>"
+        msg += f", values={self.values})"
         return msg

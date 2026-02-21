@@ -23,10 +23,10 @@ _F6_02_TELEGRAM = EEPTelegram(
             range_min=0,
             range_max=7,
             range_enum={
-                0: "Button A1",
-                1: "Button A0",
-                2: "Button B1",
-                3: "Button B0",
+                0: "a1",
+                1: "a0",
+                2: "b1",
+                3: "b0",
             },
         ),
         EEPDataField(
@@ -46,10 +46,10 @@ _F6_02_TELEGRAM = EEPTelegram(
             range_min=0,
             range_max=7,
             range_enum={
-                0: "Button A1",
-                1: "Button A0",
-                2: "Button B1",
-                3: "Button B0",
+                0: "a1",
+                1: "a0",
+                2: "b1",
+                3: "b0",
             },
         ),
         EEPDataField(

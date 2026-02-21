@@ -112,7 +112,7 @@ class ERP1Telegram:
 
     def __repr__(self) -> str:
         return (
-            f"ERP1Telegram(RORG={self.rorg.simple_name}, sender={self.sender.to_string()}, destination: {self.destination.to_string() if self.destination else '*'}, "
+            f"ERP1Telegram(sender={self.sender.to_string()}, RORG={self.rorg.simple_name}, destination={self.destination.to_string() if self.destination else '*'}, "
             f"telegram_data={self.telegram_data.hex().upper()}, "
             f"status=0x{self.status:02X}, "
             f"sub_tel_num={self.sub_tel_num}, "

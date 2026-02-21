@@ -7,6 +7,9 @@ from typing import Callable, Optional
 import serial_asyncio_fast as serial_asyncio
 
 from .address import EURID, BaseAddress, SenderAddress
+from .capabilities.state_change import StateChange, StateChangeCallback
+from .device.device import Device
+from .device.types import DEVICE_TYPE_DATABASE
 from .eep import EEP_DATABASE
 from .eep.handler import EEPHandler
 from .eep.id import EEPID
@@ -82,9 +85,11 @@ class Gateway:
         self.__base_id: BaseAddress | None = None
 
         # device and EEP management
-        self.__known_devices: dict[EURID | BaseAddress, EEPID] = {}
+        self.__known_device_eeps: dict[EURID | BaseAddress, EEPID] = {}
         self.__detected_devices: list[EURID | BaseAddress] = []
         self.__eep_handlers: dict[EEPID, EEPHandler] = {}
+        self.__devices: dict[EURID | BaseAddress, Device] = {}
+        self.__state_change_callbacks: list[StateChangeCallback] = []
 
         # callbacks
         self.__esp3_receive_callbacks: list[ESP3Callback] = []
@@ -157,6 +162,10 @@ class Gateway:
 
     def add_response_callback(self, cb: ResponseCallback):
         self.__response_callbacks.append(cb)
+
+    def add_state_change_callback(self, cb: StateChangeCallback) -> None:
+        """Add a callback for capability state changes."""
+        self.__state_change_callbacks.append(cb)
 
     # ------------------------------------------------------------------
     # start and stop
@@ -276,12 +285,18 @@ class Gateway:
     # ------------------------------------------------------------------
     # device registry
     # ------------------------------------------------------------------
-    def add_device(self, address: EURID | BaseAddress, eepid: EEPID) -> None:
+    def add_device(
+        self,
+        address: EURID | BaseAddress,
+        eepid: EEPID,
+        sender: SenderAddress | None = None,
+        name: str | None = None,
+    ) -> None:
         """Register a device with its sender address (EURID or Base ID) and its EEPID.
 
         This allows the gateway to recognize incoming messages from this device and decode them according to the registered EEP (if a handler for that EEP is found).
         """
-        self.__known_devices[address] = eepid
+        self.__known_device_eeps[address] = eepid
         self._logger.info(f"Added device with address {address} and EEPID {eepid}")
 
         # get the EEP handler for this EEPID
@@ -298,10 +313,34 @@ class Gateway:
         else:
             self._logger.debug(f"EEP handler for EEPID {eepid} already loaded.")
 
+        # get device type for this EEP
+        device_type = DEVICE_TYPE_DATABASE.get(eepid)
+        if device_type is None:
+            self._logger.debug(
+                f"No DeviceType found for {eepid}, messages from this device will not have a StateChange processing."
+            )
+            return
+
+        # create Device instance and initialize capabilities
+        device = Device(
+            id=address, type=device_type, name=name or str(address), sender=sender
+        )
+        device.init_capabilities(on_state_change=self.__on_capability_state_change)
+        self.__devices[address] = device
+        self._logger.debug(
+            f"Initialized device {address} with {len(device.capabilities)} capabilities"
+        )
+
+    def __on_capability_state_change(self, state_change: StateChange) -> None:
+        """Internal callback for capability state changes."""
+        self.__emit(self.__state_change_callbacks, state_change)
+
     def remove_device(self, address: EURID | BaseAddress) -> None:
         """Deregister a device by its sender address (EURID or Base ID). This removes the device from the registry of known devices, so that incoming messages from this address will no longer be recognized as coming from a known device and will not be decoded as EEP messages."""
-        if address in self.__known_devices:
-            del self.__known_devices[address]
+        if address in self.__known_device_eeps:
+            del self.__known_device_eeps[address]
+            if address in self.__devices:
+                del self.__devices[address]
             self._logger.info(f"Removed device with address {address}")
         else:
             self._logger.warning(
@@ -484,11 +523,13 @@ class Gateway:
         if packet.packet_type != ESP3PacketType.RADIO_ERP1:
             return
 
-        # parse to ERP1 telegram; if parsing fails, ignore the packet and return
-        erp1: ERP1Telegram
+        self.__process_erp1_packet(packet)
+
+    def __process_erp1_packet(self, packet: ESP3Packet) -> None:
+        """Parse ESP3 RADIO_ERP1 packet into ERP1 telegram and process it."""
         try:
             erp1 = ERP1Telegram.from_esp3(packet)
-        except Exception as e:
+        except Exception:
             return
 
         self.__process_erp1_telegram(erp1)
@@ -511,7 +552,8 @@ class Gateway:
     def __is_sender_known(self, sender: SenderAddress) -> bool:
         """Check if the sender address is known (i.e. if we have an EEP ID for it)."""
         return (
-            sender in self.__known_devices.keys() or sender in self.__detected_devices
+            sender in self.__known_device_eeps.keys()
+            or sender in self.__detected_devices
         )
 
     def __process_response(self, response: ResponseTelegram):
@@ -554,33 +596,43 @@ class Gateway:
             self.__handle_4bs_teach_in_telegram(erp1)
             return
 
+        self.__process_eep_telegram(erp1)
+
+    def __process_eep_telegram(self, erp1: ERP1Telegram) -> None:
+        """Detect EEP ID for ERP1 telegram and decode to EEP message."""
         # There are two options for determining the EEP ID of an incoming ERP1 telegram: either we look it up by the sender address, or by the destination address (if the destination is not a broadcast address).
         # We first check if we have a known device with the sender address, and if not, we check if we have a known device with the destination address.
         # If we cannot find a known device for either the sender or the destination, we cannot determine the EEP ID for this telegram, so we emit a parsing failed message and return.
         # If we can find a known device for either the sender or the destination, we use that device's EEP ID for further processing.
         eep_id: EEPID
-        if erp1.sender in self.__known_devices:
-            eep_id = self.__known_devices[erp1.sender]
+        if erp1.sender in self.__known_device_eeps:
+            eep_id = self.__known_device_eeps[erp1.sender]
         else:
             if erp1.destination is None or erp1.destination.is_broadcast():
-                msg = f"Failed to decode ERP1 telegram to EEP message: sender {erp1.sender} is unknown and destination is not specified."
+                msg = (
+                    f"Failed to decode ERP1 telegram to EEP message: sender {erp1.sender} "
+                    "is unknown and destination is not specified."
+                )
                 self._logger.debug(msg)
                 self.__emit(self.__parsing_failed_callbacks, msg)
                 return
 
-            if not erp1.destination in self.__known_devices:
-                msg = f"Failed to decode ERP1 telegram to EEP message: sender {erp1.sender} is unknown and destination {erp1.destination} is also unknown."
+            if erp1.destination not in self.__known_device_eeps:
+                msg = (
+                    f"Failed to decode ERP1 telegram to EEP message: sender {erp1.sender} "
+                    f"is unknown and destination {erp1.destination} is also unknown."
+                )
                 self._logger.debug(msg)
                 self.__emit(self.__parsing_failed_callbacks, msg)
                 return
 
             self._logger.debug(
-                f"Sender {erp1.sender} is unknown, but destination {erp1.destination} is known, using EEP ID of destination for EEP decoding."
+                f"Sender {erp1.sender} is unknown, but destination {erp1.destination} "
+                "is known, using EEP ID of destination for EEP decoding."
             )
-            eep_id = self.__known_devices[erp1.destination]
+            eep_id = self.__known_device_eeps[erp1.destination]
 
-        # if we have no EEP handler for the EEP ID of the sender, we cannot decode to EEP message, so we return
-        if not eep_id in self.__eep_handlers:
+        if eep_id not in self.__eep_handlers:
             self._logger.debug(
                 f"Failed to decode ERP1 telegram to EEP message: No EEP handler for {eep_id}."
             )
@@ -590,15 +642,9 @@ class Gateway:
             )
             return
 
-        # try eep-specific decoding; if it fails, ignore the packet and return
         try:
             eep_message = self.__eep_handlers[eep_id](erp1)
-            self.__emit_with_sender_filter(
-                self.__eep_receive_callbacks, erp1.sender, eep_message
-            )
-            self._logger.debug(
-                f"ERP1 telegram successfully decoded to EEP message: {eep_message}"
-            )
+            self.__process_eep_message(eep_message)
         except Exception as e:
             self._logger.debug(f"Failed to decode ERP1 telegram to EEP message: {e}")
             self.__emit(
@@ -606,6 +652,45 @@ class Gateway:
                 f"Failed to decode ERP1 telegram to EEP message: {e}",
             )
             return
+
+    def __process_eep_message(self, eep_message: EEPMessage) -> None:
+        """Emit callbacks for a decoded EEP message."""
+        self.__emit_with_sender_filter(
+            self.__eep_receive_callbacks, eep_message.sender, eep_message
+        )
+        self._logger.debug(
+            f"ERP1 telegram successfully decoded to EEP message: {eep_message}"
+        )
+        self.__process_capability_message(eep_message)
+
+    def __process_capability_message(self, eep_message: EEPMessage) -> None:
+        """Decode EEP message using device capabilities."""
+        if eep_message.sender is None:
+            self.__emit(
+                self.__parsing_failed_callbacks,
+                "Failed to decode capability: sender is not specified.",
+            )
+            return
+
+        device = self.__devices.get(eep_message.sender)
+        if device is None:
+            self.__emit(
+                self.__parsing_failed_callbacks,
+                "Failed to decode capability: no device.",
+            )
+            return
+
+        for capability in device.capabilities:
+            try:
+                capability.decode(eep_message)
+            except Exception as e:
+                self._logger.debug(
+                    f"Failed to decode EEP message {eep_message} using capability {capability}: {e}"
+                )
+                self.__emit(
+                    self.__parsing_failed_callbacks,
+                    f"Failed to decode EEP message {eep_message} using capability {capability}: {e}",
+                )
 
     def __handle_ute_message(self, ute_message: UTEMessage):
         self.__emit(self.__ute_receive_callbacks, ute_message)
@@ -641,7 +726,3 @@ class Gateway:
 
     def __handle_4bs_teach_in_telegram(self, erp1: ERP1Telegram):
         pass
-
-    def __handle_eep_message(self, msg: EEPMessage):
-        for cb in self.callbacks:
-            cb(msg)

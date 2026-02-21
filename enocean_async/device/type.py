@@ -1,6 +1,16 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Callable, Optional
 
 from ..eep.id import EEPID
+
+if TYPE_CHECKING:
+    from ..address import SenderAddress
+    from ..capabilities.capability import Capability
+    from ..capabilities.state_change import StateChange
+
+CapabilityFactory = Callable[
+    ["SenderAddress", Optional[Callable[["StateChange"], None]]], "Capability"
+]
 
 
 @dataclass
@@ -11,7 +21,15 @@ class DeviceType:
     uid: str | None = None
     model: str | None = None
     manufacturer: str | None = None
+    capability_factories: list[CapabilityFactory] = field(default_factory=list)
 
-    def is_generic(self) -> bool:
-        """Check if the device type is generic (i.e., has no specific model or manufacturer information)."""
-        return self.uid is not None and self.uid == self.eepid.to_string()
+    def create_capabilities(
+        self,
+        device_address: "SenderAddress",
+        on_state_change: Optional[Callable[["StateChange"], None]] = None,
+    ) -> list["Capability"]:
+        """Instantiate capabilities for a device instance."""
+        return [
+            factory(device_address, on_state_change)
+            for factory in self.capability_factories
+        ]

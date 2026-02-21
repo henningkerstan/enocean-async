@@ -1,11 +1,11 @@
-# ask for base id
-
 import asyncio
 import logging
 import signal
 import sys
 
 from enocean_async import EEPID, EnOceanGateway, EnOceanUniqueRadioID
+from enocean_async.capabilities.state_change import StateChange, StateChangeSource
+from enocean_async.eep.message import EEPMessage
 
 
 class ColorFormatter(logging.Formatter):
@@ -18,17 +18,22 @@ class ColorFormatter(logging.Formatter):
     }
     RESET = "\033[0m"
 
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
         color = self.COLORS.get(record.levelno, self.RESET)
         message = super().format(record)
         return f"{color}{message}{self.RESET}"
     
-CHECKMARK = "\033[92m✓\033[0m"
 CROSSMARK = "\033[91m✗\033[0m"
 EXCLAMATIONMARK = "\033[93m!\033[0m"
+TIMERMARK = "\033[94m⏱\033[0m"
+RECEIVEMARK = "\033[96m📡\033[0m"
+SENDMARK = "\033[94m📤\033[0m"
+TELEGRAMMARK = "\033[92m🧾\033[0m"
+MESSAGEMARK = "\033[92m✉️\033[0m"
+STATECHANGEMARK = "\033[92m🔔\033[0m"
          
 
-async def main(port: str):
+async def main(port: str) -> None:
     # set up main loop with exit handler
     loop = asyncio.get_running_loop() 
     stop_event = asyncio.Event() 
@@ -47,14 +52,24 @@ async def main(port: str):
     gateway = EnOceanGateway(port)
 
     # callback registration
-    gateway.add_esp3_received_callback(lambda pkt: print(f"\nReceived {pkt}"))
-    gateway.add_erp1_received_callback(lambda erp1: print(f"├─ {CHECKMARK} successfully parsed to ERP1 telegram: {erp1}"))
+    gateway.add_esp3_received_callback(lambda pkt: print(f"\n{RECEIVEMARK} Received {pkt}"))
+    gateway.add_erp1_received_callback(lambda erp1: print(f"├─ {TELEGRAMMARK} {erp1}"))
     gateway.add_new_device_callback(lambda addr: print(f"├─ {EXCLAMATIONMARK} new device: {addr}"))
-    gateway.add_eep_message_received_callback(lambda msg: print(f"╰─ {CHECKMARK} successfully parsed to EEP message: {msg}"))
-    gateway.add_ute_received_callback(lambda ute: print(f"╰─ {CHECKMARK} successfully parsed to UTE message: {ute}"))
-    gateway.add_response_callback(lambda resp: print(f"╰─ {CHECKMARK} successfully parsed to {resp}"))
+
+    def on_state_change(state_change: StateChange) -> None:
+        """Handle state changes emitted by device capabilities."""
+        if state_change.source == StateChangeSource.TIMER:
+            print(f"\n{TIMERMARK} {STATECHANGEMARK} {state_change}")
+        else:
+            print(f"╰─ {STATECHANGEMARK} {state_change}")
+
+
+    gateway.add_state_change_callback(on_state_change)
+    gateway.add_eep_message_received_callback(lambda msg: print(f"├─ {MESSAGEMARK} {msg}"))
+    gateway.add_ute_received_callback(lambda ute: print(f"╰─ {MESSAGEMARK} successfully parsed to UTE message: {ute}"))
+    gateway.add_response_callback(lambda resp: print(f"╰─ {MESSAGEMARK} {resp}"))
     gateway.add_parsing_failed_callback(lambda msg: print(f"╰─ {CROSSMARK} Further parsing failed: {msg}"))
-    gateway.add_esp3_send_callback(lambda pkt: print(f"Sending {pkt}"))
+    gateway.add_esp3_send_callback(lambda pkt: print(f"{SENDMARK} Sending {pkt}"))
 
 
     print("Starting gateway...")
