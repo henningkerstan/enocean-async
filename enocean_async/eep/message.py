@@ -21,10 +21,11 @@ class EEPMessage:
     rssi: int | None = None
     """The RSSI (signal strength) of the message. This is optional and can be None if the RSSI is unknown or not relevant."""
 
+    message_type: str | None = None
+    """The type of the message, which can be used to further specify the kind of message"""
+
     values: Dict[str, Any] = None
     """A dictionary of values extracted from the message according to the EEP profile's data fields. The keys are the data field IDs (e.g., 'R1', 'POS'), and the values are the corresponding values extracted from the message."""
 
     def __repr__(self) -> str:
-        return (
-            f"<EEPMessage {self.eepid} from {self.sender.to_string()}: {self.values}>"
-        )
+        return f"<EEPMessage {self.eepid} ({self.message_type if self.message_type else 'default'}) from {self.sender.to_string()}: {self.values}>"

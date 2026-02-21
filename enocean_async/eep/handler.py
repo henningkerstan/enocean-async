@@ -14,14 +14,39 @@ class EEPHandler:
 
         msg = EEPMessage(sender=telegram.sender, eepid=self.__eep.id, rssi=0, values={})
 
+        # determine the command/telegram type based on the EEP's cmd_size and cmd_offset, if applicable
+        cmd_value = 0
+
+        if self.__eep.cmd_size > 0 and self.__eep.cmd_offset is not None:
+            offset = (
+                self.__eep.cmd_offset
+                if self.__eep.cmd_offset >= 0
+                else len(telegram.telegram_data) * 8 + self.__eep.cmd_offset
+            )
+
+            cmd_value = telegram.bitstring_raw_value(
+                offset=offset, size=self.__eep.cmd_size
+            )
+
+        if cmd_value not in self.__eep.telegrams:
+            return msg  # unknown telegram type, return message with empty values; TODO: improve this!
+
+        if self.__eep.telegrams[cmd_value].name:
+            # print(f"Telegram {cmd_value} identified as {self.__eep.telegrams[cmd_value].name}")
+            msg.message_type = self.__eep.telegrams[cmd_value].name
+        else:
+            msg.message_type = f"Telegram {cmd_value}"
+
         # iterate over the data fields defined in the EEP and extract values from the telegram
-        for field in self.__eep.datafields:
+        for field in self.__eep.telegrams[cmd_value].datafields:
             value = None
             # if the field has an enumeration, convert the raw value to its corresponding string representation
+
+            raw_value = telegram.bitstring_raw_value(
+                offset=field.offset, size=field.size
+            )
+
             if field.range_enum is not None:
-                raw_value = telegram.bitstring_raw_value(
-                    offset=field.offset, size=field.size
-                )
                 value = field.range_enum.get(raw_value, f"Unknown({raw_value})")
             elif (
                 field.scale_min is not None
@@ -42,7 +67,7 @@ class EEPHandler:
                     offset=field.offset, size=field.size
                 )
 
-            msg.values[field.id] = value
+            msg.values[field.id] = (raw_value, value)
 
         return msg
 

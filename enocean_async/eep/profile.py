@@ -39,6 +39,17 @@ class EEPDataField:
 
 
 @dataclass
+class EEPTelegram:
+    """An EEP telegram represents a specific type of message defined within an EEP, which may have its own structure and data fields."""
+
+    name: str | None
+    """Human-readable name for the telegram, describing its purpose or function."""
+
+    datafields: list[EEPDataField]
+    """List of data fields within the EEP."""
+
+
+@dataclass
 class EEP:
     """Base class for EEP data."""
 
@@ -48,5 +59,11 @@ class EEP:
     name: str
     """Human-readable name/description for the EEP."""
 
-    datafields: list[EEPDataField]
-    """List of data fields within the EEP."""
+    cmd_size: int
+    """Size of the telegram's command/message identifier in bits. If zero, there is only one telegram type."""
+
+    cmd_offset: int | None
+    """Bit offset of the telegram's command/message identifier within the EEP; either measured from left (if cmd_offset is non-negative) or from right (if cmd_offset is negative)."""
+
+    telegrams: dict[int, EEPTelegram]
+    """Dictionary of telegrams defined for this EEP, keyed by their command/message identifier, each with its own structure and data fields."""
