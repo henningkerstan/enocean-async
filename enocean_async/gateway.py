@@ -554,27 +554,45 @@ class Gateway:
             self.__handle_4bs_teach_in_telegram(erp1)
             return
 
-        # if sender is not known, we cannot decode to EEP message, so we return
-        if not erp1.sender in self.__known_devices:
-            msg = f"Failed to decode ERP1 telegram to EEP message: sender {erp1.sender} is unknown."
-            self._logger.debug(msg)
-            self.__emit(self.__parsing_failed_callbacks, msg)
-            return
+        # There are two options for determining the EEP ID of an incoming ERP1 telegram: either we look it up by the sender address, or by the destination address (if the destination is not a broadcast address).
+        # We first check if we have a known device with the sender address, and if not, we check if we have a known device with the destination address.
+        # If we cannot find a known device for either the sender or the destination, we cannot determine the EEP ID for this telegram, so we emit a parsing failed message and return.
+        # If we can find a known device for either the sender or the destination, we use that device's EEP ID for further processing.
+        eep_id: EEPID
+        if erp1.sender in self.__known_devices:
+            eep_id = self.__known_devices[erp1.sender]
+        else:
+            if erp1.destination is None or erp1.destination.is_broadcast():
+                msg = f"Failed to decode ERP1 telegram to EEP message: sender {erp1.sender} is unknown and destination is not specified."
+                self._logger.debug(msg)
+                self.__emit(self.__parsing_failed_callbacks, msg)
+                return
+
+            if not erp1.destination in self.__known_devices:
+                msg = f"Failed to decode ERP1 telegram to EEP message: sender {erp1.sender} is unknown and destination {erp1.destination} is also unknown."
+                self._logger.debug(msg)
+                self.__emit(self.__parsing_failed_callbacks, msg)
+                return
+
+            self._logger.debug(
+                f"Sender {erp1.sender} is unknown, but destination {erp1.destination} is known, using EEP ID of destination for EEP decoding."
+            )
+            eep_id = self.__known_devices[erp1.destination]
 
         # if we have no EEP handler for the EEP ID of the sender, we cannot decode to EEP message, so we return
-        if not self.__known_devices[erp1.sender] in self.__eep_handlers:
+        if not eep_id in self.__eep_handlers:
             self._logger.debug(
-                f"Failed to decode ERP1 telegram to EEP message: No EEP handler for {self.__known_devices[erp1.sender]}."
+                f"Failed to decode ERP1 telegram to EEP message: No EEP handler for {eep_id}."
             )
             self.__emit(
                 self.__parsing_failed_callbacks,
-                f"Failed to decode ERP1 telegram to EEP message: No EEP handler for {self.__known_devices[erp1.sender]}.",
+                f"Failed to decode ERP1 telegram to EEP message: No EEP handler for {eep_id}.",
             )
             return
 
         # try eep-specific decoding; if it fails, ignore the packet and return
         try:
-            eep_message = self.__eep_handlers[self.__known_devices[erp1.sender]](erp1)
+            eep_message = self.__eep_handlers[eep_id](erp1)
             self.__emit_with_sender_filter(
                 self.__eep_receive_callbacks, erp1.sender, eep_message
             )
