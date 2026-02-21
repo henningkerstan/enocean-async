@@ -20,7 +20,7 @@ What is missing/untested:
 
 
 ## Implemented EEPs
-See [SUPPORTED_EEPS.md](https://github.com/henningkerstan/enocean-async/blob/main/SUPPRTED_EEPS.md).
+See [SUPPORTED_EEPS.md](https://github.com/henningkerstan/enocean-async/blob/main/SUPPORTED_EEPS.md).
 
 
 ## Contributing
