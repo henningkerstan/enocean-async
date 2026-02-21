@@ -6,6 +6,17 @@ from ..eep.id import EEPID
 
 
 @dataclass
+class EEPMessageValue:
+    """Raw and interpreted value for a single EEP data field."""
+
+    raw: int
+    """The raw integer value of the data field as extracted from the message."""
+
+    value: Any
+    """The interpreted value of the data field according to the EEP profile's data field definition"""
+
+
+@dataclass
 class EEPMessage:
     """An EEP message represents a message according to a specific EEP profile in a a dictionary of values extracted from the message according to the EEP profile's data fields. It should not be generated manually but using a proper EEPHandler.
 
@@ -25,10 +36,10 @@ class EEPMessage:
     """The RSSI (signal strength) of the message. This is optional and can be None if the RSSI is unknown or not relevant."""
 
     message_type: str | None = None
-    """The type of the message, which can be used to further specify the kind of message"""
+    """The type of the message."""
 
-    values: Dict[str, Any] = None
-    """A dictionary of values extracted from the message according to the EEP profile's data fields. The keys are the data field IDs (e.g., 'R1', 'POS'), and the values are the corresponding values extracted from the message."""
+    values: Dict[str, EEPMessageValue] = None
+    """A dictionary of values extracted from the message according to the EEP profile's data fields. The keys are the data field IDs (e.g., 'R1', 'POS'), and the values are the corresponding raw/interpreted pairs."""
 
     def __repr__(self) -> str:
         msg = f"EEPMessage(sender={self.sender.to_string()}, eepid={self.eepid}, message_type={self.message_type if self.message_type else 'default'}"

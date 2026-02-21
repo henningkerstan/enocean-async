@@ -1,5 +1,6 @@
 """Device types for F6-02-01 and F6-02-02 rocker switch profiles."""
 
+from ....capabilities.metadata import MetaDataCapability
 from ....capabilities.push_button import F6_02_01_02PushButtonCapability
 from ....eep.id import EEPID
 from ...type import DeviceType
@@ -13,7 +14,11 @@ DEVICE_TYPE_F6_02_01 = DeviceType(
         lambda addr, cb: F6_02_01_02PushButtonCapability(
             device_address=addr,
             on_state_change=cb,
-        )
+        ),
+        lambda addr, cb: MetaDataCapability(
+            device_address=addr,
+            on_state_change=cb,
+        ),
     ],
 )
 
@@ -26,6 +31,10 @@ DEVICE_TYPE_F6_02_02 = DeviceType(
         lambda addr, cb: F6_02_01_02PushButtonCapability(
             device_address=addr,
             on_state_change=cb,
-        )
+        ),
+        lambda addr, cb: MetaDataCapability(
+            device_address=addr,
+            on_state_change=cb,
+        ),
     ],
 )

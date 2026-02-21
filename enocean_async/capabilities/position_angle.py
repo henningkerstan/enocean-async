@@ -25,8 +25,11 @@ class PositionAngleCapability(Capability):
             )
             return
 
-        pos_raw, _ = message.values.get("POS", (None, None))
-        ang_raw, _ = message.values.get("ANG", (None, None))
+        pos_value = message.values.get("POS")
+        ang_value = message.values.get("ANG")
+
+        pos_raw = pos_value.raw if pos_value else None
+        ang_raw = ang_value.raw if ang_value else None
 
         timestamp = time()
 

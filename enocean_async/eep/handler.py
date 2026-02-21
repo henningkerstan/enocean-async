@@ -1,7 +1,7 @@
 from enocean_async.address import BroadcastAddress
 
 from ..erp1.telegram import ERP1Telegram
-from .message import EEPMessage
+from .message import EEPMessage, EEPMessageValue
 from .profile import EEP
 
 
@@ -72,7 +72,7 @@ class EEPHandler:
                     offset=field.offset, size=field.size
                 )
 
-            msg.values[field.id] = (raw_value, value)
+            msg.values[field.id] = EEPMessageValue(raw=raw_value, value=value)
 
         return msg
 

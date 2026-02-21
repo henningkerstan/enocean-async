@@ -225,10 +225,15 @@ class F6_02_01_02PushButtonCapability(PushButtonCapability):
             and "R2" in message.values
             and "SA" in message.values
         ):
-            r1_raw, r1_val = message.values.get("R1", (None, None))
-            eb_raw, eb_val = message.values.get("EB", (None, None))
-            sa_raw, sa_val = message.values.get("SA", (None, None))
-            r2_raw, r2_val = message.values.get("R2", (None, None))
+            r1_value = message.values.get("R1")
+            eb_value = message.values.get("EB")
+            sa_value = message.values.get("SA")
+            r2_value = message.values.get("R2")
+
+            r1_val = r1_value.value if r1_value else None
+            eb_val = eb_value.value if eb_value else None
+            sa_val = sa_value.value if sa_value else None
+            r2_val = r2_value.value if r2_value else None
 
             current_time = time()
 
