@@ -19,6 +19,9 @@ What is missing/untested:
 - add (and test) more EEPs
 
 
+## Implemented EEPs
+See [SUPPORTED_EEPS.md](https://github.com/henningkerstan/enocean-async/blob/main/SUPPRTED_EEPS.md).
+
 
 ## Contributing
 See [CONTRIBUTING](https://github.com/henningkerstan/enocean-async/blob/main/CONTRIBUTING.md).
