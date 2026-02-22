@@ -9,6 +9,7 @@ from enocean_async.capabilities.push_button import (
     F6_02_01_02PushButtonCapability,
     PushButtonCapability,
 )
+from enocean_async.capabilities.temperature_sensor import TemperatureSensorCapability
 from enocean_async.device.types import DEVICE_TYPE_DATABASE
 from enocean_async.eep import EEP_DATABASE
 
@@ -35,6 +36,11 @@ CAPABILITY_STATE_CHANGES = {
         "entities": {
             "POS": ["position (0-127)"],
             "ANG": ["angle (0-127)"],
+        },
+    },
+    TemperatureSensorCapability: {
+        "entities": {
+            "temperature": ["temperature (°C)"],
         },
     },
     MetaDataCapability: {
