@@ -1,6 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any, Callable, Optional
 
 from enocean_async.eep.id import EEPID
+
+type TelegramRawValues = dict[str, int]
+type ScaleFunction = Callable[[TelegramRawValues], float]
+type UnitFunction = Callable[[TelegramRawValues], str]
 
 
 @dataclass
@@ -19,23 +24,38 @@ class EEPDataField:
     size: int
     """Size of the data field in bits."""
 
-    range_min: int | None = None
+    range_min: int = 0
     """Minimum value of the data field's range."""
 
     range_max: int | None = None
-    """Maximum value of the data field's range."""
+    """Maximum value of the data field's range, defaulting to the maximum representable by the given size in bits (e.g. 2^size - 1)."""
 
-    scale_min: float | None = None
-    """Minimum value of the data field's scaled value."""
+    scale_min_fn: ScaleFunction = lambda _: 0.0
+    """Function to compute scale_min based on message values. Defaults to constant 0.0."""
 
-    scale_max: float | None = None
-    """Maximum value of the data field's scaled value."""
+    scale_max_fn: ScaleFunction = lambda _: 0.0
+    """Function to compute scale_max based on message values. Defaults to constant 0.0."""
+
+    unit_fn: UnitFunction = lambda _: ""
+    """Function to compute unit based on message values. Defaults to empty string."""
 
     range_enum: dict[int, str] | None = None
     """Enumeration of possible values for the data field, if applicable."""
 
-    unit: str | None = None
-    """Unit of the data field, such as '°C' for temperature or '%' for humidity."""
+    __range_max_backing: int | None = field(init=False, default=None, repr=False)
+    """Private backing field for range_max property with validation."""
+
+    def __post_init__(self):
+        if self.range_enum:
+            # If an enumeration is provided, range_min and range_max should be derived from the enum keys
+            enum_keys = self.range_enum.keys()
+            self.range_min = min(enum_keys)
+            # Use setter for validation
+            self.range_max = max(enum_keys)
+        else:
+            # If no enumeration, ensure range_max is set based on size if not provided
+            if self.range_max is None or self.range_max > (1 << self.size) - 1:
+                self.range_max = (1 << self.size) - 1
 
 
 @dataclass

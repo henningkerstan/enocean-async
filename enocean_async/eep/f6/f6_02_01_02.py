@@ -34,8 +34,6 @@ _F6_02_TELEGRAM = EEPTelegram(
             name="Energy bow",
             offset=3,
             size=1,
-            range_min=0,
-            range_max=1,
             range_enum={0: "released", 1: "pressed"},
         ),
         EEPDataField(
@@ -57,8 +55,6 @@ _F6_02_TELEGRAM = EEPTelegram(
             name="2nd action",
             offset=7,
             size=1,
-            range_min=0,
-            range_max=1,
             range_enum={0: "No 2nd action", 1: "2nd action valid"},
         ),
     ],

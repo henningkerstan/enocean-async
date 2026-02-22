@@ -48,36 +48,46 @@ class EEPHandler:
             msg.message_type = f"Telegram {cmd_value}"
 
         # iterate over the data fields defined in the EEP and extract values from the telegram
+        # First pass: collect all raw values for dependency resolution
+        telegram_raw_values: dict[str, int] = {}
         for field in self.__eep.telegrams[cmd_value].datafields:
-            value = None
-            # if the field has an enumeration, convert the raw value to its corresponding string representation
-
-            raw_value = telegram.bitstring_raw_value(
+            telegram_raw_values[field.id] = telegram.bitstring_raw_value(
                 offset=field.offset, size=field.size
             )
 
+        # Second pass: decode values with context (for field interdependencies)
+        for field in self.__eep.telegrams[cmd_value].datafields:
+            raw_value = telegram_raw_values[field.id]
+            value = None
+
+            # if the field has an enumeration, convert the raw value to its corresponding string representation
             if field.range_enum is not None:
                 value = field.range_enum.get(raw_value, f"Unknown({raw_value})")
-            elif (
-                field.scale_min is not None
-                and field.scale_max is not None
-                and field.range_min is not None
-                and field.range_max is not None
-            ):
-                value = telegram.bitstring_scaled_value(
-                    offset=field.offset,
-                    size=field.size,
-                    range_min=field.range_min,
-                    range_max=field.range_max,
-                    scale_min=field.scale_min,
-                    scale_max=field.scale_max,
-                )
-            else:
-                value = telegram.bitstring_raw_value(
-                    offset=field.offset, size=field.size
-                )
+            elif field.range_min is not None and field.range_max is not None:
+                # Compute scale bounds using callbacks (with full message context)
+                scale_min = field.scale_min_fn(telegram_raw_values)
+                scale_max = field.scale_max_fn(telegram_raw_values)
 
-            msg.values[field.id] = EEPMessageValue(raw=raw_value, value=value)
+                if scale_min is not None and scale_max is not None:
+                    value = telegram.bitstring_scaled_value(
+                        offset=field.offset,
+                        size=field.size,
+                        range_min=field.range_min,
+                        range_max=field.range_max,
+                        scale_min=scale_min,
+                        scale_max=scale_max,
+                    )
+                else:
+                    value = raw_value
+            else:
+                value = raw_value
+
+            # Compute unit using callback
+            unit = field.unit_fn(telegram_raw_values)
+
+            msg.values[field.id] = EEPMessageValue(
+                raw=raw_value, value=value, unit=unit
+            )
 
         return msg
 

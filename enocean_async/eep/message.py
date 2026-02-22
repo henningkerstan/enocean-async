@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict
 
 from ..address import EURID, Address, BaseAddress, BroadcastAddress
@@ -14,6 +14,9 @@ class EEPMessageValue:
 
     value: Any
     """The interpreted value of the data field according to the EEP profile's data field definition"""
+
+    unit: str | None = None
+    """The unit of the interpreted value (e.g., '°C', '%', 'kWh'). Can be dynamic based on message context."""
 
 
 @dataclass
@@ -38,7 +41,7 @@ class EEPMessage:
     message_type: str | None = None
     """The type of the message."""
 
-    values: Dict[str, EEPMessageValue] = None
+    values: Dict[str, EEPMessageValue] = field(default_factory=dict)
     """A dictionary of values extracted from the message according to the EEP profile's data fields. The keys are the data field IDs (e.g., 'R1', 'POS'), and the values are the corresponding raw/interpreted pairs."""
 
     def __repr__(self) -> str:
