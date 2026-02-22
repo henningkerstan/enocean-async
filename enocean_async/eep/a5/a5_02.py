@@ -1,10 +1,10 @@
 """A5-02-XX: Temperature sensors."""
 
 from ..id import EEPID
-from ..profile import EEP, EEPDataField, EEPTelegram
+from ..profile import EEPDataField, SingleTelegramEEP
 
 
-class _EEP_A5_02(EEP):
+class _EEP_A5_02(SingleTelegramEEP):
     def __init__(
         self, _type: int, scale_min: float, scale_max: float, ten_bit: bool = False
     ):
@@ -16,24 +16,17 @@ class _EEP_A5_02(EEP):
             + "°C to "
             + str(scale_max)
             + "°C",
-            cmd_size=0,
-            cmd_offset=None,
-            telegrams={
-                0: EEPTelegram(
-                    name=None,
-                    datafields=[
-                        EEPDataField(
-                            id="TMP",
-                            name="Temperature",
-                            offset=14 if ten_bit else 16,
-                            size=10 if ten_bit else 8,
-                            scale_min_fn=lambda _: scale_min,
-                            scale_max_fn=lambda _: scale_max,
-                            unit_fn=lambda _: "°C",
-                        )
-                    ],
-                ),
-            },
+            datafields=[
+                EEPDataField(
+                    id="TMP",
+                    name="Temperature",
+                    offset=14 if ten_bit else 16,
+                    size=10 if ten_bit else 8,
+                    scale_min_fn=lambda _: scale_min,
+                    scale_max_fn=lambda _: scale_max,
+                    unit_fn=lambda _: "°C",
+                )
+            ],
         )
 
 

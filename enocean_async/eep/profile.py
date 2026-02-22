@@ -33,7 +33,7 @@ class EEPDataField:
     scale_min_fn: ScaleFunction = lambda _: 0.0
     """Function to compute scale_min based on message values. Defaults to constant 0.0."""
 
-    scale_max_fn: ScaleFunction = lambda _: 0.0
+    scale_max_fn: ScaleFunction | None = None
     """Function to compute scale_max based on message values. Defaults to constant 0.0."""
 
     unit_fn: UnitFunction = lambda _: ""
@@ -57,6 +57,9 @@ class EEPDataField:
             if self.range_max is None or self.range_max > (1 << self.size) - 1:
                 self.range_max = (1 << self.size) - 1
 
+        if self.scale_max_fn is None:
+            self.scale_max_fn = lambda _: float(self.range_max)
+
 
 @dataclass
 class EEPTelegram:
@@ -65,8 +68,8 @@ class EEPTelegram:
     name: str | None
     """Human-readable name for the telegram, describing its purpose or function."""
 
-    datafields: list[EEPDataField]
-    """List of data fields within the EEP."""
+    datafields: list[EEPDataField] = field(default_factory=list)
+    """List of data fields within the telegram."""
 
 
 @dataclass
@@ -79,11 +82,38 @@ class EEP:
     name: str
     """Human-readable name/description for the EEP."""
 
-    cmd_size: int
+    cmd_size: int = 0
     """Size of the telegram's command/message identifier in bits. If zero, there is only one telegram type."""
 
-    cmd_offset: int | None
+    cmd_offset: int | None = None
     """Bit offset of the telegram's command/message identifier within the EEP; either measured from left (if cmd_offset is non-negative) or from right (if cmd_offset is negative)."""
 
-    telegrams: dict[int, EEPTelegram]
+    telegrams: dict[int, EEPTelegram] = field(default_factory=dict)
     """Dictionary of telegrams defined for this EEP, keyed by their command/message identifier, each with its own structure and data fields."""
+
+
+@dataclass
+class SingleTelegramEEP(EEP):
+    """EEP variant for profiles with a single telegram type (cmd_size=0, no telegram selector)."""
+
+    def __init__(
+        self,
+        id: EEPID,
+        name: str,
+        datafields: list[EEPDataField],
+    ):
+        """Initialize a single-telegram EEP.
+
+        Args:
+            id: Unique identifier for the EEP.
+            name: Human-readable name/description.
+            datafields: List of data fields in this single telegram.
+        """
+
+        super().__init__(
+            id=id,
+            name=name,
+            cmd_size=0,
+            cmd_offset=None,
+            telegrams={0: EEPTelegram(name=None, datafields=datafields)},
+        )

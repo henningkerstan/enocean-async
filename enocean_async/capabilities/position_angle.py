@@ -19,7 +19,7 @@ class PositionAngleCapability(Capability):
         if message.eepid is None or message.eepid.to_string() != "D2-05-00":
             return
 
-        if message.message_type != "Reply Position and Angle":
+        if message.message_type != "Reply position and angle":
             print(
                 f"Received unsupported message type {message.message_type} for PositionAngleCapability"
             )
