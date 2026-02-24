@@ -7,6 +7,11 @@ type TelegramRawValues = dict[str, int]
 type ScaleFunction = Callable[[TelegramRawValues], float]
 type UnitFunction = Callable[[TelegramRawValues], str]
 
+# Type aliases for capability factories and semantic resolvers.
+# Using Any to avoid circular imports (capabilities/ imports from eep/).
+type SemanticResolver = Callable[[dict[str, Any]], Any | None]
+type CapabilityFactory = Callable[[Any, Any], Any]
+
 
 @dataclass
 class EEPDataField:
@@ -41,6 +46,10 @@ class EEPDataField:
 
     range_enum: dict[int, str] | None = None
     """Enumeration of possible values for the data field, if applicable."""
+
+    entity_uid: str | None = None
+    """Semantic entity UID to which this field's decoded value is propagated (e.g. 'temperature', 'illumination').
+    When set, EEPHandler copies msg.values[field.id] → msg.values[entity_uid] after decoding."""
 
     __range_max_backing: int | None = field(init=False, default=None, repr=False)
     """Private backing field for range_max property with validation."""
@@ -91,6 +100,14 @@ class EEP:
     telegrams: dict[int, EEPTelegram] = field(default_factory=dict)
     """Dictionary of telegrams defined for this EEP, keyed by their command/message identifier, each with its own structure and data fields."""
 
+    semantic_resolvers: dict[str, SemanticResolver] = field(default_factory=dict)
+    """Dict mapping entity_uid → resolver function. Each resolver receives the full decoded values dict
+    and returns a single EEPMessageValue (or None) to be stored under that entity_uid key."""
+
+    capability_factories: list[CapabilityFactory] = field(default_factory=list)
+    """Ordered list of capability factory callables. Each factory takes (device_address, on_state_change)
+    and returns a Capability instance. MetaDataCapability is always prepended by the gateway."""
+
 
 @dataclass
 class SingleTelegramEEP(EEP):
@@ -101,6 +118,8 @@ class SingleTelegramEEP(EEP):
         id: EEPID,
         name: str,
         datafields: list[EEPDataField],
+        semantic_resolvers: dict[str, SemanticResolver] | None = None,
+        capability_factories: list[CapabilityFactory] | None = None,
     ):
         """Initialize a single-telegram EEP.
 
@@ -108,6 +127,8 @@ class SingleTelegramEEP(EEP):
             id: Unique identifier for the EEP.
             name: Human-readable name/description.
             datafields: List of data fields in this single telegram.
+            semantic_resolvers: Optional dict of entity_uid → resolver for multi-field combinations.
+            capability_factories: Optional list of capability factory callables.
         """
 
         super().__init__(
@@ -116,4 +137,6 @@ class SingleTelegramEEP(EEP):
             cmd_size=0,
             cmd_offset=None,
             telegrams={0: EEPTelegram(name=None, datafields=datafields)},
+            semantic_resolvers=semantic_resolvers or {},
+            capability_factories=capability_factories or [],
         )

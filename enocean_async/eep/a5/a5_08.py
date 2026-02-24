@@ -1,8 +1,56 @@
-"""A5-06-XX: Light sensors."""
+"""A5-08-XX: Light, temperature and occupancy sensors."""
 
+from ...capabilities.entity_uids import EntityUID
+from ...capabilities.scalar_sensor import ScalarSensorCapability
 from ..id import EEPID
 from ..manufacturer import Manufacturer
 from ..profile import EEPDataField, SingleTelegramEEP
+
+_FULL_FACTORIES = [
+    lambda addr, cb: ScalarSensorCapability(
+        device_address=addr,
+        on_state_change=cb,
+        entity_uid=EntityUID.VOLTAGE,
+    ),
+    lambda addr, cb: ScalarSensorCapability(
+        device_address=addr,
+        on_state_change=cb,
+        entity_uid=EntityUID.ILLUMINATION,
+    ),
+    lambda addr, cb: ScalarSensorCapability(
+        device_address=addr,
+        on_state_change=cb,
+        entity_uid=EntityUID.TEMPERATURE,
+    ),
+    lambda addr, cb: ScalarSensorCapability(
+        device_address=addr,
+        on_state_change=cb,
+        entity_uid=EntityUID.MOTION,
+    ),
+    lambda addr, cb: ScalarSensorCapability(
+        device_address=addr,
+        on_state_change=cb,
+        entity_uid=EntityUID.OCCUPANCY_BUTTON,
+    ),
+]
+
+_ELTAKO_FACTORIES = [
+    lambda addr, cb: ScalarSensorCapability(
+        device_address=addr,
+        on_state_change=cb,
+        entity_uid=EntityUID.VOLTAGE,
+    ),
+    lambda addr, cb: ScalarSensorCapability(
+        device_address=addr,
+        on_state_change=cb,
+        entity_uid=EntityUID.ILLUMINATION,
+    ),
+    lambda addr, cb: ScalarSensorCapability(
+        device_address=addr,
+        on_state_change=cb,
+        entity_uid=EntityUID.MOTION,
+    ),
+]
 
 
 class _EEP_A5_08(SingleTelegramEEP):
@@ -19,6 +67,7 @@ class _EEP_A5_08(SingleTelegramEEP):
                     scale_min_fn=lambda _: 0.0,
                     scale_max_fn=lambda _: 5.1,
                     unit_fn=lambda _: "V",
+                    entity_uid=EntityUID.VOLTAGE,
                 ),
                 EEPDataField(
                     id="ILL",
@@ -28,6 +77,7 @@ class _EEP_A5_08(SingleTelegramEEP):
                     scale_min_fn=lambda _: 0,
                     scale_max_fn=lambda _: ill_max,
                     unit_fn=lambda _: "lx",
+                    entity_uid=EntityUID.ILLUMINATION,
                 ),
                 EEPDataField(
                     id="TMP",
@@ -37,6 +87,7 @@ class _EEP_A5_08(SingleTelegramEEP):
                     scale_min_fn=lambda _: temp_min,
                     scale_max_fn=lambda _: temp_max,
                     unit_fn=lambda _: "°C",
+                    entity_uid=EntityUID.TEMPERATURE,
                 ),
                 EEPDataField(
                     id="PIRS",
@@ -47,6 +98,7 @@ class _EEP_A5_08(SingleTelegramEEP):
                         0: "motion",
                         1: "no motion",
                     },
+                    entity_uid=EntityUID.MOTION,
                 ),
                 EEPDataField(
                     id="OCC",
@@ -57,8 +109,10 @@ class _EEP_A5_08(SingleTelegramEEP):
                         0: "pressed",
                         1: "released",
                     },
+                    entity_uid=EntityUID.OCCUPANCY_BUTTON,
                 ),
             ],
+            capability_factories=_FULL_FACTORIES,
         )
 
 
@@ -78,6 +132,7 @@ EEP_A5_08_01_ELTAKO = SingleTelegramEEP(
             scale_min_fn=lambda _: 0.0,
             scale_max_fn=lambda _: 5.1,
             unit_fn=lambda _: "V",
+            entity_uid=EntityUID.VOLTAGE,
         ),
         EEPDataField(
             id="ILL",
@@ -87,6 +142,7 @@ EEP_A5_08_01_ELTAKO = SingleTelegramEEP(
             scale_min_fn=lambda _: 0,
             scale_max_fn=lambda _: 510,
             unit_fn=lambda _: "lx",
+            entity_uid=EntityUID.ILLUMINATION,
         ),
         EEPDataField(
             id="PIRS",
@@ -97,6 +153,8 @@ EEP_A5_08_01_ELTAKO = SingleTelegramEEP(
                 0x0D: "motion",
                 0x0F: "no motion",
             },
+            entity_uid=EntityUID.MOTION,
         ),
     ],
+    capability_factories=_ELTAKO_FACTORIES,
 )

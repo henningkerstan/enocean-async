@@ -1,5 +1,7 @@
 """A5-02-XX: Temperature sensors."""
 
+from ...capabilities.entity_uids import EntityUID
+from ...capabilities.scalar_sensor import ScalarSensorCapability
 from ..id import EEPID
 from ..profile import EEPDataField, SingleTelegramEEP
 
@@ -25,7 +27,15 @@ class _EEP_A5_02(SingleTelegramEEP):
                     scale_min_fn=lambda _: scale_min,
                     scale_max_fn=lambda _: scale_max,
                     unit_fn=lambda _: "°C",
+                    entity_uid=EntityUID.TEMPERATURE,
                 )
+            ],
+            capability_factories=[
+                lambda addr, cb: ScalarSensorCapability(
+                    device_address=addr,
+                    on_state_change=cb,
+                    entity_uid=EntityUID.TEMPERATURE,
+                ),
             ],
         )
 

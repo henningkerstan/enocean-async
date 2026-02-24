@@ -1,5 +1,7 @@
 """D2-05-00: Blinds control for position and angle, type 0x00."""
 
+from ...capabilities.entity_uids import EntityUID
+from ...capabilities.position_angle import PositionAngleCapability
 from ..id import EEPID
 from ..profile import EEP, EEPDataField, EEPTelegram
 
@@ -20,6 +22,7 @@ EEP_D2_05_00 = EEP(
                     range_min=0,
                     range_max=127,
                     unit_fn=lambda _: "%",
+                    entity_uid=EntityUID.POSITION,
                 ),
                 EEPDataField(
                     id="ANG",
@@ -29,6 +32,7 @@ EEP_D2_05_00 = EEP(
                     range_min=0,
                     range_max=127,
                     unit_fn=lambda _: "%",
+                    entity_uid=EntityUID.ANGLE,
                 ),
                 EEPDataField(
                     id="REPO",
@@ -122,6 +126,7 @@ EEP_D2_05_00 = EEP(
                     offset=1,
                     size=7,
                     unit_fn=lambda _: "%",
+                    entity_uid=EntityUID.POSITION,
                 ),
                 EEPDataField(
                     id="ANG",
@@ -129,6 +134,7 @@ EEP_D2_05_00 = EEP(
                     offset=9,
                     size=7,
                     unit_fn=lambda _: "%",
+                    entity_uid=EntityUID.ANGLE,
                 ),
                 EEPDataField(
                     id="LOCK",
@@ -161,4 +167,10 @@ EEP_D2_05_00 = EEP(
             ],
         ),
     },
+    capability_factories=[
+        lambda addr, cb: PositionAngleCapability(
+            device_address=addr,
+            on_state_change=cb,
+        ),
+    ],
 )

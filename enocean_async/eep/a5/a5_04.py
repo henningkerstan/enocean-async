@@ -1,7 +1,22 @@
-"""A5-02-XX: Temperature sensors."""
+"""A5-04-XX: Temperature and humidity sensors."""
 
+from ...capabilities.entity_uids import EntityUID
+from ...capabilities.scalar_sensor import ScalarSensorCapability
 from ..id import EEPID
 from ..profile import EEPDataField, SingleTelegramEEP
+
+_TEMP_HUM_FACTORIES = [
+    lambda addr, cb: ScalarSensorCapability(
+        device_address=addr,
+        on_state_change=cb,
+        entity_uid=EntityUID.HUMIDITY,
+    ),
+    lambda addr, cb: ScalarSensorCapability(
+        device_address=addr,
+        on_state_change=cb,
+        entity_uid=EntityUID.TEMPERATURE,
+    ),
+]
 
 
 class _EEP_A5_04_01_02(SingleTelegramEEP):
@@ -20,6 +35,7 @@ class _EEP_A5_04_01_02(SingleTelegramEEP):
                     scale_min_fn=lambda _: 0.0,
                     scale_max_fn=lambda _: 100.0,
                     unit_fn=lambda _: "%",
+                    entity_uid=EntityUID.HUMIDITY,
                 ),
                 EEPDataField(
                     id="TMP",
@@ -31,6 +47,7 @@ class _EEP_A5_04_01_02(SingleTelegramEEP):
                     scale_min_fn=lambda _: min_temp,
                     scale_max_fn=lambda _: max_temp,
                     unit_fn=lambda _: "°C",
+                    entity_uid=EntityUID.TEMPERATURE,
                 ),
                 EEPDataField(
                     id="TSN",
@@ -43,6 +60,7 @@ class _EEP_A5_04_01_02(SingleTelegramEEP):
                     },
                 ),
             ],
+            capability_factories=_TEMP_HUM_FACTORIES,
         )
 
 
@@ -60,6 +78,7 @@ EEP_A5_04_03 = SingleTelegramEEP(
             scale_min_fn=lambda _: 0.0,
             scale_max_fn=lambda _: 100.0,
             unit_fn=lambda _: "%",
+            entity_uid=EntityUID.HUMIDITY,
         ),
         EEPDataField(
             id="TMP",
@@ -69,6 +88,7 @@ EEP_A5_04_03 = SingleTelegramEEP(
             scale_min_fn=lambda _: -20.0,
             scale_max_fn=lambda _: 60.0,
             unit_fn=lambda _: "°C",
+            entity_uid=EntityUID.TEMPERATURE,
         ),
         EEPDataField(
             id="TTP",
@@ -81,6 +101,7 @@ EEP_A5_04_03 = SingleTelegramEEP(
             },
         ),
     ],
+    capability_factories=_TEMP_HUM_FACTORIES,
 )
 
 

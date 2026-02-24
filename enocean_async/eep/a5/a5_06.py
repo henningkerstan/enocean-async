@@ -1,8 +1,47 @@
 """A5-06-XX: Light sensors."""
 
+from ...capabilities.entity_uids import EntityUID
+from ...capabilities.scalar_sensor import ScalarSensorCapability
 from ..id import EEPID
 from ..manufacturer import Manufacturer
+from ..message import EEPMessageValue
 from ..profile import EEPDataField, SingleTelegramEEP
+
+
+def _a5_06_illumination_resolver(
+    values: dict[str, EEPMessageValue],
+) -> EEPMessageValue | None:
+    """Select the illumination value for standard A5-06 variants using the RS range-select field."""
+    rs = values.get("RS")
+    ill1 = values.get("ILL1")
+    ill2 = values.get("ILL2")
+    if rs is not None:
+        return ill1 if rs.raw == 0 else ill2
+
+    return ill2 or ill1
+
+
+def _a5_06_eltako_illumination_resolver(
+    values: dict[str, EEPMessageValue],
+) -> EEPMessageValue | None:
+    """Select the illumination value for the Eltako A5-06-01 variant.
+
+    Uses ILL1 (low range) when ILL2 is at its minimum raw value (0), otherwise ILL2 (high range).
+    """
+    ill1 = values.get("ILL1")
+    ill2 = values.get("ILL2")
+    if ill2 is not None and ill2.raw == 0:
+        return ill1
+    return ill2 or ill1
+
+
+_ILL_FACTORY = [
+    lambda addr, cb: ScalarSensorCapability(
+        device_address=addr,
+        on_state_change=cb,
+        entity_uid=EntityUID.ILLUMINATION,
+    ),
+]
 
 
 class _EEP_A5_06(SingleTelegramEEP):
@@ -56,6 +95,8 @@ class _EEP_A5_06(SingleTelegramEEP):
                     },
                 ),
             ],
+            semantic_resolvers={EntityUID.ILLUMINATION: _a5_06_illumination_resolver},
+            capability_factories=_ILL_FACTORY,
         )
 
 
@@ -91,8 +132,10 @@ EEP_A5_06_03 = SingleTelegramEEP(
             scale_min_fn=lambda _: 0.0,
             scale_max_fn=lambda _: 1000.0,
             unit_fn=lambda _: "lx",
+            entity_uid=EntityUID.ILLUMINATION,
         ),
     ],
+    capability_factories=_ILL_FACTORY,
 )
 
 EEP_A5_06_04 = SingleTelegramEEP(
@@ -107,6 +150,7 @@ EEP_A5_06_04 = SingleTelegramEEP(
             scale_min_fn=lambda _: -20.0,
             scale_max_fn=lambda _: 60.0,
             unit_fn=lambda _: "°C",
+            entity_uid=EntityUID.TEMPERATURE,
         ),
         EEPDataField(
             id="ILL",
@@ -116,6 +160,7 @@ EEP_A5_06_04 = SingleTelegramEEP(
             scale_min_fn=lambda _: 0.0,
             scale_max_fn=lambda _: 65535.0,
             unit_fn=lambda _: "lx",
+            entity_uid=EntityUID.ILLUMINATION,
         ),
         EEPDataField(
             id="SV",
@@ -147,6 +192,18 @@ EEP_A5_06_04 = SingleTelegramEEP(
             },
         ),
     ],
+    capability_factories=[
+        lambda addr, cb: ScalarSensorCapability(
+            device_address=addr,
+            on_state_change=cb,
+            entity_uid=EntityUID.ILLUMINATION,
+        ),
+        lambda addr, cb: ScalarSensorCapability(
+            device_address=addr,
+            on_state_change=cb,
+            entity_uid=EntityUID.TEMPERATURE,
+        ),
+    ],
 )
 
 EEP_A5_06_01_ELTAKO = SingleTelegramEEP(
@@ -172,6 +229,8 @@ EEP_A5_06_01_ELTAKO = SingleTelegramEEP(
             unit_fn=lambda _: "lx",
         ),
     ],
+    semantic_resolvers={EntityUID.ILLUMINATION: _a5_06_eltako_illumination_resolver},
+    capability_factories=_ILL_FACTORY,
 )
 
 __all__ = [

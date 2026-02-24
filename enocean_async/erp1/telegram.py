@@ -10,6 +10,30 @@ from .errors import ERP1ParseError
 from .rorg import RORG
 
 
+class HashAlgorithm(IntEnum):
+    Checksum = 0
+    CRC8 = 1
+
+
+class RepeaterCount(IntEnum):
+    Original = 0x0
+    OnceRepeated = 0x1
+    TwiceRepeated = 0x2
+    Invalid3 = 0x3
+    Invalid4 = 0x4
+    Invalid5 = 0x5
+    Invalid6 = 0x6
+    Invalid7 = 0x7
+    Invalid8 = 0x8
+    Invalid9 = 0x9
+    InvalidA = 0xA
+    InvalidB = 0xB
+    InvalidC = 0xC
+    InvalidD = 0xD
+    InvalidE = 0xE
+    ShallNotBeRepeated = 0xF
+
+
 @dataclass
 class ERP1Telegram:
     rorg: RORG
@@ -118,7 +142,7 @@ class ERP1Telegram:
         return (
             f"ERP1Telegram(sender={self.sender.to_string()}, RORG={self.rorg.simple_name}, destination={self.destination.to_string() if self.destination else '*'}, "
             f"telegram_data={self.telegram_data.hex().upper()}, "
-            f"status=0x{self.status:02X}, "
+            f"status=0x{self.status:02X} (hash function: {self.hash_function}, repeater count: {self.repeater_count}), "
             f"sub_tel_num={self.sub_tel_num}, "
             f"rssi={self.rssi}, "
             f"sec_level={self.sec_level})"
@@ -270,6 +294,21 @@ class ERP1Telegram:
         return ESP3Packet(
             packet_type=ESP3PacketType.RADIO_ERP1, data=data, optional=optional
         )
+
+    @property
+    def hash_function(self) -> HashAlgorithm:
+        """
+        Return the HashAlgorithm indicated by bit 7 of self.status.
+        Extracts bit 7 from the status byte and returns the corresponding
+        HashAlgorithm enum value.
+        """
+
+        return HashAlgorithm((self.status >> 7) & 1)
+
+    @property
+    def repeater_count(self) -> RepeaterCount:
+        """Return lower 4 bits (last 4 bits) of the 8-bit status byte, interpreted as per ERP1 spec as repeater count."""
+        return RepeaterCount(self.status & 0x0F)
 
 
 class FourBSTeachInVariation(IntEnum):

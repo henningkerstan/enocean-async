@@ -218,9 +218,7 @@ class F6_02_01_02PushButtonCapability(PushButtonCapability):
             return
 
         if (
-            message.eepid
-            and message.eepid.to_string() in ["F6-02-01", "F6-02-02"]
-            and "R1" in message.values
+            "R1" in message.values
             and "EB" in message.values
             and "R2" in message.values
             and "SA" in message.values

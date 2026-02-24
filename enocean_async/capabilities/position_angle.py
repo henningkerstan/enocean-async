@@ -1,22 +1,22 @@
 import asyncio
 from dataclasses import dataclass, field
+import logging
 from time import time
 
 from ..eep.message import EEPMessage
 from .capability import Capability
+from .entity_uids import EntityUID
 from .state_change import StateChange, StateChangeSource
-
-POSITION_UID = "POS"
-ANGLE_UID = "ANG"
-COVER_STATE_UID = "COVER_STATE"
 
 # Watchdog timeout in seconds to detect when cover movement has stopped
 COVER_WATCHDOG_TIMEOUT = 1.5
 
+_logger = logging.getLogger(__name__)
+
 
 @dataclass
 class PositionAngleCapability(Capability):
-    """Capability that emits position and angle updates for D2-05-00."""
+    """Capability that emits position and angle updates for blinds/cover devices."""
 
     _previous_position: int | None = field(default=None, init=False, repr=False)
     """Track previous position to derive cover state from movement."""
@@ -30,19 +30,14 @@ class PositionAngleCapability(Capability):
     def _decode_impl(self, message: EEPMessage) -> None:
         if not message.values:
             return
-        if message.eepid is None or message.eepid.to_string() != "D2-05-00":
-            return
 
-        if message.message_type.id != 4:
-            print(
-                f"Received unsupported message type {message.message_type} for PositionAngleCapability"
-            )
+        if message.message_type is None or message.message_type.id != 4:
             return
 
         current_time = time()
 
-        pos_value = message.values.get("POS")
-        ang_value = message.values.get("ANG")
+        pos_value = message.values.get(EntityUID.POSITION)
+        ang_value = message.values.get(EntityUID.ANGLE)
 
         pos_raw = pos_value.raw if pos_value else None
         ang_raw = ang_value.raw if ang_value else None
@@ -51,7 +46,7 @@ class PositionAngleCapability(Capability):
             self._emit(
                 StateChange(
                     device_address=self.device_address,
-                    entity_uid=POSITION_UID,
+                    entity_uid=EntityUID.POSITION,
                     value=pos_raw,
                     timestamp=current_time,
                     source=StateChangeSource.TELEGRAM,
@@ -64,7 +59,7 @@ class PositionAngleCapability(Capability):
                 self._emit(
                     StateChange(
                         device_address=self.device_address,
-                        entity_uid=COVER_STATE_UID,
+                        entity_uid=EntityUID.COVER_STATE,
                         value=cover_state,
                         timestamp=current_time,
                         source=StateChangeSource.TELEGRAM,
@@ -89,7 +84,7 @@ class PositionAngleCapability(Capability):
             self._emit(
                 StateChange(
                     device_address=self.device_address,
-                    entity_uid=ANGLE_UID,
+                    entity_uid=EntityUID.ANGLE,
                     value=ang_raw,
                     timestamp=current_time,
                     source=StateChangeSource.TELEGRAM,
@@ -110,7 +105,7 @@ class PositionAngleCapability(Capability):
             self._emit(
                 StateChange(
                     device_address=self.device_address,
-                    entity_uid=COVER_STATE_UID,
+                    entity_uid=EntityUID.COVER_STATE,
                     value="stopped",
                     timestamp=time(),
                     source=StateChangeSource.TIMER,

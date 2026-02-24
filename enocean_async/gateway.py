@@ -7,9 +7,9 @@ from typing import Callable, Optional
 import serial_asyncio_fast as serial_asyncio
 
 from .address import EURID, BaseAddress, SenderAddress
+from .capabilities.metadata import MetaDataCapability
 from .capabilities.state_change import StateChange, StateChangeCallback
 from .device.device import Device
-from .device.types import DEVICE_TYPE_DATABASE
 from .eep import EEP_DATABASE
 from .eep.handler import EEPHandler
 from .eep.id import EEPID
@@ -320,19 +320,26 @@ class Gateway:
         else:
             self._logger.debug(f"EEP handler for EEPID {eepid} already loaded.")
 
-        # get device type for this EEP
-        device_type = DEVICE_TYPE_DATABASE.get(eepid)
-        if device_type is None:
+        # build capability list from EEP capability_factories
+        eep = EEP_DATABASE[eepid]
+        if not eep.capability_factories:
             self._logger.debug(
-                f"No DeviceType found for {eepid}, messages from this device will not have a StateChange processing."
+                f"EEP {eepid} has no capability factories; StateChange processing unavailable for device {address}."
             )
             return
 
-        # create Device instance and initialize capabilities
+        cb = self.__on_capability_state_change
+        capabilities = [MetaDataCapability(device_address=address, on_state_change=cb)]
+        for factory in eep.capability_factories:
+            capabilities.append(factory(address, cb))
+
         device = Device(
-            id=address, type=device_type, name=name or str(address), sender=sender
+            address=address,
+            eepid=eepid,
+            name=name or str(address),
+            sender=sender,
+            capabilities=capabilities,
         )
-        device.init_capabilities(on_state_change=self.__on_capability_state_change)
         self.__devices[address] = device
         self._logger.debug(
             f"Initialized device {address} with {len(device.capabilities)} capabilities"
@@ -724,13 +731,15 @@ class Gateway:
 
         match request_type:
             case UTEQueryRequestType.TEACH_IN:
-                print(f"Received UTE teach-in query message: {ute_message}")
+                self._logger.info(f"Received UTE teach-in query message: {ute_message}")
 
             case UTEQueryRequestType.TEACH_IN_DELETION:
-                print(f"Received UTE teach-in deletion query message: {ute_message}")
+                self._logger.info(
+                    f"Received UTE teach-in deletion query message: {ute_message}"
+                )
 
             case UTEQueryRequestType.TEACH_IN_OR_DELETION_OF_TEACH_IN:
-                print(
+                self._logger.info(
                     f"Received UTE teach-in or deletion of teach-in query message: {ute_message}"
                 )
 
@@ -740,10 +749,10 @@ class Gateway:
     def __handle_4bs_teach_in_telegram(self, erp1: ERP1Telegram):
         try:
             teach_in_telegram = FourBSTeachInTelegram.from_erp1(erp1)
-            print(teach_in_telegram)
+            self._logger.info(f"4BS teach-in telegram: {teach_in_telegram}")
 
         except ValueError as e:
-            print(e)
+            self._logger.warning(f"Failed to parse 4BS teach-in telegram: {e}")
 
         learn_type = erp1.bitstring_raw_value(24, 1)
 
@@ -756,6 +765,6 @@ class Gateway:
             manufacturer_id = erp1.bitstring_raw_value(13, 11)
             manufacturer = Manufacturer(manufacturer_id)
             eepid = EEPID(0xA5, func, type_, manufacturer)
-            print(
+            self._logger.info(
                 f"4BS learn telegram with EEP A5-{func:02X}-{type_:02X} and manufacturer '{manufacturer}', hence {eepid.to_string()}"
             )

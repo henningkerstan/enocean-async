@@ -12,8 +12,11 @@ from .address import (
     BroadcastAddress as EnOceanBroadcastAddress,
     SenderAddress as EnOceanSenderAddress,
 )
+from .device.catalog import (
+    DEVICE_CATALOG as ENOCEAN_DEVICE_CATALOG,
+    DeviceCatalogEntry as EnOceanDeviceCatalogEntry,
+)
 from .device.device import Device as EnOceanDevice
-from .device.type import DeviceType as EnOceanDeviceType
 from .eep import EEP_DATABASE as ENOCEAN_EEP_DATABASE
 from .eep.handler import EEPHandler
 from .eep.id import EEPID
@@ -58,7 +61,8 @@ __all__ = [
     "EnOceanBaseAddress",
     "EnOceanBroadcastAddress",
     "EnOceanDevice",
-    "EnOceanDeviceType",
+    "EnOceanDeviceCatalogEntry",
+    "ENOCEAN_DEVICE_CATALOG",
     "EnOceanGateway",
     "EnOceanManufacturers",
     "EnOceanSenderAddress",

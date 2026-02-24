@@ -20,6 +20,7 @@ class StateChange:
     device_address: SenderAddress
     entity_uid: str
     value: any
+    unit: str | None = None
     timestamp: float = field(default_factory=time)
     time_elapsed: float = 0
     source: StateChangeSource = StateChangeSource.TELEGRAM

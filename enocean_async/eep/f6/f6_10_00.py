@@ -1,7 +1,17 @@
 from enocean_async.eep.manufacturer import Manufacturer
 
+from ...capabilities.entity_uids import EntityUID
+from ...capabilities.scalar_sensor import ScalarSensorCapability
 from ..id import EEPID
 from ..profile import EEPDataField, SingleTelegramEEP
+
+_WIN_FACTORIES = [
+    lambda addr, cb: ScalarSensorCapability(
+        device_address=addr,
+        on_state_change=cb,
+        entity_uid=EntityUID.WINDOW_STATE,
+    ),
+]
 
 EEP_F6_10_00 = SingleTelegramEEP(
     id=EEPID.from_string("F6-10-00"),
@@ -19,8 +29,10 @@ EEP_F6_10_00 = SingleTelegramEEP(
                 2: "open",  # was closed, now open
                 3: "closed",  # "window now closed"
             },
+            entity_uid=EntityUID.WINDOW_STATE,
         ),
     ],
+    capability_factories=_WIN_FACTORIES,
 )
 
 EEP_F6_10_00_ELTAKO = SingleTelegramEEP(
@@ -37,6 +49,8 @@ EEP_F6_10_00_ELTAKO = SingleTelegramEEP(
                 0xE0: "open",
                 0xF0: "closed",
             },
+            entity_uid=EntityUID.WINDOW_STATE,
         ),
     ],
+    capability_factories=_WIN_FACTORIES,
 )

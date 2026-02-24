@@ -90,6 +90,17 @@ class EEPHandler:
                 raw=raw_value, value=value, unit=unit
             )
 
+        # Third pass: entity UID propagation — copy decoded values to their semantic keys
+        for field in self.__eep.telegrams[cmd_value].datafields:
+            if field.entity_uid is not None and field.id in msg.values:
+                msg.values[field.entity_uid] = msg.values[field.id]
+
+        # Fourth pass: semantic resolvers — combine multiple fields into a single entity value
+        for entity_uid, resolver in self.__eep.semantic_resolvers.items():
+            result = resolver(msg.values)
+            if result is not None:
+                msg.values[entity_uid] = result
+
         return msg
 
     def encode(self, message: EEPMessage) -> ERP1Telegram:
