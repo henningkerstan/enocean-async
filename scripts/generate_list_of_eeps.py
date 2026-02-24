@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 This script generates a markdown file listing all supported EnOcean Equipment Profiles (EEPs) based on the EEP database in the `enocean_async` library.
-The generated file is named `PROFILES.md` and contains a table with the EEP ID and its corresponding name.
+The generated file is named `SUPPORTED_EEPS.md` and contains a table with the EEP ID and its corresponding name.
 """
 from enocean_async.capabilities.entity_uids import EntityUID
 from enocean_async.capabilities.metadata import MetaDataCapability
@@ -87,7 +87,7 @@ def get_state_changes_for_eep(eep):
     return entity_strings if entity_strings else None
 
 
-with open("PROFILES.md", "w", encoding="utf-8") as file:
+with open("SUPPORTED_EEPS.md", "w", encoding="utf-8") as file:
     file.write("# List of supported EnOcean Equipment Profiles (EEPs)\n")
     file.write("<!-- This file is auto-generated via a pre-commit hook, do not edit manually. -->\n\n")
     file.write("All EEPs listed below have three metadata sensors `rssi` (the signal strength in dBm), `last_seen` (the timestamp of the last received telegram), and `telegram_count` (the number of telegrams received since startup) in addition to the listed State Change Events.\n\n")
