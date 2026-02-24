@@ -10,12 +10,16 @@ TEMPERATURE_UID = "temperature"
 
 @dataclass
 class TemperatureSensorCapability(Capability):
-    """Capability that emits temperature updates for A5-02-XX sensors."""
+    """Capability that emits temperature updates for A5-02-XX and A5-08 sensors."""
 
     def _decode_impl(self, message: EEPMessage) -> None:
         if not message.values:
             return
-        if message.eepid is None or not message.eepid.to_string().startswith("A5-02-"):
+        if message.eepid is None:
+            return
+
+        eepid = message.eepid
+        if eepid.rorg != 0xA5 or eepid.func not in (0x02, 0x08):
             return
 
         temp_value = message.values.get("TMP")

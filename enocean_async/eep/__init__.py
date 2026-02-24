@@ -33,11 +33,21 @@ from .a5 import (
     EEP_A5_04_01,
     EEP_A5_04_02,
     EEP_A5_04_03,
+    EEP_A5_06_01,
+    EEP_A5_06_01_ELTAKO,
+    EEP_A5_06_02,
+    EEP_A5_06_03,
+    EEP_A5_06_04,
+    EEP_A5_06_05,
     EEP_A5_07_03,
+    EEP_A5_08_01,
+    EEP_A5_08_01_ELTAKO,
+    EEP_A5_08_02,
+    EEP_A5_08_03,
     EEP_A5_38_08,
 )
 from .d2 import EEP_D2_05_00, EEP_D2_20_02
-from .f6 import EEP_F6_02_01, EEP_F6_02_02
+from .f6 import EEP_F6_02_01, EEP_F6_02_02, EEP_F6_10_00, EEP_F6_10_00_ELTAKO
 from .id import EEPID
 from .profile import EEP
 
@@ -70,10 +80,22 @@ EEP_DATABASE: dict[EEPID, EEP] = {
     EEP_A5_04_01.id: EEP_A5_04_01,
     EEP_A5_04_02.id: EEP_A5_04_02,
     EEP_A5_04_03.id: EEP_A5_04_03,
+    EEP_A5_06_01.id: EEP_A5_06_01,
+    EEP_A5_06_01_ELTAKO.id: EEP_A5_06_01_ELTAKO,
+    EEP_A5_06_02.id: EEP_A5_06_02,
+    EEP_A5_06_03.id: EEP_A5_06_03,
+    EEP_A5_06_04.id: EEP_A5_06_04,
+    EEP_A5_06_05.id: EEP_A5_06_05,
     EEP_A5_07_03.id: EEP_A5_07_03,
+    EEP_A5_08_01.id: EEP_A5_08_01,
+    EEP_A5_08_01_ELTAKO.id: EEP_A5_08_01_ELTAKO,
+    EEP_A5_08_02.id: EEP_A5_08_02,
+    EEP_A5_08_03.id: EEP_A5_08_03,
     EEP_A5_38_08.id: EEP_A5_38_08,
     EEP_F6_02_01.id: EEP_F6_02_01,
     EEP_F6_02_02.id: EEP_F6_02_02,
+    EEP_F6_10_00.id: EEP_F6_10_00,
+    EEP_F6_10_00_ELTAKO.id: EEP_F6_10_00_ELTAKO,
     EEP_D2_05_00.id: EEP_D2_05_00,
     EEP_D2_20_02.id: EEP_D2_20_02,
 }

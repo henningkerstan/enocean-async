@@ -15,7 +15,11 @@ class VoltageSensorCapability(Capability):
     def _decode_impl(self, message: EEPMessage) -> None:
         if not message.values:
             return
-        if message.eepid is None or not message.eepid.to_string() == "A5-07-03":
+        if message.eepid is None:
+            return
+
+        eepid = message.eepid
+        if eepid.rorg != 0xA5 or eepid.func not in (0x07, 0x08):
             return
 
         svc_value = message.values.get("SVC")

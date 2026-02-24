@@ -13,8 +13,14 @@ from .device.types import DEVICE_TYPE_DATABASE
 from .eep import EEP_DATABASE
 from .eep.handler import EEPHandler
 from .eep.id import EEPID
+from .eep.manufacturer import Manufacturer
 from .eep.message import EEPMessage
-from .erp1.telegram import RORG, ERP1Telegram
+from .erp1.telegram import (
+    RORG,
+    ERP1Telegram,
+    FourBSTeachInTelegram,
+    FourBSTeachInVariation,
+)
 from .erp1.ute import (
     EEPTeachInResponseMessageExpectation,
     UTEMessage,
@@ -45,6 +51,7 @@ type UTECallback = Callable[[UTEMessage], None]
 type ResponseCallback = Callable[[ResponseTelegram], None]
 type NewDeviceCallback = Callable[[SenderAddress], None]
 type ParsingFailedCallback = Callable[[str], None]
+type TeachInCallback = Callable[[FourBSTeachInTelegram], None]
 
 
 @dataclass
@@ -731,4 +738,24 @@ class Gateway:
         pass
 
     def __handle_4bs_teach_in_telegram(self, erp1: ERP1Telegram):
-        pass
+        try:
+            teach_in_telegram = FourBSTeachInTelegram.from_erp1(erp1)
+            print(teach_in_telegram)
+
+        except ValueError as e:
+            print(e)
+
+        learn_type = erp1.bitstring_raw_value(24, 1)
+
+        if learn_type == 0:  # unidirectional profileless
+            # todo: this will just add a device
+            pass
+        else:  # unidirectional with profile
+            func = erp1.bitstring_raw_value(0, 6)
+            type_ = erp1.bitstring_raw_value(6, 7)
+            manufacturer_id = erp1.bitstring_raw_value(13, 11)
+            manufacturer = Manufacturer(manufacturer_id)
+            eepid = EEPID(0xA5, func, type_, manufacturer)
+            print(
+                f"4BS learn telegram with EEP A5-{func:02X}-{type_:02X} and manufacturer '{manufacturer}', hence {eepid.to_string()}"
+            )

@@ -14,6 +14,7 @@ from enocean_async.capabilities.push_button import (
 )
 from enocean_async.capabilities.temperature_sensor import TemperatureSensorCapability
 from enocean_async.capabilities.voltage_sensor import VoltageSensorCapability
+from enocean_async.capabilities.window_state import WindowStateCapability
 from enocean_async.device.types import DEVICE_TYPE_DATABASE
 from enocean_async.eep import EEP_DATABASE
 
@@ -66,6 +67,11 @@ CAPABILITY_STATE_CHANGES = {
     VoltageSensorCapability: {
         "entities": {
             "voltage": ["supply voltage (V)"],
+        },
+    },
+    WindowStateCapability: {
+        "entities": {
+            "window_state": ["window position value"],
         },
     },
     MetaDataCapability: {

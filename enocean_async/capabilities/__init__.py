@@ -7,6 +7,7 @@ from .position_angle import PositionAngleCapability
 from .push_button import F6_02_01_02PushButtonCapability, PushButtonCapability
 from .temperature_sensor import TemperatureSensorCapability
 from .voltage_sensor import VoltageSensorCapability
+from .window_state import WindowStateCapability
 
 __all__ = [
     "Capability",
@@ -19,4 +20,5 @@ __all__ = [
     "PushButtonCapability",
     "TemperatureSensorCapability",
     "VoltageSensorCapability",
+    "WindowStateCapability",
 ]
