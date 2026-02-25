@@ -1,12 +1,12 @@
 """A5-07-03: Occupancy with supply voltage monitor and 10-bit illumination measurement."""
 
-from ...capabilities.entity_uids import EntityUID
-from ...capabilities.scalar_sensor import ScalarSensorCapability
-from ..id import EEPID
-from ..profile import EEPDataField, SingleTelegramEEP
+from ...capabilities.observable_uids import ObservableUID
+from ...capabilities.scalar import ScalarCapability
+from ..id import EEP
+from ..profile import EEPDataField, SimpleProfileSpecification
 
-EEP_A5_07_03 = SingleTelegramEEP(
-    id=EEPID.from_string("A5-07-03"),
+EEP_A5_07_03 = SimpleProfileSpecification(
+    eep=EEP.from_string("A5-07-03"),
     name="Occupancy with supply voltage monitor and 10-bit illumination measurement",
     datafields=[
         EEPDataField(
@@ -19,7 +19,7 @@ EEP_A5_07_03 = SingleTelegramEEP(
             scale_min_fn=lambda _: 0.0,
             scale_max_fn=lambda _: 5.0,
             unit_fn=lambda _: "V",
-            entity_uid=EntityUID.VOLTAGE,
+            observable_uid=ObservableUID.VOLTAGE,
         ),
         EEPDataField(
             id="ILL",
@@ -31,7 +31,7 @@ EEP_A5_07_03 = SingleTelegramEEP(
             scale_min_fn=lambda _: 0.0,
             scale_max_fn=lambda _: 1000.0,
             unit_fn=lambda _: "lx",
-            entity_uid=EntityUID.ILLUMINATION,
+            observable_uid=ObservableUID.ILLUMINATION,
         ),
         EEPDataField(
             id="PIR",
@@ -42,24 +42,24 @@ EEP_A5_07_03 = SingleTelegramEEP(
                 0: "Uncertain of occupancy status",
                 1: "Motion detected",
             },
-            entity_uid=EntityUID.MOTION,
+            observable_uid=ObservableUID.MOTION,
         ),
     ],
     capability_factories=[
-        lambda addr, cb: ScalarSensorCapability(
+        lambda addr, cb: ScalarCapability(
             device_address=addr,
             on_state_change=cb,
-            entity_uid=EntityUID.VOLTAGE,
+            observable_uid=ObservableUID.VOLTAGE,
         ),
-        lambda addr, cb: ScalarSensorCapability(
+        lambda addr, cb: ScalarCapability(
             device_address=addr,
             on_state_change=cb,
-            entity_uid=EntityUID.ILLUMINATION,
+            observable_uid=ObservableUID.ILLUMINATION,
         ),
-        lambda addr, cb: ScalarSensorCapability(
+        lambda addr, cb: ScalarCapability(
             device_address=addr,
             on_state_change=cb,
-            entity_uid=EntityUID.MOTION,
+            observable_uid=ObservableUID.MOTION,
         ),
     ],
 )

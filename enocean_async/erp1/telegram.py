@@ -4,7 +4,7 @@ from enum import IntEnum
 from enocean_async.eep.manufacturer import Manufacturer
 
 from ..address import EURID, Address, BaseAddress, BroadcastAddress
-from ..eep.id import EEPID
+from ..eep.id import EEP
 from ..esp3.packet import ESP3Packet, ESP3PacketType
 from .errors import ERP1ParseError
 from .rorg import RORG
@@ -319,7 +319,7 @@ class FourBSTeachInVariation(IntEnum):
 @dataclass
 class FourBSTeachInTelegram:
     teach_in_variation: FourBSTeachInVariation = 1
-    eepid: EEPID | None = None
+    eep: EEP | None = None
 
     @classmethod
     def from_erp1(cls, erp1: ERP1Telegram) -> "FourBSTeachInTelegram":
@@ -330,7 +330,7 @@ class FourBSTeachInTelegram:
             raise ValueError("Not a learning telegram")
 
         teach_in_variation = FourBSTeachInVariation(erp1.bitstring_raw_value(24, 1))
-        eepid: EEPID | None = None
+        eep: EEP | None = None
 
         if (
             teach_in_variation
@@ -340,6 +340,6 @@ class FourBSTeachInTelegram:
             type_ = erp1.bitstring_raw_value(6, 7)
             manufacturer_id = erp1.bitstring_raw_value(13, 11)
             manufacturer = Manufacturer(manufacturer_id)
-            eepid = EEPID(0xA5, func, type_, manufacturer)
+            eep = EEP(0xA5, func, type_, manufacturer)
 
-        return cls(teach_in_variation=teach_in_variation, eepid=eepid)
+        return cls(teach_in_variation=teach_in_variation, eep=eep)

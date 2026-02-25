@@ -1,20 +1,20 @@
 from enocean_async.eep.manufacturer import Manufacturer
 
-from ...capabilities.entity_uids import EntityUID
-from ...capabilities.scalar_sensor import ScalarSensorCapability
-from ..id import EEPID
-from ..profile import EEPDataField, SingleTelegramEEP
+from ...capabilities.observable_uids import ObservableUID
+from ...capabilities.scalar import ScalarCapability
+from ..id import EEP
+from ..profile import EEPDataField, SimpleProfileSpecification
 
 _WIN_FACTORIES = [
-    lambda addr, cb: ScalarSensorCapability(
+    lambda addr, cb: ScalarCapability(
         device_address=addr,
         on_state_change=cb,
-        entity_uid=EntityUID.WINDOW_STATE,
+        observable_uid=ObservableUID.WINDOW_STATE,
     ),
 ]
 
-EEP_F6_10_00 = SingleTelegramEEP(
-    id=EEPID.from_string("F6-10-00"),
+EEP_F6_10_00 = SimpleProfileSpecification(
+    eep=EEP.from_string("F6-10-00"),
     name="Window handle",
     datafields=[
         EEPDataField(
@@ -29,14 +29,14 @@ EEP_F6_10_00 = SingleTelegramEEP(
                 2: "open",  # was closed, now open
                 3: "closed",  # "window now closed"
             },
-            entity_uid=EntityUID.WINDOW_STATE,
+            observable_uid=ObservableUID.WINDOW_STATE,
         ),
     ],
     capability_factories=_WIN_FACTORIES,
 )
 
-EEP_F6_10_00_ELTAKO = SingleTelegramEEP(
-    id=EEPID(rorg=0xF6, func=0x10, type_=0x00, manufacturer=Manufacturer.ELTAKO),
+EEP_F6_10_00_ELTAKO = SimpleProfileSpecification(
+    eep=EEP(rorg=0xF6, func=0x10, type_=0x00, manufacturer=Manufacturer.ELTAKO),
     name="Window handle (Eltako variant)",
     datafields=[
         EEPDataField(
@@ -49,7 +49,7 @@ EEP_F6_10_00_ELTAKO = SingleTelegramEEP(
                 0xE0: "open",
                 0xF0: "closed",
             },
-            entity_uid=EntityUID.WINDOW_STATE,
+            observable_uid=ObservableUID.WINDOW_STATE,
         ),
     ],
     capability_factories=_WIN_FACTORIES,

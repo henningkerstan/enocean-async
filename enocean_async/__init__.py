@@ -12,17 +12,13 @@ from .address import (
     BroadcastAddress as EnOceanBroadcastAddress,
     SenderAddress as EnOceanSenderAddress,
 )
-from .device.catalog import (
-    DEVICE_CATALOG as ENOCEAN_DEVICE_CATALOG,
-    DeviceCatalogEntry as EnOceanDeviceCatalogEntry,
-)
 from .device.device import Device as EnOceanDevice
-from .eep import EEP_DATABASE as ENOCEAN_EEP_DATABASE
+from .eep import EEP_SPECIFICATIONS
 from .eep.handler import EEPHandler
-from .eep.id import EEPID
+from .eep.id import EEP
 from .eep.manufacturer import Manufacturer as EnOceanManufacturers
-from .eep.message import EEPMessage
-from .eep.profile import EEP, EEPDataField
+from .eep.message import EEPMessage, EntityValue
+from .eep.profile import EEPDataField, EEPSpecification
 from .erp1.errors import ERP1ParseError
 from .erp1.rorg import RORG
 from .erp1.telegram import ERP1Telegram
@@ -50,13 +46,13 @@ from .version.info import VersionInfo as EnOceanVersionInfo
 
 __all__ = [
     "CommunicationDuringEEPOperation",
-    "EEP",
+    "EEPSpecification",
     "EEPDataField",
     "EEPHandler",
-    "EEPID",
+    "EEP",
     "EEPMessage",
     "EEPTeachInResponseMessageExpectation",
-    "ENOCEAN_EEP_DATABASE",
+    "EEP_SPECIFICATIONS",
     "EnOceanAddress",
     "EnOceanBaseAddress",
     "EnOceanBroadcastAddress",
@@ -68,6 +64,7 @@ __all__ = [
     "EnOceanSenderAddress",
     "EnOceanSerialProtocol3",
     "EnOceanUniqueRadioID",
+    "EntityValue",
     "EnOceanVersionIdentifier",
     "EnOceanVersionInfo",
     "ERP1ParseError",

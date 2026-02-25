@@ -1,8 +1,18 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any, Dict, NamedTuple
 
 from ..address import EURID, Address, BaseAddress, BroadcastAddress
-from ..eep.id import EEPID
+from ..eep.id import EEP
+
+
+class EntityValue(NamedTuple):
+    """A lightweight container for semantic entity values."""
+
+    value: Any
+    """The interpreted/scaled value."""
+
+    unit: str | None = None
+    """The unit of the value (e.g., '°C', '%', 'lx')."""
 
 
 @dataclass
@@ -34,7 +44,7 @@ class EEPMessageValue:
 class EEPMessage:
     """An EEP message represents a message according to a specific EEP profile in a a dictionary of values extracted from the message according to the EEP profile's data fields. It should not be generated manually but using a proper EEPHandler.
 
-    For convenience, it can include the sender's address, the destination address, the EEPID of the message, and the RSSI (signal strength).
+    For convenience, it can include the sender's address, the destination address, the eep of the message, and the RSSI (signal strength).
     """
 
     sender: EURID | BaseAddress | None
@@ -43,8 +53,8 @@ class EEPMessage:
     destination: Address = BroadcastAddress()
     """The destination address. This will only be different from broadcast, when addressed sending is used (i.e. for VLD telegrams)."""
 
-    eepid: EEPID | None = None
-    """The EEPID of the message. This is optional and can be None if the EEPID is unknown or not relevant."""
+    eep: EEP | None = None
+    """The eep of the message. This is optional and can be None if the eep is unknown or not relevant."""
 
     rssi: int | None = None
     """The RSSI (signal strength) of the message. This is optional and can be None if the RSSI is unknown or not relevant."""
@@ -53,12 +63,22 @@ class EEPMessage:
     """The type of the message."""
 
     values: Dict[str, EEPMessageValue] = field(default_factory=dict)
-    """A dictionary of values extracted from the message according to the EEP profile's data fields. The keys are the data field IDs (e.g., 'R1', 'POS'), and the values are the corresponding raw/interpreted pairs."""
+    """A dictionary of values extracted from the message according to the EEP profile's data fields.
+
+    Keys are EEP field IDs (e.g., 'R1', 'POS'); values are corresponding raw/interpreted pairs.
+    """
+
+    entities: Dict[str, EntityValue] = field(default_factory=dict)
+    """A dictionary of semantically interpreted values keyed by ObservableUID.
+
+    Keys are semantic observable UIDs (e.g., 'temperature', 'position').
+    Values are EntityValue tuples containing (value, unit).
+    """
 
     def __repr__(self) -> str:
-        msg = f"EEPMessage(sender={self.sender.to_string()}, eepid={self.eepid}, message_type={self.message_type if self.message_type else 'default'}"
+        msg = f"EEPMessage(sender={self.sender.to_string()}, eep={self.eep}, message_type={self.message_type if self.message_type else 'default'}"
         if self.destination is not None and not self.destination.is_broadcast():
             msg += f", destination={self.destination.to_string()}"
 
-        msg += f", values={self.values})"
+        msg += f", values={self.values}, entities={self.entities})"
         return msg

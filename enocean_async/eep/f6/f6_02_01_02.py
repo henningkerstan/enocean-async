@@ -9,8 +9,8 @@ Profiles in this module:
 """
 
 from ...capabilities.push_button import F6_02_01_02PushButtonCapability
-from ..id import EEPID
-from ..profile import EEPDataField, SingleTelegramEEP
+from ..id import EEP
+from ..profile import EEPDataField, SimpleProfileSpecification
 
 # Shared datafields definition for all F6-02-xx profiles
 _F6_02_DATAFIELDS = [
@@ -66,15 +66,15 @@ _F6_02_FACTORIES = [
 ]
 
 # Define all F6-02-xx variants using the shared datafields structure
-EEP_F6_02_01 = SingleTelegramEEP(
-    id=EEPID.from_string("F6-02-01"),
+EEP_F6_02_01 = SimpleProfileSpecification(
+    eep=EEP.from_string("F6-02-01"),
     name="Light and blind control - application style 1",
     datafields=_F6_02_DATAFIELDS,
     capability_factories=_F6_02_FACTORIES,
 )
 
-EEP_F6_02_02 = SingleTelegramEEP(
-    id=EEPID.from_string("F6-02-02"),
+EEP_F6_02_02 = SimpleProfileSpecification(
+    eep=EEP.from_string("F6-02-02"),
     name="Light and blind control - application style 2",
     datafields=_F6_02_DATAFIELDS,
     capability_factories=_F6_02_FACTORIES,

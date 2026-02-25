@@ -1,4 +1,4 @@
-"""Generic scalar sensor capability driven by entity_uid annotation on EEP fields."""
+"""Generic scalar capability driven by observable_uid annotation on EEP fields."""
 
 from dataclasses import dataclass, field
 from time import time
@@ -9,26 +9,25 @@ from .state_change import StateChange, StateChangeSource
 
 
 @dataclass
-class ScalarSensorCapability(Capability):
-    """Generic capability that emits a StateChange for any EEP field annotated with a matching entity_uid.
+class ScalarCapability(Capability):
+    """Generic capability that emits a StateChange for any EEP field annotated with a matching observable_uid.
 
-    Instead of hard-coding EEP IDs and field names, this capability reads from the
-    EEP-level entity_uid key that was propagated into EEPMessage.values by EEPHandler.
+    This capability reads from the EEP-level observable_uid key that was propagated into EEPMessage.entities by EEPHandler.
     This makes it fully EEP-agnostic.
     """
 
-    entity_uid: str = field(kw_only=True)
-    """The entity UID to read from EEPMessage.values and emit as a StateChange."""
+    observable_uid: str = field(kw_only=True)
+    """The entity UID to read from EEPMessage.entities and emit as a StateChange."""
 
     def _decode_impl(self, message: EEPMessage) -> None:
-        v = message.values.get(self.entity_uid)
+        v = message.entities.get(self.observable_uid)
         if v is None or v.value is None:
             return
 
         self._emit(
             StateChange(
                 device_address=self.device_address,
-                entity_uid=self.entity_uid,
+                observable_uid=self.observable_uid,
                 value=v.value,
                 unit=v.unit,
                 timestamp=time(),

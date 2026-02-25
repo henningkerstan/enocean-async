@@ -1,62 +1,62 @@
 """A5-08-XX: Light, temperature and occupancy sensors."""
 
-from ...capabilities.entity_uids import EntityUID
-from ...capabilities.scalar_sensor import ScalarSensorCapability
-from ..id import EEPID
+from ...capabilities.observable_uids import ObservableUID
+from ...capabilities.scalar import ScalarCapability
+from ..id import EEP
 from ..manufacturer import Manufacturer
-from ..profile import EEPDataField, SingleTelegramEEP
+from ..profile import EEPDataField, SimpleProfileSpecification
 
 _FULL_FACTORIES = [
-    lambda addr, cb: ScalarSensorCapability(
+    lambda addr, cb: ScalarCapability(
         device_address=addr,
         on_state_change=cb,
-        entity_uid=EntityUID.VOLTAGE,
+        observable_uid=ObservableUID.VOLTAGE,
     ),
-    lambda addr, cb: ScalarSensorCapability(
+    lambda addr, cb: ScalarCapability(
         device_address=addr,
         on_state_change=cb,
-        entity_uid=EntityUID.ILLUMINATION,
+        observable_uid=ObservableUID.ILLUMINATION,
     ),
-    lambda addr, cb: ScalarSensorCapability(
+    lambda addr, cb: ScalarCapability(
         device_address=addr,
         on_state_change=cb,
-        entity_uid=EntityUID.TEMPERATURE,
+        observable_uid=ObservableUID.TEMPERATURE,
     ),
-    lambda addr, cb: ScalarSensorCapability(
+    lambda addr, cb: ScalarCapability(
         device_address=addr,
         on_state_change=cb,
-        entity_uid=EntityUID.MOTION,
+        observable_uid=ObservableUID.MOTION,
     ),
-    lambda addr, cb: ScalarSensorCapability(
+    lambda addr, cb: ScalarCapability(
         device_address=addr,
         on_state_change=cb,
-        entity_uid=EntityUID.OCCUPANCY_BUTTON,
+        observable_uid=ObservableUID.OCCUPANCY_BUTTON,
     ),
 ]
 
 _ELTAKO_FACTORIES = [
-    lambda addr, cb: ScalarSensorCapability(
+    lambda addr, cb: ScalarCapability(
         device_address=addr,
         on_state_change=cb,
-        entity_uid=EntityUID.VOLTAGE,
+        observable_uid=ObservableUID.VOLTAGE,
     ),
-    lambda addr, cb: ScalarSensorCapability(
+    lambda addr, cb: ScalarCapability(
         device_address=addr,
         on_state_change=cb,
-        entity_uid=EntityUID.ILLUMINATION,
+        observable_uid=ObservableUID.ILLUMINATION,
     ),
-    lambda addr, cb: ScalarSensorCapability(
+    lambda addr, cb: ScalarCapability(
         device_address=addr,
         on_state_change=cb,
-        entity_uid=EntityUID.MOTION,
+        observable_uid=ObservableUID.MOTION,
     ),
 ]
 
 
-class _EEP_A5_08(SingleTelegramEEP):
+class _EEP_A5_08(SimpleProfileSpecification):
     def __init__(self, _type: int, ill_max: float, temp_min: float, temp_max: float):
         super().__init__(
-            id=EEPID.from_string(f"A5-08-{_type:02X}"),
+            eep=EEP.from_string(f"A5-08-{_type:02X}"),
             name=f"Light, temperature and occupancy sensor, range 0lx to {ill_max}lx, {temp_min}°C to {temp_max}°C and occupancy button",
             datafields=[
                 EEPDataField(
@@ -67,7 +67,7 @@ class _EEP_A5_08(SingleTelegramEEP):
                     scale_min_fn=lambda _: 0.0,
                     scale_max_fn=lambda _: 5.1,
                     unit_fn=lambda _: "V",
-                    entity_uid=EntityUID.VOLTAGE,
+                    observable_uid=ObservableUID.VOLTAGE,
                 ),
                 EEPDataField(
                     id="ILL",
@@ -77,7 +77,7 @@ class _EEP_A5_08(SingleTelegramEEP):
                     scale_min_fn=lambda _: 0,
                     scale_max_fn=lambda _: ill_max,
                     unit_fn=lambda _: "lx",
-                    entity_uid=EntityUID.ILLUMINATION,
+                    observable_uid=ObservableUID.ILLUMINATION,
                 ),
                 EEPDataField(
                     id="TMP",
@@ -87,7 +87,7 @@ class _EEP_A5_08(SingleTelegramEEP):
                     scale_min_fn=lambda _: temp_min,
                     scale_max_fn=lambda _: temp_max,
                     unit_fn=lambda _: "°C",
-                    entity_uid=EntityUID.TEMPERATURE,
+                    observable_uid=ObservableUID.TEMPERATURE,
                 ),
                 EEPDataField(
                     id="PIRS",
@@ -98,7 +98,7 @@ class _EEP_A5_08(SingleTelegramEEP):
                         0: "motion",
                         1: "no motion",
                     },
-                    entity_uid=EntityUID.MOTION,
+                    observable_uid=ObservableUID.MOTION,
                 ),
                 EEPDataField(
                     id="OCC",
@@ -109,7 +109,7 @@ class _EEP_A5_08(SingleTelegramEEP):
                         0: "pressed",
                         1: "released",
                     },
-                    entity_uid=EntityUID.OCCUPANCY_BUTTON,
+                    observable_uid=ObservableUID.OCCUPANCY_BUTTON,
                 ),
             ],
             capability_factories=_FULL_FACTORIES,
@@ -120,8 +120,8 @@ EEP_A5_08_01 = _EEP_A5_08(_type=0x01, ill_max=510, temp_min=0.0, temp_max=51.0)
 EEP_A5_08_02 = _EEP_A5_08(_type=0x02, ill_max=1020, temp_min=0.0, temp_max=51.0)
 EEP_A5_08_03 = _EEP_A5_08(_type=0x03, ill_max=1530, temp_min=-30.0, temp_max=50.0)
 
-EEP_A5_08_01_ELTAKO = SingleTelegramEEP(
-    id=EEPID(0xA5, 0x08, 0x01, Manufacturer.ELTAKO),
+EEP_A5_08_01_ELTAKO = SimpleProfileSpecification(
+    eep=EEP(0xA5, 0x08, 0x01, Manufacturer.ELTAKO),
     name="Light and occupancy sensor, range 0lx to 510lx, Eltako variant (FABH65S, FBH65, FBH65TF, FBH65SB, FBH55SB, FBHF65SB, F4USM61B)",
     datafields=[
         EEPDataField(
@@ -132,7 +132,7 @@ EEP_A5_08_01_ELTAKO = SingleTelegramEEP(
             scale_min_fn=lambda _: 0.0,
             scale_max_fn=lambda _: 5.1,
             unit_fn=lambda _: "V",
-            entity_uid=EntityUID.VOLTAGE,
+            observable_uid=ObservableUID.VOLTAGE,
         ),
         EEPDataField(
             id="ILL",
@@ -142,7 +142,7 @@ EEP_A5_08_01_ELTAKO = SingleTelegramEEP(
             scale_min_fn=lambda _: 0,
             scale_max_fn=lambda _: 510,
             unit_fn=lambda _: "lx",
-            entity_uid=EntityUID.ILLUMINATION,
+            observable_uid=ObservableUID.ILLUMINATION,
         ),
         EEPDataField(
             id="PIRS",
@@ -153,7 +153,7 @@ EEP_A5_08_01_ELTAKO = SingleTelegramEEP(
                 0x0D: "motion",
                 0x0F: "no motion",
             },
-            entity_uid=EntityUID.MOTION,
+            observable_uid=ObservableUID.MOTION,
         ),
     ],
     capability_factories=_ELTAKO_FACTORIES,

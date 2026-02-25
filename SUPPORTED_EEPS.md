@@ -34,7 +34,7 @@ All EEPs listed below have three metadata sensors `rssi` (the signal strength in
 | A5 | 04 | 02 | Temperature and humidity sensor, range -20.0°C to 60.0°C and 0% to 100% | `0x0` (single message EEP) | `humidity`: humidity (%)<br>`temperature`: temperature (°C) |
 | A5 | 04 | 03 | Temperature and humidity sensor, range -20°C to 60°C 10bit-measurement and 0% to 100% | `0x0` (single message EEP) | `humidity`: humidity (%)<br>`temperature`: temperature (°C) |
 | A5 | 06 | 01 | Light sensor, range 300.0lx to 60000.0lx | `0x0` (single message EEP) | `illumination`: illumination (lx) |
-| A5 | 06 | 01 |   | `0x0` (single message EEP) | `illumination`: illumination (lx) |
+| A5 | 06 | 01 | Light sensor (Eltako variant), dual-range 0–100lx / 300–30000lx | `0x0` (single message EEP) | `illumination`: illumination (lx) |
 | A5 | 06 | 02 | Light sensor, range 0.0lx to 1020.0lx | `0x0` (single message EEP) | `illumination`: illumination (lx) |
 | A5 | 06 | 03 | Light sensor, 10-bit measurement, range 0lx to 1000lx | `0x0` (single message EEP) | `illumination`: illumination (lx) |
 | A5 | 06 | 04 | Curtain wall brightness sensor | `0x0` (single message EEP) | `illumination`: illumination (lx)<br>`temperature`: temperature (°C) |

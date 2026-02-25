@@ -18,7 +18,7 @@ class StateChange:
     """A semantic update emitted by a Capability."""
 
     device_address: SenderAddress
-    entity_uid: str
+    observable_uid: str
     value: any
     unit: str | None = None
     timestamp: float = field(default_factory=time)

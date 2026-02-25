@@ -1,16 +1,20 @@
+from .action_uid import ActionUID
 from .capability import Capability
-from .entity_uids import EntityUID
+from .device_command import DeviceCommand
 from .metadata import MetaDataCapability
-from .position_angle import PositionAngleCapability
+from .observable_uids import ObservableUID
+from .position_angle import CoverCapability
 from .push_button import F6_02_01_02PushButtonCapability, PushButtonCapability
-from .scalar_sensor import ScalarSensorCapability
+from .scalar import ScalarCapability
 
 __all__ = [
+    "ActionUID",
     "Capability",
-    "EntityUID",
+    "CoverCapability",
+    "DeviceCommand",
     "F6_02_01_02PushButtonCapability",
     "MetaDataCapability",
-    "PositionAngleCapability",
+    "ObservableUID",
     "PushButtonCapability",
-    "ScalarSensorCapability",
+    "ScalarCapability",
 ]

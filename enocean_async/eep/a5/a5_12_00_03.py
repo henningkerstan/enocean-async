@@ -1,7 +1,7 @@
 """A5-02-XX: Temperature sensors."""
 
-from ..id import EEPID
-from ..profile import EEPDataField, SingleTelegramEEP
+from ..id import EEP
+from ..profile import EEPDataField, SimpleProfileSpecification
 
 
 def _compute_mr_scale_max(raw_values: dict[str, int]) -> float:
@@ -12,7 +12,7 @@ def _compute_mr_scale_max(raw_values: dict[str, int]) -> float:
     return 16777215.0 / divisor
 
 
-class _EEP_A5_12_00_03(SingleTelegramEEP):
+class _EEP_A5_12_00_03(SimpleProfileSpecification):
     def __init__(self, _type: int, info_id: str, info_name: str):
         name_suffix = "counter"
         match _type:
@@ -24,7 +24,7 @@ class _EEP_A5_12_00_03(SingleTelegramEEP):
                 name_suffix = "water"
 
         super().__init__(
-            id=EEPID.from_string(f"A5-12-{_type:02X}"),
+            eep=EEP.from_string(f"A5-12-{_type:02X}"),
             name=f"Automated meter reading (AMR), {name_suffix}",
             datafields=[
                 EEPDataField(

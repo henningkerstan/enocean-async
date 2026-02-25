@@ -1,10 +1,24 @@
 """D2-20-02: Fan control, type 0x02."""
 
-from ..id import EEPID
-from ..profile import EEP, EEPDataField, EEPTelegram
+from ...capabilities.action_uid import ActionUID
+from ...capabilities.device_command import DeviceCommand
+from ..id import EEP
+from ..message import EEPMessage, EEPMessageType, EEPMessageValue
+from ..profile import EEPDataField, EEPSpecification, EEPTelegram
 
-EEP_D2_20_02 = EEP(
-    id=EEPID.from_string("D2-20-02"),
+
+def _encode_set_fan_speed(cmd: DeviceCommand) -> EEPMessage:
+    msg = EEPMessage(
+        sender=None,
+        message_type=EEPMessageType(id=0, description="Fan control message"),
+    )
+    for field_id, raw in cmd.values.items():
+        msg.values[field_id] = EEPMessageValue(raw=raw, value=raw)
+    return msg
+
+
+EEP_D2_20_02 = EEPSpecification(
+    eep=EEP.from_string("D2-20-02"),
     name="Fan control, type 0x02",
     cmd_size=7,
     cmd_offset=1,
@@ -117,5 +131,8 @@ EEP_D2_20_02 = EEP(
                 ),
             ],
         ),
+    },
+    command_encoders={
+        ActionUID.SET_FAN_SPEED: _encode_set_fan_speed,
     },
 )

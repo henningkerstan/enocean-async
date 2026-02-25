@@ -3,7 +3,7 @@ import logging
 import signal
 import sys
 
-from enocean_async import EEPID, EnOceanGateway, EnOceanUniqueRadioID
+from enocean_async import EEP, EnOceanGateway, EnOceanUniqueRadioID
 from enocean_async.capabilities.state_change import StateChange, StateChangeSource
 from enocean_async.eep.message import EEPMessage
 
@@ -89,8 +89,8 @@ async def main(port: str) -> None:
     print(f"Device version: {version_info.device_version}")
 
     # add some devices - adopt to your own devices and EEPs
-    gateway.add_device(EnOceanUniqueRadioID.from_string("00:00:00:01"), EEPID.from_string("F6-02-01"))
-    gateway.add_device(EnOceanUniqueRadioID.from_string("00:00:00:02"), EEPID.from_string("F6-02-01"))
+    gateway.add_device(EnOceanUniqueRadioID.from_string("00:00:00:01"), EEP.from_string("F6-02-01"))
+    gateway.add_device(EnOceanUniqueRadioID.from_string("00:00:00:02"), EEP.from_string("F6-02-01"))
 
 
     try:

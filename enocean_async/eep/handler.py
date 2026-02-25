@@ -1,25 +1,28 @@
+import math
+
 from enocean_async.address import BroadcastAddress
 
-from ..erp1.telegram import ERP1Telegram
-from .message import EEPMessage, EEPMessageType, EEPMessageValue
-from .profile import EEP
+from ..erp1.telegram import RORG, ERP1Telegram
+from .message import EEPMessage, EEPMessageType, EEPMessageValue, EntityValue
+from .profile import EEPSpecification
 
 
 class EEPHandler:
     """An EEP handler is responsible for encoding and decoding messages for a specific EEP."""
 
-    def __init__(self, eep: EEP):
+    def __init__(self, eep: EEPSpecification):
         self.__eep = eep
 
     def decode(self, telegram: ERP1Telegram) -> EEPMessage:
         """Convert an ERP1Telegram into an EEPMessage."""
 
         msg = EEPMessage(
-            sender=telegram.sender, eepid=self.__eep.id, rssi=telegram.rssi, values={}
+            sender=telegram.sender,
+            eep=self.__eep.eep,
+            rssi=telegram.rssi,
+            values={},
+            entities={},
         )
-
-        if msg.eepid != self.__eep.id:
-            return msg  # EEPID mismatch, return message with empty values; TODO: improve this!
 
         if telegram.destination is not None and not telegram.destination.is_broadcast():
             msg.destination = telegram.destination
@@ -90,23 +93,84 @@ class EEPHandler:
                 raw=raw_value, value=value, unit=unit
             )
 
-        # Third pass: entity UID propagation — copy decoded values to their semantic keys
+        # Third pass: entity UID propagation — copy decoded values to semantic entity keys
         for field in self.__eep.telegrams[cmd_value].datafields:
-            if field.entity_uid is not None and field.id in msg.values:
-                msg.values[field.entity_uid] = msg.values[field.id]
+            if field.observable_uid is not None and field.id in msg.values:
+                field_value = msg.values[field.id]
+                msg.entities[field.observable_uid] = EntityValue(
+                    value=field_value.value, unit=field_value.unit
+                )
 
         # Fourth pass: semantic resolvers — combine multiple fields into a single entity value
-        for entity_uid, resolver in self.__eep.semantic_resolvers.items():
+        for observable_uid, resolver in self.__eep.semantic_resolvers.items():
             result = resolver(msg.values)
             if result is not None:
-                msg.values[entity_uid] = result
+                msg.entities[observable_uid] = EntityValue(
+                    value=result.value, unit=result.unit
+                )
 
         return msg
 
     def encode(self, message: EEPMessage) -> ERP1Telegram:
-        """Convert an EEPMessage into an ERP1Telegram."""
-        # Not all EEPs will support encoding, so this can be left unimplemented if desired.
-        pass
+        """Convert an EEPMessage into an ERP1Telegram.
+
+        The message must have:
+        - message.sender set to a valid sender address (BaseAddress or EURID) for the gateway
+        - message.message_type.id set to the telegram command value (0 for single-telegram EEPs)
+        - message.values[field_id] = EEPMessageValue(raw=<int>, ...) for each field to encode
+
+        Raises:
+            ValueError: if message.sender is None or the telegram type is unknown.
+        """
+        if message.sender is None:
+            raise ValueError("message.sender must be set before encoding")
+
+        cmd_value = message.message_type.id if message.message_type else 0
+
+        if cmd_value not in self.__eep.telegrams:
+            raise ValueError(
+                f"Unknown telegram type {cmd_value} for EEP {self.__eep.eep}"
+            )
+
+        datafields = self.__eep.telegrams[cmd_value].datafields
+
+        # Compute the minimum buffer size to hold all fields and the CMD selector.
+        max_bit = max((f.offset + f.size for f in datafields), default=0)
+        if self.__eep.cmd_size > 0 and self.__eep.cmd_offset is not None:
+            if self.__eep.cmd_offset < 0:
+                # CMD is at the end (negative offset = relative to buffer end)
+                max_bit += self.__eep.cmd_size
+            else:
+                # CMD is embedded at a fixed position
+                max_bit = max(max_bit, self.__eep.cmd_offset + self.__eep.cmd_size)
+        buffer_size = math.ceil(max_bit / 8)
+
+        rorg = RORG(self.__eep.eep.rorg)
+        erp1 = ERP1Telegram(
+            rorg=rorg,
+            telegram_data=bytes(buffer_size),
+            sender=message.sender,
+            destination=message.destination,
+        )
+
+        # Write CMD bits
+        if self.__eep.cmd_size > 0 and self.__eep.cmd_offset is not None:
+            cmd_bit_offset = (
+                self.__eep.cmd_offset
+                if self.__eep.cmd_offset >= 0
+                else buffer_size * 8 + self.__eep.cmd_offset
+            )
+            erp1.set_bitstring_raw_value(
+                offset=cmd_bit_offset, size=self.__eep.cmd_size, value=cmd_value
+            )
+
+        # Write each field's raw value
+        for f in datafields:
+            mv = message.values.get(f.id)
+            if mv is not None:
+                erp1.set_bitstring_raw_value(offset=f.offset, size=f.size, value=mv.raw)
+
+        return erp1
 
     def __call__(self, telegram: ERP1Telegram) -> EEPMessage:
         """Allow decoder instances to be called like functions."""

@@ -1,7 +1,7 @@
 """EEP (EnOcean Equipment Profile) - Central registry of all supported profiles.
 
 This module imports all EEP definitions organized by RORG (Radio Telegram Type)
-and provides them in a single dictionary for easy lookup by EEPID.
+and provides them in a single dictionary for easy lookup by eep.
 """
 
 from .a5 import (
@@ -48,64 +48,60 @@ from .a5 import (
 )
 from .d2 import EEP_D2_05_00, EEP_D2_20_02
 from .f6 import EEP_F6_02_01, EEP_F6_02_02, EEP_F6_10_00, EEP_F6_10_00_ELTAKO
-from .id import EEPID
-from .profile import EEP
+from .id import EEP
+from .profile import EEPSpecification
 
-EEP_DATABASE: dict[EEPID, EEP] = {
-    EEP_A5_02_01.id: EEP_A5_02_01,
-    EEP_A5_02_02.id: EEP_A5_02_02,
-    EEP_A5_02_03.id: EEP_A5_02_03,
-    EEP_A5_02_04.id: EEP_A5_02_04,
-    EEP_A5_02_05.id: EEP_A5_02_05,
-    EEP_A5_02_06.id: EEP_A5_02_06,
-    EEP_A5_02_07.id: EEP_A5_02_07,
-    EEP_A5_02_08.id: EEP_A5_02_08,
-    EEP_A5_02_09.id: EEP_A5_02_09,
-    EEP_A5_02_0A.id: EEP_A5_02_0A,
-    EEP_A5_02_0B.id: EEP_A5_02_0B,
-    EEP_A5_02_10.id: EEP_A5_02_10,
-    EEP_A5_02_11.id: EEP_A5_02_11,
-    EEP_A5_02_12.id: EEP_A5_02_12,
-    EEP_A5_02_13.id: EEP_A5_02_13,
-    EEP_A5_02_14.id: EEP_A5_02_14,
-    EEP_A5_02_15.id: EEP_A5_02_15,
-    EEP_A5_02_16.id: EEP_A5_02_16,
-    EEP_A5_02_17.id: EEP_A5_02_17,
-    EEP_A5_02_18.id: EEP_A5_02_18,
-    EEP_A5_02_19.id: EEP_A5_02_19,
-    EEP_A5_02_1A.id: EEP_A5_02_1A,
-    EEP_A5_02_1B.id: EEP_A5_02_1B,
-    EEP_A5_02_20.id: EEP_A5_02_20,
-    EEP_A5_02_30.id: EEP_A5_02_30,
-    EEP_A5_04_01.id: EEP_A5_04_01,
-    EEP_A5_04_02.id: EEP_A5_04_02,
-    EEP_A5_04_03.id: EEP_A5_04_03,
-    EEP_A5_06_01.id: EEP_A5_06_01,
-    EEP_A5_06_01_ELTAKO.id: EEP_A5_06_01_ELTAKO,
-    EEP_A5_06_02.id: EEP_A5_06_02,
-    EEP_A5_06_03.id: EEP_A5_06_03,
-    EEP_A5_06_04.id: EEP_A5_06_04,
-    EEP_A5_06_05.id: EEP_A5_06_05,
-    EEP_A5_07_03.id: EEP_A5_07_03,
-    EEP_A5_08_01.id: EEP_A5_08_01,
-    EEP_A5_08_01_ELTAKO.id: EEP_A5_08_01_ELTAKO,
-    EEP_A5_08_02.id: EEP_A5_08_02,
-    EEP_A5_08_03.id: EEP_A5_08_03,
-    EEP_A5_38_08.id: EEP_A5_38_08,
-    EEP_F6_02_01.id: EEP_F6_02_01,
-    EEP_F6_02_02.id: EEP_F6_02_02,
-    EEP_F6_10_00.id: EEP_F6_10_00,
-    EEP_F6_10_00_ELTAKO.id: EEP_F6_10_00_ELTAKO,
-    EEP_D2_05_00.id: EEP_D2_05_00,
-    EEP_D2_20_02.id: EEP_D2_20_02,
+EEP_SPECIFICATIONS: dict[EEP, EEPSpecification] = {
+    EEP_A5_02_01.eep: EEP_A5_02_01,
+    EEP_A5_02_02.eep: EEP_A5_02_02,
+    EEP_A5_02_03.eep: EEP_A5_02_03,
+    EEP_A5_02_04.eep: EEP_A5_02_04,
+    EEP_A5_02_05.eep: EEP_A5_02_05,
+    EEP_A5_02_06.eep: EEP_A5_02_06,
+    EEP_A5_02_07.eep: EEP_A5_02_07,
+    EEP_A5_02_08.eep: EEP_A5_02_08,
+    EEP_A5_02_09.eep: EEP_A5_02_09,
+    EEP_A5_02_0A.eep: EEP_A5_02_0A,
+    EEP_A5_02_0B.eep: EEP_A5_02_0B,
+    EEP_A5_02_10.eep: EEP_A5_02_10,
+    EEP_A5_02_11.eep: EEP_A5_02_11,
+    EEP_A5_02_12.eep: EEP_A5_02_12,
+    EEP_A5_02_13.eep: EEP_A5_02_13,
+    EEP_A5_02_14.eep: EEP_A5_02_14,
+    EEP_A5_02_15.eep: EEP_A5_02_15,
+    EEP_A5_02_16.eep: EEP_A5_02_16,
+    EEP_A5_02_17.eep: EEP_A5_02_17,
+    EEP_A5_02_18.eep: EEP_A5_02_18,
+    EEP_A5_02_19.eep: EEP_A5_02_19,
+    EEP_A5_02_1A.eep: EEP_A5_02_1A,
+    EEP_A5_02_1B.eep: EEP_A5_02_1B,
+    EEP_A5_02_20.eep: EEP_A5_02_20,
+    EEP_A5_02_30.eep: EEP_A5_02_30,
+    EEP_A5_04_01.eep: EEP_A5_04_01,
+    EEP_A5_04_02.eep: EEP_A5_04_02,
+    EEP_A5_04_03.eep: EEP_A5_04_03,
+    EEP_A5_06_01.eep: EEP_A5_06_01,
+    EEP_A5_06_01_ELTAKO.eep: EEP_A5_06_01_ELTAKO,
+    EEP_A5_06_02.eep: EEP_A5_06_02,
+    EEP_A5_06_03.eep: EEP_A5_06_03,
+    EEP_A5_06_04.eep: EEP_A5_06_04,
+    EEP_A5_06_05.eep: EEP_A5_06_05,
+    EEP_A5_07_03.eep: EEP_A5_07_03,
+    EEP_A5_08_01.eep: EEP_A5_08_01,
+    EEP_A5_08_01_ELTAKO.eep: EEP_A5_08_01_ELTAKO,
+    EEP_A5_08_02.eep: EEP_A5_08_02,
+    EEP_A5_08_03.eep: EEP_A5_08_03,
+    EEP_A5_38_08.eep: EEP_A5_38_08,
+    EEP_F6_02_01.eep: EEP_F6_02_01,
+    EEP_F6_02_02.eep: EEP_F6_02_02,
+    EEP_F6_10_00.eep: EEP_F6_10_00,
+    EEP_F6_10_00_ELTAKO.eep: EEP_F6_10_00_ELTAKO,
+    EEP_D2_05_00.eep: EEP_D2_05_00,
+    EEP_D2_20_02.eep: EEP_D2_20_02,
 }
-"""A simple in-memory database of supported EEP profiles. 
+"""A simple in-memory database of supported EEP profiles, indexed by EEP. 
 
-For performance reasons, this is implemented as a dictionary mapping EEPID to EEP.
-EEP definitions are organized in subfolders by RORG (Radio Telegram Type):
-- a5/ - 4BS telegram profiles (A5-xx-xx)
-- f6/ - RPS telegram profiles (F6-xx-xx)
-- d2/ - VLD telegram profiles (D2-xx-xx)
+This allows for efficient lookup of the corresponding EEPSpecification for a given EEP when processing incoming telegrams. 
 """
 
-__all__ = ["EEP_DATABASE", "EEPID", "EEP"]
+__all__ = ["EEP_SPECIFICATIONS", "EEP", "EEPSpecification"]

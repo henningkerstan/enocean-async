@@ -5,7 +5,7 @@ from time import time
 
 from ..eep.message import EEPMessage
 from .capability import Capability
-from .entity_uids import EntityUID
+from .observable_uids import ObservableUID
 from .state_change import StateChange, StateChangeSource
 
 # Watchdog timeout in seconds to detect when cover movement has stopped
@@ -15,7 +15,7 @@ _logger = logging.getLogger(__name__)
 
 
 @dataclass
-class PositionAngleCapability(Capability):
+class CoverCapability(Capability):
     """Capability that emits position and angle updates for blinds/cover devices."""
 
     _previous_position: int | None = field(default=None, init=False, repr=False)
@@ -36,30 +36,30 @@ class PositionAngleCapability(Capability):
 
         current_time = time()
 
-        pos_value = message.values.get(EntityUID.POSITION)
-        ang_value = message.values.get(EntityUID.ANGLE)
+        pos_entity = message.entities.get(ObservableUID.POSITION)
+        ang_entity = message.entities.get(ObservableUID.ANGLE)
 
-        pos_raw = pos_value.raw if pos_value else None
-        ang_raw = ang_value.raw if ang_value else None
+        pos_value = pos_entity.value if pos_entity else None
+        ang_value = ang_entity.value if ang_entity else None
 
-        if pos_raw is not None:
+        if pos_value is not None:
             self._emit(
                 StateChange(
                     device_address=self.device_address,
-                    entity_uid=EntityUID.POSITION,
-                    value=pos_raw,
+                    observable_uid=ObservableUID.POSITION,
+                    value=pos_value,
                     timestamp=current_time,
                     source=StateChangeSource.TELEGRAM,
                 )
             )
 
             # Derive cover state from position changes
-            cover_state = self._derive_cover_state(pos_raw)
+            cover_state = self._derive_cover_state(pos_value)
             if cover_state is not None:
                 self._emit(
                     StateChange(
                         device_address=self.device_address,
-                        entity_uid=EntityUID.COVER_STATE,
+                        observable_uid=ObservableUID.COVER_STATE,
                         value=cover_state,
                         timestamp=current_time,
                         source=StateChangeSource.TELEGRAM,
@@ -78,14 +78,14 @@ class PositionAngleCapability(Capability):
                         and not self._watchdog_task.done()
                     ):
                         self._watchdog_task.cancel()
-            self._previous_position = pos_raw
+            self._previous_position = pos_value
 
-        if ang_raw is not None:
+        if ang_value is not None:
             self._emit(
                 StateChange(
                     device_address=self.device_address,
-                    entity_uid=EntityUID.ANGLE,
-                    value=ang_raw,
+                    observable_uid=ObservableUID.ANGLE,
+                    value=ang_value,
                     timestamp=current_time,
                     source=StateChangeSource.TELEGRAM,
                 )
@@ -105,7 +105,7 @@ class PositionAngleCapability(Capability):
             self._emit(
                 StateChange(
                     device_address=self.device_address,
-                    entity_uid=EntityUID.COVER_STATE,
+                    observable_uid=ObservableUID.COVER_STATE,
                     value="stopped",
                     timestamp=time(),
                     source=StateChangeSource.TIMER,

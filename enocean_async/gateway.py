@@ -7,12 +7,13 @@ from typing import Callable, Optional
 import serial_asyncio_fast as serial_asyncio
 
 from .address import EURID, BaseAddress, SenderAddress
+from .capabilities.device_command import DeviceCommand
 from .capabilities.metadata import MetaDataCapability
 from .capabilities.state_change import StateChange, StateChangeCallback
 from .device.device import Device
-from .eep import EEP_DATABASE
+from .eep import EEP_SPECIFICATIONS
 from .eep.handler import EEPHandler
-from .eep.id import EEPID
+from .eep.id import EEP
 from .eep.manufacturer import Manufacturer
 from .eep.message import EEPMessage
 from .erp1.telegram import (
@@ -92,9 +93,9 @@ class Gateway:
         self.__base_id: BaseAddress | None = None
 
         # device and EEP management
-        self.__known_device_eeps: dict[EURID | BaseAddress, EEPID] = {}
+        self.__known_device_eeps: dict[EURID | BaseAddress, EEP] = {}
         self.__detected_devices: list[EURID | BaseAddress] = []
-        self.__eep_handlers: dict[EEPID, EEPHandler] = {}
+        self.__eep_handlers: dict[EEP, EEPHandler] = {}
         self.__devices: dict[EURID | BaseAddress, Device] = {}
         self.__state_change_callbacks: list[StateChangeCallback] = []
 
@@ -157,8 +158,8 @@ class Gateway:
         """Add a callback that will be called for every received ERP1 telegram that could successfully be decoded as an EEP message. If sender_filter is provided, the callback will only be called for messages that have a sender address matching the filter.
 
         This is a high-level callback that will be called for every received EEP message after parsing, basic processing, and EEP-specific decoding. Prerequisite for this callback to be called for a message are:
-        - the sender address of the message is known (by adding it to this gateway as known-device along with its EEPID), and
-        - there is an EEPHandler capable of handling the EEPID of the sender device."""
+        - the sender address of the message is known (by adding it to this gateway as known-device along with its eep), and
+        - there is an EEPHandler capable of handling the eep of the sender device."""
         self.__eep_receive_callbacks.append(EEPCallbackWithFilter(cb, sender_filter))
 
     def add_ute_received_callback(self, cb: UTECallback):
@@ -283,6 +284,61 @@ class Gateway:
             finally:
                 self.__send_future = None
 
+    async def send_command(
+        self,
+        destination: EURID | BaseAddress,
+        action: str,
+        values: dict[str, int],
+        sender: SenderAddress | None = None,
+    ) -> SendResult:
+        """Send a command to a registered device.
+
+        Args:
+            destination: The device's address (must have been registered via add_device()). Note that the destination is needed to infer the correct EEP, it will not necessarily be used as destination for sending.
+            action: The action UID (ActionUID constant) identifying the command to send.
+            values: Raw field values as {EEP field_id → raw integer}.
+            sender: Sender address to use. If None, uses the device's registered sender
+                    or falls back to the gateway's base ID.
+
+        Returns:
+            SendResult with the response and duration.
+
+        Raises:
+            ValueError: If the device is unknown, or the action is not supported by its EEP.
+            ConnectionError: If not connected to the EnOcean module.
+        """
+        if destination not in self.__known_device_eeps:
+            raise ValueError(f"Unknown device {destination}: call add_device() first")
+
+        eep_id = self.__known_device_eeps[destination]
+
+        if eep_id not in self.__eep_handlers:
+            raise ValueError(f"No EEP handler loaded for {eep_id}")
+
+        spec = EEP_SPECIFICATIONS[eep_id]
+        if action not in spec.command_encoders:
+            raise ValueError(f"Action '{action}' is not supported for EEP {eep_id}")
+
+        # Resolve sender: explicit > device sender > gateway base ID
+        if sender is None:
+            device = self.__devices.get(destination)
+            if device and device.sender:
+                sender = device.sender
+            else:
+                sender = await self.base_id
+        if sender is None:
+            raise ValueError(
+                "Could not determine sender address; pass sender= explicitly or connect first"
+            )
+
+        cmd = DeviceCommand(action=action, values=values)
+        message: EEPMessage = spec.command_encoders[action](cmd)
+        message.sender = sender
+        message.destination = destination
+
+        erp1 = self.__eep_handlers[eep_id].encode(message)
+        return await self.send_esp3_packet(erp1.to_esp3())
+
     def connection_made(self) -> None:
         pass
 
@@ -295,36 +351,36 @@ class Gateway:
     def add_device(
         self,
         address: EURID | BaseAddress,
-        eepid: EEPID,
+        eep: EEP,
         sender: SenderAddress | None = None,
         name: str | None = None,
     ) -> None:
-        """Register a device with its sender address (EURID or Base ID) and its EEPID.
+        """Register a device with its sender address (EURID or Base ID) and its eep.
 
         This allows the gateway to recognize incoming messages from this device and decode them according to the registered EEP (if a handler for that EEP is found).
         """
-        self.__known_device_eeps[address] = eepid
-        self._logger.info(f"Added device with address {address} and EEPID {eepid}")
+        self.__known_device_eeps[address] = eep
+        self._logger.info(f"Added device with address {address} and eep {eep}")
 
-        # get the EEP handler for this EEPID
-        if not eepid in self.__eep_handlers:
+        # get the EEP handler for this eep
+        if eep not in self.__eep_handlers:
             # try to load
-            if eepid not in EEP_DATABASE:
+            if eep not in EEP_SPECIFICATIONS:
                 self._logger.warning(
-                    f"EEP {eepid} is not supported. Messages from device {address} will not be decoded."
+                    f"EEP {eep} is not supported. Messages from device {address} will not be decoded."
                 )
                 return
             else:
-                self.__eep_handlers[eepid] = EEPHandler(EEP_DATABASE[eepid])
-                self._logger.info(f"Loaded EEP handler for EEPID {eepid}")
+                self.__eep_handlers[eep] = EEPHandler(EEP_SPECIFICATIONS[eep])
+                self._logger.info(f"Loaded EEP handler for eep {eep}")
         else:
-            self._logger.debug(f"EEP handler for EEPID {eepid} already loaded.")
+            self._logger.debug(f"EEP handler for eep {eep} already loaded.")
 
         # build capability list from EEP capability_factories
-        eep = EEP_DATABASE[eepid]
+        eep = EEP_SPECIFICATIONS[eep]
         if not eep.capability_factories:
             self._logger.debug(
-                f"EEP {eepid} has no capability factories; StateChange processing unavailable for device {address}."
+                f"EEP {eep} has no capability factories; StateChange processing unavailable for device {address}."
             )
             return
 
@@ -335,7 +391,7 @@ class Gateway:
 
         device = Device(
             address=address,
-            eepid=eepid,
+            eep=eep,
             name=name or str(address),
             sender=sender,
             capabilities=capabilities,
@@ -624,7 +680,7 @@ class Gateway:
         # We first check if we have a known device with the sender address, and if not, we check if we have a known device with the destination address.
         # If we cannot find a known device for either the sender or the destination, we cannot determine the EEP ID for this telegram, so we emit a parsing failed message and return.
         # If we can find a known device for either the sender or the destination, we use that device's EEP ID for further processing.
-        eep_id: EEPID
+        eep_id: EEP
         if erp1.sender in self.__known_device_eeps:
             eep_id = self.__known_device_eeps[erp1.sender]
         else:
@@ -764,7 +820,7 @@ class Gateway:
             type_ = erp1.bitstring_raw_value(6, 7)
             manufacturer_id = erp1.bitstring_raw_value(13, 11)
             manufacturer = Manufacturer(manufacturer_id)
-            eepid = EEPID(0xA5, func, type_, manufacturer)
+            eep = EEP(0xA5, func, type_, manufacturer)
             self._logger.info(
-                f"4BS learn telegram with EEP A5-{func:02X}-{type_:02X} and manufacturer '{manufacturer}', hence {eepid.to_string()}"
+                f"4BS learn telegram with EEP A5-{func:02X}-{type_:02X} and manufacturer '{manufacturer}', hence {eep}"
             )

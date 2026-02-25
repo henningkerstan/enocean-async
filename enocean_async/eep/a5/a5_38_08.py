@@ -1,10 +1,24 @@
 """A5-38-08: Central command - gateway."""
 
-from ..id import EEPID
-from ..profile import EEP, EEPDataField, EEPTelegram
+from ...capabilities.action_uid import ActionUID
+from ...capabilities.device_command import DeviceCommand
+from ..id import EEP
+from ..message import EEPMessage, EEPMessageType, EEPMessageValue
+from ..profile import EEPDataField, EEPSpecification, EEPTelegram
 
-EEP_A5_38_08 = EEP(
-    id=EEPID.from_string("A5-38-08"),
+
+def _encode_dim(cmd: DeviceCommand) -> EEPMessage:
+    msg = EEPMessage(
+        sender=None,
+        message_type=EEPMessageType(id=2, description="Dimming"),
+    )
+    for field_id, raw in cmd.values.items():
+        msg.values[field_id] = EEPMessageValue(raw=raw, value=raw)
+    return msg
+
+
+EEP_A5_38_08 = EEPSpecification(
+    eep=EEP.from_string("A5-38-08"),
     name="Central command - gateway",
     cmd_size=8,
     cmd_offset=0,
@@ -61,5 +75,8 @@ EEP_A5_38_08 = EEP(
                 ),
             ],
         )
+    },
+    command_encoders={
+        ActionUID.DIM: _encode_dim,
     },
 )

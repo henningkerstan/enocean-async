@@ -1,12 +1,36 @@
 """D2-05-00: Blinds control for position and angle, type 0x00."""
 
-from ...capabilities.entity_uids import EntityUID
-from ...capabilities.position_angle import PositionAngleCapability
-from ..id import EEPID
-from ..profile import EEP, EEPDataField, EEPTelegram
+from ...capabilities.action_uid import ActionUID
+from ...capabilities.device_command import DeviceCommand
+from ...capabilities.observable_uids import ObservableUID
+from ...capabilities.position_angle import CoverCapability
+from ..id import EEP
+from ..message import EEPMessage, EEPMessageType, EEPMessageValue
+from ..profile import EEPDataField, EEPSpecification, EEPTelegram
 
-EEP_D2_05_00 = EEP(
-    id=EEPID.from_string("D2-05-00"),
+
+def _encode_set_position(cmd: DeviceCommand) -> EEPMessage:
+    msg = EEPMessage(
+        sender=None,
+        message_type=EEPMessageType(id=1, description="Go to position and angle"),
+    )
+    for field_id, raw in cmd.values.items():
+        msg.values[field_id] = EEPMessageValue(raw=raw, value=raw)
+    return msg
+
+
+def _encode_stop(cmd: DeviceCommand) -> EEPMessage:
+    msg = EEPMessage(
+        sender=None,
+        message_type=EEPMessageType(id=2, description="Stop"),
+    )
+    for field_id, raw in cmd.values.items():
+        msg.values[field_id] = EEPMessageValue(raw=raw, value=raw)
+    return msg
+
+
+EEP_D2_05_00 = EEPSpecification(
+    eep=EEP.from_string("D2-05-00"),
     name="Blinds control for position and angle, type 0x00",
     cmd_size=4,
     cmd_offset=-4,
@@ -22,7 +46,7 @@ EEP_D2_05_00 = EEP(
                     range_min=0,
                     range_max=127,
                     unit_fn=lambda _: "%",
-                    entity_uid=EntityUID.POSITION,
+                    observable_uid=ObservableUID.POSITION,
                 ),
                 EEPDataField(
                     id="ANG",
@@ -32,7 +56,7 @@ EEP_D2_05_00 = EEP(
                     range_min=0,
                     range_max=127,
                     unit_fn=lambda _: "%",
-                    entity_uid=EntityUID.ANGLE,
+                    observable_uid=ObservableUID.ANGLE,
                 ),
                 EEPDataField(
                     id="REPO",
@@ -126,7 +150,7 @@ EEP_D2_05_00 = EEP(
                     offset=1,
                     size=7,
                     unit_fn=lambda _: "%",
-                    entity_uid=EntityUID.POSITION,
+                    observable_uid=ObservableUID.POSITION,
                 ),
                 EEPDataField(
                     id="ANG",
@@ -134,7 +158,7 @@ EEP_D2_05_00 = EEP(
                     offset=9,
                     size=7,
                     unit_fn=lambda _: "%",
-                    entity_uid=EntityUID.ANGLE,
+                    observable_uid=ObservableUID.ANGLE,
                 ),
                 EEPDataField(
                     id="LOCK",
@@ -168,9 +192,13 @@ EEP_D2_05_00 = EEP(
         ),
     },
     capability_factories=[
-        lambda addr, cb: PositionAngleCapability(
+        lambda addr, cb: CoverCapability(
             device_address=addr,
             on_state_change=cb,
         ),
     ],
+    command_encoders={
+        ActionUID.SET_COVER_POSITION: _encode_set_position,
+        ActionUID.STOP_COVER: _encode_stop,
+    },
 )

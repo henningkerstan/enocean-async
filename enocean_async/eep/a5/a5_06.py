@@ -1,11 +1,11 @@
 """A5-06-XX: Light sensors."""
 
-from ...capabilities.entity_uids import EntityUID
-from ...capabilities.scalar_sensor import ScalarSensorCapability
-from ..id import EEPID
+from ...capabilities.observable_uids import ObservableUID
+from ...capabilities.scalar import ScalarCapability
+from ..id import EEP
 from ..manufacturer import Manufacturer
 from ..message import EEPMessageValue
-from ..profile import EEPDataField, SingleTelegramEEP
+from ..profile import EEPDataField, SimpleProfileSpecification
 
 
 def _a5_06_illumination_resolver(
@@ -36,15 +36,15 @@ def _a5_06_eltako_illumination_resolver(
 
 
 _ILL_FACTORY = [
-    lambda addr, cb: ScalarSensorCapability(
+    lambda addr, cb: ScalarCapability(
         device_address=addr,
         on_state_change=cb,
-        entity_uid=EntityUID.ILLUMINATION,
+        observable_uid=ObservableUID.ILLUMINATION,
     ),
 ]
 
 
-class _EEP_A5_06(SingleTelegramEEP):
+class _EEP_A5_06(SimpleProfileSpecification):
     def __init__(
         self,
         _type: int,
@@ -54,7 +54,7 @@ class _EEP_A5_06(SingleTelegramEEP):
         ill1_max: float,
     ):
         super().__init__(
-            id=EEPID.from_string(f"A5-06-{_type:02X}"),
+            eep=EEP.from_string(f"A5-06-{_type:02X}"),
             name=f"Light sensor, range {min(ill1_min, ill2_min)}lx to {max(ill1_max, ill2_max)}lx",
             datafields=[
                 EEPDataField(
@@ -95,7 +95,9 @@ class _EEP_A5_06(SingleTelegramEEP):
                     },
                 ),
             ],
-            semantic_resolvers={EntityUID.ILLUMINATION: _a5_06_illumination_resolver},
+            semantic_resolvers={
+                ObservableUID.ILLUMINATION: _a5_06_illumination_resolver
+            },
             capability_factories=_ILL_FACTORY,
         )
 
@@ -110,8 +112,8 @@ EEP_A5_06_05 = _EEP_A5_06(
     _type=0x05, ill2_min=0.0, ill2_max=5100.0, ill1_min=0.0, ill1_max=10200.0
 )
 
-EEP_A5_06_03 = SingleTelegramEEP(
-    id=EEPID.from_string(f"A5-06-03"),
+EEP_A5_06_03 = SimpleProfileSpecification(
+    eep=EEP.from_string(f"A5-06-03"),
     name=f"Light sensor, 10-bit measurement, range 0lx to 1000lx",
     datafields=[
         EEPDataField(
@@ -132,14 +134,14 @@ EEP_A5_06_03 = SingleTelegramEEP(
             scale_min_fn=lambda _: 0.0,
             scale_max_fn=lambda _: 1000.0,
             unit_fn=lambda _: "lx",
-            entity_uid=EntityUID.ILLUMINATION,
+            observable_uid=ObservableUID.ILLUMINATION,
         ),
     ],
     capability_factories=_ILL_FACTORY,
 )
 
-EEP_A5_06_04 = SingleTelegramEEP(
-    id=EEPID.from_string(f"A5-06-04"),
+EEP_A5_06_04 = SimpleProfileSpecification(
+    eep=EEP.from_string(f"A5-06-04"),
     name=f"Curtain wall brightness sensor",
     datafields=[
         EEPDataField(
@@ -150,7 +152,7 @@ EEP_A5_06_04 = SingleTelegramEEP(
             scale_min_fn=lambda _: -20.0,
             scale_max_fn=lambda _: 60.0,
             unit_fn=lambda _: "°C",
-            entity_uid=EntityUID.TEMPERATURE,
+            observable_uid=ObservableUID.TEMPERATURE,
         ),
         EEPDataField(
             id="ILL",
@@ -160,7 +162,7 @@ EEP_A5_06_04 = SingleTelegramEEP(
             scale_min_fn=lambda _: 0.0,
             scale_max_fn=lambda _: 65535.0,
             unit_fn=lambda _: "lx",
-            entity_uid=EntityUID.ILLUMINATION,
+            observable_uid=ObservableUID.ILLUMINATION,
         ),
         EEPDataField(
             id="SV",
@@ -193,22 +195,22 @@ EEP_A5_06_04 = SingleTelegramEEP(
         ),
     ],
     capability_factories=[
-        lambda addr, cb: ScalarSensorCapability(
+        lambda addr, cb: ScalarCapability(
             device_address=addr,
             on_state_change=cb,
-            entity_uid=EntityUID.ILLUMINATION,
+            observable_uid=ObservableUID.ILLUMINATION,
         ),
-        lambda addr, cb: ScalarSensorCapability(
+        lambda addr, cb: ScalarCapability(
             device_address=addr,
             on_state_change=cb,
-            entity_uid=EntityUID.TEMPERATURE,
+            observable_uid=ObservableUID.TEMPERATURE,
         ),
     ],
 )
 
-EEP_A5_06_01_ELTAKO = SingleTelegramEEP(
-    id=EEPID(rorg=0xA5, func=0x06, type_=0x01, manufacturer=Manufacturer.ELTAKO),
-    name=f" ",
+EEP_A5_06_01_ELTAKO = SimpleProfileSpecification(
+    eep=EEP(rorg=0xA5, func=0x06, type_=0x01, manufacturer=Manufacturer.ELTAKO),
+    name="Light sensor (Eltako variant), dual-range 0–100lx / 300–30000lx",
     datafields=[
         EEPDataField(
             id="ILL1",
@@ -229,7 +231,9 @@ EEP_A5_06_01_ELTAKO = SingleTelegramEEP(
             unit_fn=lambda _: "lx",
         ),
     ],
-    semantic_resolvers={EntityUID.ILLUMINATION: _a5_06_eltako_illumination_resolver},
+    semantic_resolvers={
+        ObservableUID.ILLUMINATION: _a5_06_eltako_illumination_resolver
+    },
     capability_factories=_ILL_FACTORY,
 )
 

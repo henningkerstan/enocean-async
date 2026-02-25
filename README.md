@@ -33,6 +33,16 @@ This library only has one dependency, namely
 - [pyserial-asyncio-fast](https://pypi.org/project/pyserial-asyncio-fast/) in version 0.16, which is BSD-3 licensed.
 
 
+## Technology documentation
+The EnOcean technology is documented in several, publicly available sources, particularly:
+- the [EnOcean Serial Protocol Version 3 (ESP3)](https://www.enocean.com/wp-content/uploads/Knowledge-Base/EnOceanSerialProtocol3-1.pdf) specification
+-  the [EnOcean Radio Protocol 1 (ERP1)](https://www.enocean.com/wp-content/uploads/Knowledge-Base/EnOceanRadioProtocol1.pdf) specification
+- the [EnOcean Alliance's Specifications](https://www.enocean-alliance.org/specifications/),
+    - the [EnOcean Unique Radio Identifier – EURID Specification, V1.2](https://www.enocean-alliance.org/wp-content/uploads/2021/03/EURID-v1.2.pdf)
+    - a high level spec of [EnOcean Equipment Profiles (EEP), V3.1](https://www.enocean-alliance.org/wp-content/uploads/2020/07/EnOcean-Equipment-Profiles-3-1.pdf)
+    - the individual EEPs can be viewed using the [EEPViewer](https://tools.enocean-alliance.org/EEPViewer), which replaces the previously maintained [EEP Spec V.2.6.8 from Dec 31, 2017](https://www.enocean-alliance.org/wp-content/uploads/2019/10/EEP268_R3_Feb022018_public.pdf)
+
+
 ## Copyright & license
 Copyright 2026 Henning Kerstan
 

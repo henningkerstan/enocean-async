@@ -6,7 +6,7 @@ from enocean_async.eep.manufacturer import Manufacturer
 from enocean_async.erp1.errors import ERP1ParseError
 from enocean_async.esp3.packet import ESP3Packet, ESP3PacketType
 
-from ..eep.id import EEPID
+from ..eep.id import EEP
 from ..erp1.rorg import RORG
 from ..erp1.telegram import ERP1Telegram
 
@@ -50,7 +50,7 @@ class UTEMessage:
     command: CommandIdentifier
     number_of_channels_to_be_taught_in: int
     manufacturer: Manufacturer
-    eep: EEPID
+    eep: EEP
 
     @classmethod
     def from_erp1(cls, telegram: ERP1Telegram) -> "UTEMessage":
@@ -92,7 +92,7 @@ class UTEMessage:
         except ValueError:
             manufacturer = Manufacturer.Reserved
 
-        eep = EEPID(
+        eep = EEP(
             type_=telegram.data_byte(2),
             func=telegram.data_byte(1),
             rorg=telegram.data_byte(0),

@@ -1,17 +1,17 @@
 """A5-02-XX: Temperature sensors."""
 
-from ...capabilities.entity_uids import EntityUID
-from ...capabilities.scalar_sensor import ScalarSensorCapability
-from ..id import EEPID
-from ..profile import EEPDataField, SingleTelegramEEP
+from ...capabilities.observable_uids import ObservableUID
+from ...capabilities.scalar import ScalarCapability
+from ..id import EEP
+from ..profile import EEPDataField, SimpleProfileSpecification
 
 
-class _EEP_A5_02(SingleTelegramEEP):
+class _EEP_A5_02(SimpleProfileSpecification):
     def __init__(
         self, _type: int, scale_min: float, scale_max: float, ten_bit: bool = False
     ):
         super().__init__(
-            id=EEPID.from_string(f"A5-02-{_type:02X}"),
+            eep=EEP.from_string(f"A5-02-{_type:02X}"),
             name=("10 bit t" if ten_bit else "T")
             + "emperature sensor, range "
             + str(scale_min)
@@ -27,14 +27,14 @@ class _EEP_A5_02(SingleTelegramEEP):
                     scale_min_fn=lambda _: scale_min,
                     scale_max_fn=lambda _: scale_max,
                     unit_fn=lambda _: "°C",
-                    entity_uid=EntityUID.TEMPERATURE,
+                    observable_uid=ObservableUID.TEMPERATURE,
                 )
             ],
             capability_factories=[
-                lambda addr, cb: ScalarSensorCapability(
+                lambda addr, cb: ScalarCapability(
                     device_address=addr,
                     on_state_change=cb,
-                    entity_uid=EntityUID.TEMPERATURE,
+                    observable_uid=ObservableUID.TEMPERATURE,
                 ),
             ],
         )

@@ -3,17 +3,17 @@
 This script generates a markdown file listing all supported EnOcean Equipment Profiles (EEPs) based on the EEP database in the `enocean_async` library.
 The generated file is named `SUPPORTED_EEPS.md` and contains a table with the EEP ID and its corresponding name.
 """
-from enocean_async.capabilities.entity_uids import EntityUID
 from enocean_async.capabilities.metadata import MetaDataCapability
-from enocean_async.capabilities.position_angle import PositionAngleCapability
+from enocean_async.capabilities.observable_uids import ObservableUID
+from enocean_async.capabilities.position_angle import CoverCapability
 from enocean_async.capabilities.push_button import (
     F6_02_01_02PushButtonCapability,
     PushButtonCapability,
 )
-from enocean_async.capabilities.scalar_sensor import ScalarSensorCapability
-from enocean_async.eep import EEP_DATABASE
+from enocean_async.capabilities.scalar import ScalarCapability
+from enocean_async.eep import EEP_SPECIFICATIONS
 
-# Mapping of capability classes to their emitted StateChange entity_uids and possible values
+# Mapping of capability classes to their emitted StateChange observable_uids and possible values
 _BUTTON_EVENTS = ["pushed", "click", "double-click", "hold", "released"]
 
 CAPABILITY_STATE_CHANGES = {
@@ -34,35 +34,35 @@ CAPABILITY_STATE_CHANGES = {
             "{button_id}": _BUTTON_EVENTS,
         },
     },
-    PositionAngleCapability: {
+    CoverCapability: {
         "entities": {
-            EntityUID.POSITION: ["position (0-127)"],
-            EntityUID.ANGLE: ["angle (0-127)"],
-            EntityUID.COVER_STATE: ["open", "opening", "closed", "closing", "stopped"],
+            ObservableUID.POSITION: ["position (0-127)"],
+            ObservableUID.ANGLE: ["angle (0-127)"],
+            ObservableUID.COVER_STATE: ["open", "opening", "closed", "closing", "stopped"],
         },
     },
     MetaDataCapability: {
         "entities": {
-            EntityUID.RSSI: ["signal strength (dBm)"],
-            EntityUID.LAST_SEEN: ["timestamp"],
-            EntityUID.TELEGRAM_COUNT: ["count"],
+            ObservableUID.RSSI: ["signal strength (dBm)"],
+            ObservableUID.LAST_SEEN: ["timestamp"],
+            ObservableUID.TELEGRAM_COUNT: ["count"],
         },
     },
 }
 
 _SCALAR_ENTITY_DESCRIPTIONS = {
-    EntityUID.TEMPERATURE: "temperature (°C)",
-    EntityUID.HUMIDITY: "humidity (%)",
-    EntityUID.ILLUMINATION: "illumination (lx)",
-    EntityUID.MOTION: "motion detected / no motion / uncertain",
-    EntityUID.VOLTAGE: "voltage (V)",
-    EntityUID.WINDOW_STATE: "window state (open / tilted / closed)",
-    EntityUID.OCCUPANCY_BUTTON: "occupancy button (pressed / released)",
+    ObservableUID.TEMPERATURE: "temperature (°C)",
+    ObservableUID.HUMIDITY: "humidity (%)",
+    ObservableUID.ILLUMINATION: "illumination (lx)",
+    ObservableUID.MOTION: "motion detected / no motion / uncertain",
+    ObservableUID.VOLTAGE: "voltage (V)",
+    ObservableUID.WINDOW_STATE: "window state (open / tilted / closed)",
+    ObservableUID.OCCUPANCY_BUTTON: "occupancy button (pressed / released)",
 }
 
 
 def get_state_changes_for_eep(eep):
-    """Get formatted list of StateChange entity_uids with their values for a given EEP."""
+    """Get formatted list of StateChange observable_uids with their values for a given EEP."""
     if not eep.capability_factories:
         return None
 
@@ -72,15 +72,15 @@ def get_state_changes_for_eep(eep):
             dummy = factory(None, None)
             capability_class = type(dummy)
 
-            if isinstance(dummy, ScalarSensorCapability):
-                uid = dummy.entity_uid
+            if isinstance(dummy, ScalarCapability):
+                uid = dummy.observable_uid
                 desc = _SCALAR_ENTITY_DESCRIPTIONS.get(uid, uid)
                 entity_strings.append(f"`{uid}`: {desc}")
             elif capability_class in CAPABILITY_STATE_CHANGES:
                 entities = CAPABILITY_STATE_CHANGES[capability_class]["entities"]
-                for entity_uid, values in entities.items():
+                for observable_uid, values in entities.items():
                     values_str = ", ".join(f"`{v}`" for v in values)
-                    entity_strings.append(f"`{entity_uid}`: {values_str}")
+                    entity_strings.append(f"`{observable_uid}`: {values_str}")
         except Exception:
             pass
 
@@ -94,12 +94,12 @@ with open("SUPPORTED_EEPS.md", "w", encoding="utf-8") as file:
     file.write("| RORG | FUNC | TYPE | Name | Telegrams | StateChange Events |\n")
     file.write("|---|---|---|---|---|---|\n")
 
-    sorted_eeps = sorted(EEP_DATABASE.values(), key=lambda item: item.id.to_string())
+    sorted_eeps = sorted(EEP_SPECIFICATIONS.values(), key=lambda item: str(item.eep))
 
     for entry in sorted_eeps:
-        rorg = f"{entry.id.rorg:02X}"
-        func = f"{entry.id.func:02X}"
-        type_ = f"{entry.id.type:02X}"
+        rorg = f"{entry.eep.rorg:02X}"
+        func = f"{entry.eep.func:02X}"
+        type_ = f"{entry.eep.type:02X}"
 
         telegrams_supported = "`0x0` (single message EEP)"
         if entry.cmd_offset is not None and entry.cmd_size > 0:
@@ -108,8 +108,8 @@ with open("SUPPORTED_EEPS.md", "w", encoding="utf-8") as file:
                 telegrams_supported += f"`{key:#x}`: {telegram.name}<br>"
 
         entity_strings = get_state_changes_for_eep(entry)
-        entity_uids_str = "<br>".join(entity_strings) if entity_strings else "—"
+        observable_uids_str = "<br>".join(entity_strings) if entity_strings else "—"
 
         file.write(
-            f"| {rorg} | {func} | {type_} | {entry.name} | {telegrams_supported} | {entity_uids_str} |\n"
+            f"| {rorg} | {func} | {type_} | {entry.name} | {telegrams_supported} | {observable_uids_str} |\n"
         )
