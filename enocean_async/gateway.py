@@ -123,6 +123,9 @@ class Gateway:
         # logging
         self._logger = logging.getLogger(__name__)
 
+        # auto-reconnect
+        self.__reconnect_task: asyncio.Task | None = None
+
     # ------------------------------------------------------------------
     # callback registration
     # ------------------------------------------------------------------
@@ -196,7 +199,7 @@ class Gateway:
                 f"Successfully connected to EnOcean module on {self.__port} at baudrate {self.__baudrate}"
             )
         except Exception as e:
-            self._logger.error(
+            self._logger.warning(
                 f"Failed to connect to EnOcean module on {self.__port} at baudrate {self.__baudrate}: {e}"
             )
             raise ConnectionError(
@@ -252,6 +255,12 @@ class Gateway:
 
         This method is thread-safe and can be called from multiple coroutines concurrently; the send operations will be serialized using an internal lock, and each call will wait for its corresponding response before allowing the next send operation to proceed. The method returns a SendResult object containing the received response (if any) and the duration in milliseconds between sending the request and receiving the response.
         """
+
+        if not self.__transport:
+            self._logger.error(
+                "Cannot send: gateway is not connected to an EnOcean module."
+            )
+            return SendResult(None, None)
 
         async with self.__send_lock:
             self.__send_future = asyncio.get_running_loop().create_future()
@@ -343,7 +352,35 @@ class Gateway:
         pass
 
     def connection_lost(self, exc: Exception | None) -> None:
+        self._logger.warning(
+            "Connection to EnOcean module lost, attempting to reconnect ..."
+        )
+        if self.__reconnect_task is not None:
+            self.__reconnect_task.cancel()
+        self.__reconnect_task = asyncio.create_task(self.__try_to_reconnect())
         self.__transport = None
+
+    async def __try_to_reconnect(self):
+        for attempt in range(1, 721):
+            await asyncio.sleep(5)
+            try:
+                self._logger.info(
+                    f"Trying to reconnect to EnOcean Module (attempt #{attempt}/720)"
+                )
+                await self.start()
+                self.__reconnect_task.cancel()
+                self.__reconnect_task == None
+                self._logger.info("Reconnect successfull")
+                return
+            except Exception:
+                self._logger.warning(
+                    f"Reconnection attempt #{attempt}/720 failed, retrying again in 5s."
+                )
+                continue
+
+        self._logger.error(
+            "Could not reconnect to EnOcean module after 720 attempts (1 hour). Stopping auto-reconnect."
+        )
 
     # ------------------------------------------------------------------
     # device registry
