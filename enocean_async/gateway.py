@@ -125,6 +125,10 @@ class Gateway:
 
         # auto-reconnect
         self.__reconnect_task: asyncio.Task | None = None
+        self.__stopped: bool = False
+
+        self.auto_reconnect: bool = True
+        """If True (default), automatically attempt to reconnect when the connection is lost. Set to False to disable reconnection entirely."""
 
     # ------------------------------------------------------------------
     # callback registration
@@ -181,8 +185,15 @@ class Gateway:
     # ------------------------------------------------------------------
     # start and stop
     # ------------------------------------------------------------------
-    async def start(self) -> None:
-        """Open the serial connection to the EnOcean module and start processing incoming packets."""
+    async def start(self, auto_reconnect: bool = True) -> None:
+        """Open the serial connection to the EnOcean module and start processing incoming packets.
+
+        Args:
+            auto_reconnect: If True (default), automatically attempt to reconnect when the
+                            connection is lost. Set to False to disable reconnection entirely.
+        """
+        self.__stopped = False
+        self.auto_reconnect = auto_reconnect
         loop = asyncio.get_running_loop()
         try:
             (
@@ -208,6 +219,10 @@ class Gateway:
 
     def stop(self) -> None:
         """Close the serial connection to the EnOcean module."""
+        self.__stopped = True
+        if self.__reconnect_task is not None:
+            self.__reconnect_task.cancel()
+            self.__reconnect_task = None
         if self.__transport is not None:
             self.__transport.close()
             self.__transport = None
@@ -352,13 +367,20 @@ class Gateway:
         pass
 
     def connection_lost(self, exc: Exception | None) -> None:
+        self.__transport = None
+        if self.__stopped:
+            return
+        if not self.auto_reconnect:
+            self._logger.error(
+                "Connection to EnOcean module lost and auto-reconnect is disabled. You must manually call start() to reconnect."
+            )
+            return
         self._logger.warning(
             "Connection to EnOcean module lost, attempting to reconnect ..."
         )
         if self.__reconnect_task is not None:
             self.__reconnect_task.cancel()
         self.__reconnect_task = asyncio.create_task(self.__try_to_reconnect())
-        self.__transport = None
 
     async def __try_to_reconnect(self):
         for attempt in range(1, 721):
@@ -369,7 +391,7 @@ class Gateway:
                 )
                 await self.start()
                 self.__reconnect_task.cancel()
-                self.__reconnect_task == None
+                self.__reconnect_task = None
                 self._logger.info("Reconnect successfull")
                 return
             except Exception:

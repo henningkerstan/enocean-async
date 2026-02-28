@@ -219,6 +219,10 @@ Layered callbacks for application code:
 - `add_eep_message_received_callback` — decoded EEP message (filterable by sender)
 - `add_state_change_callback` — semantic observable updates from capabilities
 
+#### Auto-reconnect
+
+When the serial connection is lost unexpectedly, the gateway automatically attempts to re-establish it. This is controlled by the `auto_reconnect` parameter. When enabled (default) and the connection is lost, the gateway tries to reconnect for 1 hour. A successful reconnect cancels the task and logs a confirmation. Exhausting all attempts logs a final error and stops retrying.
+
 ---
 
 ## Key design decisions
