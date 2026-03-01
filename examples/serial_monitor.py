@@ -3,9 +3,14 @@ import logging
 import signal
 import sys
 
-from enocean_async import EEP, EnOceanGateway, EnOceanUniqueRadioID
-from enocean_async.capabilities.state_change import StateChange, StateChangeSource
-from enocean_async.eep.message import EEPMessage
+from enocean_async import (
+    EEP,
+    EURID,
+    BaseAddress,
+    Gateway,
+    StateChange,
+    StateChangeSource,
+)
 
 
 class ColorFormatter(logging.Formatter):
@@ -44,12 +49,12 @@ async def main(port: str) -> None:
     handler = logging.StreamHandler()
     handler.setFormatter(ColorFormatter( "%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S" ))
     logging.basicConfig(
-        level=logging.WARNING,
+        level=logging.INFO,
         handlers=[handler]
 )
 
     print(f"Setting up EnOcean Gateway for module on {port}...")
-    gateway = EnOceanGateway(port)
+    gateway = Gateway(port)
 
     # callback registration
     gateway.add_esp3_received_callback(lambda pkt: print(f"\n{RECEIVEMARK} Received {pkt}"))
@@ -81,6 +86,9 @@ async def main(port: str) -> None:
     print(
         f"Base ID: {await gateway.base_id} (remaining write cycles: {await gateway.base_id_remaining_write_cycles})"
     )
+    print(f"Valid sender addresses: {await gateway.eurid} and {await gateway.base_id}-{BaseAddress.from_number((await gateway.base_id).to_number() + 127)}")
+
+
     version_info = await gateway.version_info
 
     print(f"App description: {version_info.app_description}")
@@ -89,8 +97,8 @@ async def main(port: str) -> None:
     print(f"Device version: {version_info.device_version}")
 
     # add some devices - adopt to your own devices and EEPs
-    gateway.add_device(EnOceanUniqueRadioID.from_string("00:00:00:01"), EEP.from_string("F6-02-01"))
-    gateway.add_device(EnOceanUniqueRadioID.from_string("00:00:00:02"), EEP.from_string("F6-02-01"))
+    gateway.add_device(EURID.from_string("00:00:00:01"), EEP.from_string("F6-02-01"))
+    gateway.add_device(EURID.from_string("00:00:00:02"), EEP.from_string("F6-02-01"))
 
 
     try:
@@ -103,7 +111,8 @@ async def main(port: str) -> None:
     
 
     # start learning mode
-    gateway.start_learning(timeout_seconds=5)
+    await gateway.start_learning(timeout_seconds=5)
+
 
     # Keep the event loop running until CTRL+C is pressed
     print("Running... Press Ctrl+C to exit.") 

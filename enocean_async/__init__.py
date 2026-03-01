@@ -41,27 +41,7 @@ from .eep.profile import (
 from .erp1.errors import ERP1ParseError
 from .erp1.rorg import RORG
 from .erp1.telegram import ERP1Telegram
-from .erp1.ute import (
-    CommandIdentifier as UTECommandIdentifier,
-    CommunicationDuringEEPOperation,
-    EEPTeachInResponseMessageExpectation,
-    UTEMessage,
-    UTEQueryRequestType,
-    UTEResponseType,
-)
-from .esp3.common_command import (
-    CommonCommandCode as ESP3CommonCommandCode,
-    CommonCommandTelegram as ESP3CommonCommandTelegram,
-)
-from .esp3.packet import ESP3Packet, ESP3PacketType
-from .esp3.protocol import EnOceanSerialProtocol3
-from .esp3.response import (
-    ResponseCode as ESP3ResponseType,
-    ResponseTelegram as ESP3ResponseTelegram,
-)
 from .gateway import Gateway
-from .version.id import VersionIdentifier
-from .version.info import VersionInfo
 
 __all__ = [
     # Addresses
@@ -97,7 +77,6 @@ __all__ = [
     "EEPMessageType",
     "EEPMessageValue",
     "EEPSpecification",
-    "EEPTeachInResponseMessageExpectation",
     "EEPTelegram",
     "EEP_SPECIFICATIONS",
     "EntityValue",
@@ -107,21 +86,4 @@ __all__ = [
     "ERP1ParseError",
     "ERP1Telegram",
     "RORG",
-    # ESP3
-    "CommunicationDuringEEPOperation",
-    "EnOceanSerialProtocol3",
-    "ESP3CommonCommandCode",
-    "ESP3CommonCommandTelegram",
-    "ESP3Packet",
-    "ESP3PacketType",
-    "ESP3ResponseTelegram",
-    "ESP3ResponseType",
-    # UTE
-    "UTECommandIdentifier",
-    "UTEMessage",
-    "UTEQueryRequestType",
-    "UTEResponseType",
-    # Version
-    "VersionIdentifier",
-    "VersionInfo",
 ]

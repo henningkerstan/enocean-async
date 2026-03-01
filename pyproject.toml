@@ -11,7 +11,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
     "Intended Audience :: Developers",
-    "Development Status :: 3 - Alpha"
+    "Development Status :: 4 - Beta"
 ]
 license = "Apache-2.0"
 license-files = ["LICENSE*"]
