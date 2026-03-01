@@ -5,20 +5,39 @@ An async implementation of the EnOcean Serial Protocol Version 3.
 __version__ = "0.3.0"
 __date__ = "2026-03-01"
 
-from .address import (
-    EURID as EnOceanUniqueRadioID,
-    Address as EnOceanAddress,
-    BaseAddress as EnOceanBaseAddress,
-    BroadcastAddress as EnOceanBroadcastAddress,
-    SenderAddress as EnOceanSenderAddress,
+from .address import EURID, Address, BaseAddress, BroadcastAddress, SenderAddress
+from .capabilities.action import Action
+from .capabilities.action_uid import ActionUID
+from .capabilities.cover_actions import (
+    QueryCoverPositionAction,
+    SetCoverPositionAction,
+    StopCoverAction,
 )
-from .device.device import Device as EnOceanDevice
+from .capabilities.dimmer_actions import DimAction
+from .capabilities.fan_actions import SetFanSpeedAction
+from .capabilities.observable_uids import ObservableUID
+from .capabilities.state_change import (
+    StateChange,
+    StateChangeCallback,
+    StateChangeSource,
+)
+from .capabilities.switch_actions import (
+    QueryActuatorMeasurementAction,
+    QueryActuatorStatusAction,
+    SetSwitchOutputAction,
+)
+from .device.device import Device
 from .eep import EEP_SPECIFICATIONS
 from .eep.handler import EEPHandler
 from .eep.id import EEP
-from .eep.manufacturer import Manufacturer as EnOceanManufacturers
-from .eep.message import EEPMessage, EntityValue
-from .eep.profile import EEPDataField, EEPSpecification
+from .eep.manufacturer import Manufacturer
+from .eep.message import EEPMessage, EEPMessageType, EEPMessageValue, EntityValue
+from .eep.profile import (
+    EEPDataField,
+    EEPSpecification,
+    EEPTelegram,
+    SimpleProfileSpecification,
+)
 from .erp1.errors import ERP1ParseError
 from .erp1.rorg import RORG
 from .erp1.telegram import ERP1Telegram
@@ -40,44 +59,69 @@ from .esp3.response import (
     ResponseCode as ESP3ResponseType,
     ResponseTelegram as ESP3ResponseTelegram,
 )
-from .gateway import Gateway as EnOceanGateway
-from .version.id import VersionIdentifier as EnOceanVersionIdentifier
-from .version.info import VersionInfo as EnOceanVersionInfo
+from .gateway import Gateway
+from .version.id import VersionIdentifier
+from .version.info import VersionInfo
 
 __all__ = [
-    "CommunicationDuringEEPOperation",
-    "EEPSpecification",
+    # Addresses
+    "Address",
+    "BaseAddress",
+    "BroadcastAddress",
+    "EURID",
+    "SenderAddress",
+    # Actions and vocabulary
+    "Action",
+    "ActionUID",
+    "DimAction",
+    "ObservableUID",
+    "QueryActuatorMeasurementAction",
+    "QueryActuatorStatusAction",
+    "QueryCoverPositionAction",
+    "SetCoverPositionAction",
+    "SetFanSpeedAction",
+    "SetSwitchOutputAction",
+    "StopCoverAction",
+    # State changes
+    "StateChange",
+    "StateChangeCallback",
+    "StateChangeSource",
+    # Device and gateway
+    "Device",
+    "Gateway",
+    # EEP layer
+    "EEP",
     "EEPDataField",
     "EEPHandler",
-    "EEP",
     "EEPMessage",
+    "EEPMessageType",
+    "EEPMessageValue",
+    "EEPSpecification",
     "EEPTeachInResponseMessageExpectation",
+    "EEPTelegram",
     "EEP_SPECIFICATIONS",
-    "EnOceanAddress",
-    "EnOceanBaseAddress",
-    "EnOceanBroadcastAddress",
-    "EnOceanDevice",
-    "EnOceanDeviceCatalogEntry",
-    "ENOCEAN_DEVICE_CATALOG",
-    "EnOceanGateway",
-    "EnOceanManufacturers",
-    "EnOceanSenderAddress",
-    "EnOceanSerialProtocol3",
-    "EnOceanUniqueRadioID",
     "EntityValue",
-    "EnOceanVersionIdentifier",
-    "EnOceanVersionInfo",
+    "Manufacturer",
+    "SimpleProfileSpecification",
+    # ERP1
     "ERP1ParseError",
     "ERP1Telegram",
+    "RORG",
+    # ESP3
+    "CommunicationDuringEEPOperation",
+    "EnOceanSerialProtocol3",
     "ESP3CommonCommandCode",
     "ESP3CommonCommandTelegram",
     "ESP3Packet",
     "ESP3PacketType",
     "ESP3ResponseTelegram",
     "ESP3ResponseType",
-    "RORG",
+    # UTE
     "UTECommandIdentifier",
     "UTEMessage",
     "UTEQueryRequestType",
     "UTEResponseType",
+    # Version
+    "VersionIdentifier",
+    "VersionInfo",
 ]

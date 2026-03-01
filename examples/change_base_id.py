@@ -3,14 +3,14 @@
 import asyncio
 import sys
 
-from enocean_async import EnOceanBaseAddress, EnOceanGateway
+from enocean_async import BaseAddress, Gateway
 
 CHECKMARK = "\033[92m✓\033[0m"
 CROSSMARK = "\033[91m✗\033[0m"
 EXCLAMATIONMARK = "\033[93m!\033[0m"
          
 async def main(port: str):
-    gateway = EnOceanGateway(port)
+    gateway = Gateway(port)
     
     # callback registration
     gateway.add_esp3_received_callback(lambda pkt: print(f"\nReceived {pkt}"))
@@ -42,7 +42,7 @@ async def main(port: str):
     )
     new_base_id_str = input().strip()
     try:
-        new_base_id = EnOceanBaseAddress(new_base_id_str)
+        new_base_id = BaseAddress(new_base_id_str)
         print(
             f"Are you sure you want to change this module's base ID to {new_base_id}? Type 'y' to confirm: ",
             end="",

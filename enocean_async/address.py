@@ -154,7 +154,7 @@ class Address:
         return self.to_number() == other.to_number()
 
     def __repr__(self) -> str:
-        return f"EnOceanAddress({self.to_string()})"
+        return f"Address({self.to_string()})"
 
 
 class EURID(Address):
@@ -208,7 +208,7 @@ class BaseAddress(Address):
         super().__init__(numeric_address)
 
     def __repr__(self) -> str:
-        return f"EnOceanBaseAddress({self.to_string()})"
+        return f"BaseAddress({self.to_string()})"
 
 
 class BroadcastAddress(Address):
@@ -219,4 +219,4 @@ class BroadcastAddress(Address):
         super().__init__(0xFFFFFFFF)
 
     def __repr__(self) -> str:
-        return "EnOceanBroadcastAddress(FF:FF:FF:FF)"
+        return "BroadcastAddress(FF:FF:FF:FF)"

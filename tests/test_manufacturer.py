@@ -1,7 +1,7 @@
-from enocean_async import EnOceanManufacturers
+from enocean_async import Manufacturer
 
 
 def test_manufacturer_values():
-    assert EnOceanManufacturers.ENOCEAN_GMBH.value == 0x00B
-    assert EnOceanManufacturers.ENOCEAN_GMBH.friendly_name == "EnOcean GmbH"
-    assert str(EnOceanManufacturers.ENOCEAN_GMBH) == "EnOcean GmbH"
+    assert Manufacturer.ENOCEAN_GMBH.value == 0x00B
+    assert Manufacturer.ENOCEAN_GMBH.friendly_name == "EnOcean GmbH"
+    assert str(Manufacturer.ENOCEAN_GMBH) == "EnOcean GmbH"

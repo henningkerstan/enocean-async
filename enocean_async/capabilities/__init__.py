@@ -13,6 +13,12 @@ from .observable_uids import ObservableUID
 from .position_angle import CoverCapability
 from .push_button import F6_02_01_02PushButtonCapability, PushButtonCapability
 from .scalar import ScalarCapability
+from .state_change import StateChange, StateChangeCallback, StateChangeSource
+from .switch_actions import (
+    QueryActuatorMeasurementAction,
+    QueryActuatorStatusAction,
+    SetSwitchOutputAction,
+)
 
 __all__ = [
     "Action",
@@ -24,9 +30,15 @@ __all__ = [
     "MetaDataCapability",
     "ObservableUID",
     "PushButtonCapability",
+    "QueryActuatorMeasurementAction",
+    "QueryActuatorStatusAction",
     "QueryCoverPositionAction",
     "ScalarCapability",
     "SetCoverPositionAction",
     "SetFanSpeedAction",
+    "SetSwitchOutputAction",
+    "StateChange",
+    "StateChangeCallback",
+    "StateChangeSource",
     "StopCoverAction",
 ]
