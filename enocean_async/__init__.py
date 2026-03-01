@@ -2,8 +2,8 @@
 An async implementation of the EnOcean Serial Protocol Version 3.
 """
 
-__version__ = "0.2.0"
-__date__ = "2026-02-24"
+__version__ = "0.3.0"
+__date__ = "2026-03-01"
 
 from .address import (
     EURID as EnOceanUniqueRadioID,
