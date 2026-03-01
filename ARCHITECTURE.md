@@ -42,6 +42,7 @@ class StateChange:
     observable_uid: str             # which observable (ObservableUID constant)
     value: Any                      # the new value
     unit: str | None                # physical unit, if applicable
+    channel: int | None             # output channel (0-based); None for single-channel or "all channels"
     timestamp: float                # wall-clock time
     source: StateChangeSource       # TELEGRAM or TIMER
 ```
@@ -112,7 +113,7 @@ EEPMessage
     └── MetaDataCapability → reads rssi, generates timestamps
     │ _emit()
     ▼
-StateChange(device_address, observable_uid, value, unit, timestamp, source)
+StateChange(device_address, observable_uid, value, unit, channel, timestamp, source)
     │ on_state_change callback
     ▼
 Application
