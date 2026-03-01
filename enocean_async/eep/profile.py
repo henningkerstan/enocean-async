@@ -102,6 +102,12 @@ class EEPSpecification:
     cmd_offset: int | None = None
     """Bit offset of the telegram's command/message identifier within the EEP; either measured from left (if cmd_offset is non-negative) or from right (if cmd_offset is negative)."""
 
+    ecid_size: int = 0
+    """Size of the telegram's extended command/message identifier in bits. If zero, there is only one telegram type."""
+
+    ecid_offset: int | None = None
+    """Bit offset of the telegram's extended command/message identifier within the EEP; either measured from left (if ecid_offset is non-negative) or from right (if ecid_offset is negative)."""
+
     telegrams: dict[int, EEPTelegram] = field(default_factory=dict)
     """Dictionary of telegrams defined for this EEP, keyed by their command/message identifier, each with its own structure and data fields."""
 

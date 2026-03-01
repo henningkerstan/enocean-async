@@ -19,3 +19,8 @@ class ActionUID:
 
     # Fan control (D2-20-02)
     SET_FAN_SPEED = "set_fan_speed"
+
+    # Electronic switches and dimmers (D2-01)
+    SET_SWITCH_OUTPUT = "set_switch_output"
+    QUERY_ACTUATOR_STATUS = "query_actuator_status"
+    QUERY_ACTUATOR_MEASUREMENT = "query_actuator_measurement"

@@ -14,6 +14,7 @@ from dataclasses import dataclass
 
 from ...capabilities.action_uid import ActionUID
 from ...capabilities.observable_uids import ObservableUID
+from ...capabilities.scalar import ScalarCapability
 from ...capabilities.switch_actions import (
     QueryActuatorMeasurementAction,
     QueryActuatorStatusAction,
@@ -480,6 +481,7 @@ _CMD_0xA_ActuatorPilotWireModeResponse = EEPTelegram(
             offset=13,
             size=3,
             range_enum=_PILOT_WIRE_ENUM,
+            observable_uid=ObservableUID.PILOT_WIRE_MODE,
         ),
     ],
 )
@@ -633,6 +635,67 @@ _COMMAND_ENCODERS = {
 
 
 # ---------------------------------------------------------------------------
+# Semantic resolvers
+# ---------------------------------------------------------------------------
+
+_UN_TO_UNIT: dict[int, str] = {
+    0x00: "Ws",
+    0x01: "Wh",
+    0x02: "kWh",
+    0x03: "W",
+    0x04: "kW",
+}
+_ENERGY_UN = {0x00, 0x01, 0x02}
+_POWER_UN = {0x03, 0x04}
+
+
+def _resolve_energy(values: dict[str, EEPMessageValue]) -> EEPMessageValue | None:
+    mv = values.get("MV")
+    un = values.get("UN")
+    if mv is None or un is None or un.raw not in _ENERGY_UN:
+        return None
+    return EEPMessageValue(raw=mv.raw, value=mv.raw, unit=_UN_TO_UNIT[un.raw])
+
+
+def _resolve_power(values: dict[str, EEPMessageValue]) -> EEPMessageValue | None:
+    mv = values.get("MV")
+    un = values.get("UN")
+    if mv is None or un is None or un.raw not in _POWER_UN:
+        return None
+    return EEPMessageValue(raw=mv.raw, value=mv.raw, unit=_UN_TO_UNIT[un.raw])
+
+
+_SEMANTIC_RESOLVERS = {
+    ObservableUID.ENERGY: _resolve_energy,
+    ObservableUID.POWER: _resolve_power,
+}
+
+_CAPABILITY_FACTORIES = [
+    lambda addr, cb: ScalarCapability(
+        device_address=addr,
+        on_state_change=cb,
+        observable_uid=ObservableUID.OUTPUT_VALUE,
+    ),
+    lambda addr, cb: ScalarCapability(
+        device_address=addr,
+        on_state_change=cb,
+        observable_uid=ObservableUID.ERROR_LEVEL,
+    ),
+    lambda addr, cb: ScalarCapability(
+        device_address=addr,
+        on_state_change=cb,
+        observable_uid=ObservableUID.PILOT_WIRE_MODE,
+    ),
+    lambda addr, cb: ScalarCapability(
+        device_address=addr, on_state_change=cb, observable_uid=ObservableUID.ENERGY
+    ),
+    lambda addr, cb: ScalarCapability(
+        device_address=addr, on_state_change=cb, observable_uid=ObservableUID.POWER
+    ),
+]
+
+
+# ---------------------------------------------------------------------------
 # EEPSpecification factory + all type variants
 # ---------------------------------------------------------------------------
 def _spec(type_id: int, name: str) -> EEPSpecification:
@@ -646,6 +709,8 @@ def _spec(type_id: int, name: str) -> EEPSpecification:
         ecid_size=8,
         telegrams=EEP_D2_01_TELEGRAMS,
         command_encoders=_COMMAND_ENCODERS,
+        semantic_resolvers=_SEMANTIC_RESOLVERS,
+        capability_factories=_CAPABILITY_FACTORIES,
     )
 
 

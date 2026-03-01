@@ -1,6 +1,57 @@
 """VLD telegram (D2) EEP definitions."""
 
+from .d2_01 import (
+    EEP_D2_01_0A,
+    EEP_D2_01_0B,
+    EEP_D2_01_0C,
+    EEP_D2_01_0D,
+    EEP_D2_01_0E,
+    EEP_D2_01_0F,
+    EEP_D2_01_00,
+    EEP_D2_01_01,
+    EEP_D2_01_02,
+    EEP_D2_01_03,
+    EEP_D2_01_04,
+    EEP_D2_01_05,
+    EEP_D2_01_06,
+    EEP_D2_01_07,
+    EEP_D2_01_08,
+    EEP_D2_01_09,
+    EEP_D2_01_10,
+    EEP_D2_01_11,
+    EEP_D2_01_12,
+    EEP_D2_01_13,
+    EEP_D2_01_14,
+    EEP_D2_01_15,
+    EEP_D2_01_16,
+)
 from .d2_05_00 import EEP_D2_05_00
 from .d2_20_02 import EEP_D2_20_02
 
-__all__ = ["EEP_D2_05_00", "EEP_D2_20_02"]
+__all__ = [
+    "EEP_D2_01_00",
+    "EEP_D2_01_01",
+    "EEP_D2_01_02",
+    "EEP_D2_01_03",
+    "EEP_D2_01_04",
+    "EEP_D2_01_05",
+    "EEP_D2_01_06",
+    "EEP_D2_01_07",
+    "EEP_D2_01_08",
+    "EEP_D2_01_09",
+    "EEP_D2_01_0A",
+    "EEP_D2_01_0B",
+    "EEP_D2_01_0C",
+    "EEP_D2_01_0D",
+    "EEP_D2_01_0E",
+    "EEP_D2_01_0F",
+    "EEP_D2_01_10",
+    "EEP_D2_01_11",
+    "EEP_D2_01_12",
+    "EEP_D2_01_13",
+    "EEP_D2_01_14",
+    "EEP_D2_01_15",
+    "EEP_D2_01_16",
+    "EEP_D2_05_00",
+    "EEP_D2_20_02",
+]
