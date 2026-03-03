@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
+import asyncio
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 
@@ -35,6 +36,6 @@ class Capability(ABC):
         raise NotImplementedError("Subclasses must implement the _decode_impl method.")
 
     def _emit(self, state_change: StateChange) -> None:
-        """Emit a state change via callback."""
+        """Emit a state change via callback, scheduled on the running event loop."""
         if self.on_state_change:
-            self.on_state_change(state_change)
+            asyncio.get_running_loop().call_soon(self.on_state_change, state_change)
