@@ -1,9 +1,9 @@
-from .action import Action
-from .commands.base import Command
-from .commands.cover import QueryCoverPosition, SetCoverPosition, StopCover
-from .commands.dimmer import Dim
-from .commands.fan import SetFanSpeed
-from .commands.switch import (
+from .instructable import Instructable
+from .instruction import Instruction
+from .instructions.cover import QueryCoverPosition, SetCoverPosition, StopCover
+from .instructions.dimmer import Dim
+from .instructions.fan import SetFanSpeed
+from .instructions.switch import (
     QueryActuatorMeasurement,
     QueryActuatorStatus,
     SetSwitchOutput,
@@ -16,8 +16,8 @@ from .observers.push_button import F6_02_01_02PushButtonObserver, PushButtonObse
 from .observers.scalar import ScalarObserver
 
 __all__ = [
-    "Action",
-    "Command",
+    "Instructable",
+    "Instruction",
     "CoverObserver",
     "Dim",
     "Observation",

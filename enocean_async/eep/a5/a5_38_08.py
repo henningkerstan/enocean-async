@@ -1,7 +1,7 @@
 """A5-38-08: Central command - gateway."""
 
-from ...capabilities.action import Action
-from ...capabilities.commands.dimmer import Dim
+from ...semantics.instructable import Instructable
+from ...semantics.instructions.dimmer import Dim
 from ..id import EEP
 from ..message import EEPMessage, EEPMessageType, EEPMessageValue
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram
@@ -91,6 +91,6 @@ EEP_A5_38_08 = EEPSpecification(
         )
     },
     encoders={
-        Action.DIM: _encode_dim,
+        Instructable.DIM: _encode_dim,
     },
 )

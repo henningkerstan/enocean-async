@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from time import time
 from typing import TYPE_CHECKING
 
-from .base import Observer
+from .observer import Observer
 
 if TYPE_CHECKING:
     from ...eep.message import EEPMessage
@@ -197,10 +197,6 @@ class PushButtonObserver(Observer):
         raise NotImplementedError("Subclasses must implement the _decode_impl method.")
 
 
-# Backward-compatible alias
-PushButtonCapability = PushButtonObserver
-
-
 @dataclass
 class F6_02_01_02PushButtonObserver(PushButtonObserver):
     """Button observer for F6-02-01/02 rocker switches.
@@ -269,7 +265,7 @@ def f6_push_button_factory() -> ObserverFactory:
     """Return an ``ObserverFactory`` that creates an ``F6_02_01_02PushButtonObserver``.
 
     Emits ``Observable.PUSH_BUTTON`` state changes with the button ID (``"a0"``, ``"b1"``,
-    ``"ab0"``, …) as ``EntityStateChange.entity_id`` and the event type (``"click"``, ``"hold"``,
+    ``"ab0"``, …) as ``Observation.entity_id`` and the event type (``"click"``, ``"hold"``,
     ``"double-click"``, ``"pushed"``, ``"released"``) as the value in ``values``.
     """
     from ...eep.profile import ObserverFactory

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from time import time
 from typing import TYPE_CHECKING
 
-from .base import Observer
+from .observer import Observer
 
 if TYPE_CHECKING:
     from ...eep.message import EEPMessage
@@ -17,17 +17,17 @@ from ..observation import Observation, ObservationSource
 
 @dataclass
 class ScalarObserver(Observer):
-    """Generic observer that emits an EntityStateChange for any EEP field annotated with a matching observable.
+    """Generic observer that emits an Observation for any EEP field annotated with a matching observable.
 
     This observer reads from the EEP-level observable key that was propagated into EEPMessage.entities by EEPHandler.
     This makes it fully EEP-agnostic.
     """
 
     observable: Observable = field(kw_only=True)
-    """The observable type to read from EEPMessage.entities and emit as an EntityStateChange."""
+    """The observable type to read from EEPMessage.entities and emit as an Observation."""
 
     entity_id: str = field(default="", kw_only=True)
-    """Entity ID for the emitted EntityStateChange. Defaults to observable.value when empty."""
+    """Entity ID for the emitted Observation. Defaults to observable.value when empty."""
 
     entity_id_field: str | None = field(default=None, kw_only=True)
     """If set, read this field ID from message.values to derive entity_id dynamically."""
@@ -59,10 +59,6 @@ class ScalarObserver(Observer):
         )
 
 
-# Backward-compatible alias
-ScalarCapability = ScalarObserver
-
-
 def scalar_factory(
     observable: Observable,
     *,
@@ -74,7 +70,7 @@ def scalar_factory(
 
     Args:
         observable: The observable this observer reads and emits.
-        entity_id: Static entity ID for the EntityStateChange (defaults to observable.value).
+        entity_id: Static entity ID for the Observation (defaults to observable.value).
         entity_id_field: Optional field ID to read the entity ID from (e.g. ``"I/O"`` for D2-01).
         entity_id_not_applicable: Raw field value meaning "not channel-specific"; falls back to entity_id.
     """

@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, NamedTuple
 
 from ..address import EURID, Address, BaseAddress, BroadcastAddress
-from ..capabilities.observable import Observable
 from ..eep.id import EEP
+from ..semantics.observable import Observable
 
 
 class EntityValue(NamedTuple):

@@ -3,15 +3,15 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ..action import Action
-from .base import Command
+from ..instructable import Instructable
+from ..instruction import Instruction
 
 
 @dataclass
-class SetFanSpeed(Command):
+class SetFanSpeed(Instruction):
     """Set the fan speed of a controlled ventilation unit."""
 
-    action: ClassVar[Action] = Action.SET_FAN_SPEED
+    action: ClassVar[Instructable] = Instructable.SET_FAN_SPEED
 
     fan_speed: int
     """FS field: 0–100 = percentage, 253 = Auto, 254 = Default, 255 = No change."""

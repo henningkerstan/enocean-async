@@ -6,8 +6,6 @@ from typing import Any, Callable
 from ..address import SenderAddress
 from .observable import Observable
 
-type ObservationCallback = Callable[["Observation"], None]
-
 
 class ObservationSource(IntEnum):
     TELEGRAM = 0
@@ -30,3 +28,6 @@ class Observation:
     timestamp: float = field(default_factory=time)
     time_elapsed: float = 0
     source: ObservationSource = ObservationSource.TELEGRAM
+
+
+type ObservationCallback = Callable[[Observation], None]

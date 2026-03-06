@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 import math
 from typing import Any, Callable
 
-from ..capabilities.action import Action
-from ..capabilities.observable import Observable
+from ..semantics.instructable import Instructable
+from ..semantics.observable import Observable
 from .id import EEP
 
 
@@ -18,17 +18,17 @@ class Entity:
 
     id: str
     observables: frozenset[Observable]
-    actions: frozenset[Action] = field(default_factory=frozenset)
+    actions: frozenset[Instructable] = field(default_factory=frozenset)
 
 
 type TelegramRawValues = dict[str, int]
 type ScaleFunction = Callable[[TelegramRawValues], float]
 type UnitFunction = Callable[[TelegramRawValues], str]
 
-# Type aliases for semantic resolvers and action encoders.
+# Type aliases for semantic resolvers and instruction encoders.
 # Using Any to avoid circular imports (capabilities/ imports from eep/).
 type SemanticResolver = Callable[[dict[str, Any]], Any | None]
-type ActionEncoder = Callable[[Any], Any]  # Command → EEPMessage
+type InstructionEncoder = Callable[[Any], Any]  # Instruction → EEPMessage
 
 
 @dataclass
@@ -167,8 +167,8 @@ class EEPSpecification:
     """Ordered list of observer factory callables. Each factory takes (device_address, on_state_change)
     and returns an Observer instance. MetaDataObserver is always prepended by the gateway."""
 
-    encoders: dict[Action, ActionEncoder] = field(default_factory=dict)
-    """Dict mapping Action → encoder function. Each encoder takes a Command and returns
+    encoders: dict[Instructable, InstructionEncoder] = field(default_factory=dict)
+    """Dict mapping Instructable → encoder function. Each encoder takes an Instruction and returns
     an EEPMessage with message_type.id set and values filled with raw field values (field_id → raw int).
     The gateway sets message.sender and message.destination before calling EEPHandler.encode()."""
 
@@ -206,7 +206,7 @@ class SimpleProfileSpecification(EEPSpecification):
         datafields: list[EEPDataField],
         semantic_resolvers: dict[Observable, SemanticResolver] | None = None,
         observers: list[ObserverFactory] | None = None,
-        encoders: dict[Action, ActionEncoder] | None = None,
+        encoders: dict[Instructable, InstructionEncoder] | None = None,
         entities: list[Entity] | None = None,
     ):
         """Initialize a single-telegram EEP.
@@ -217,7 +217,7 @@ class SimpleProfileSpecification(EEPSpecification):
             datafields: List of data fields in the unique telegram that is defined for this EEP.
             semantic_resolvers: Optional dict of Observable → resolver for multi-field combinations.
             observers: Optional list of observer factory callables.
-            encoders: Optional dict of Action → encoder callables.
+            encoders: Optional dict of Instructable → encoder callables.
             entities: Optional list of Entity declarations for this EEP.
         """
 

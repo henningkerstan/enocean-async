@@ -7,9 +7,6 @@ from typing import Callable, Optional
 import serial_asyncio_fast as serial_asyncio
 
 from .address import EURID, BaseAddress, SenderAddress
-from .capabilities.commands.base import Command
-from .capabilities.observation import Observation, ObservationCallback
-from .capabilities.observers.metadata import MetaDataObserver
 from .device.device import Device
 from .eep import EEP_SPECIFICATIONS
 from .eep.handler import EEPHandler
@@ -28,6 +25,9 @@ from .esp3.common_command import CommonCommandTelegram
 from .esp3.packet import ESP3Packet, ESP3PacketType
 from .esp3.protocol import EnOceanSerialProtocol3
 from .esp3.response import ResponseCode, ResponseTelegram
+from .semantics.instruction import Instruction
+from .semantics.observation import Observation, ObservationCallback
+from .semantics.observers.metadata import MetaDataObserver
 from .version.id import VersionIdentifier
 from .version.info import VersionInfo
 
@@ -93,7 +93,7 @@ class Gateway:
         self.__detected_devices: list[EURID | BaseAddress] = []
         self.__eep_handlers: dict[EEP, EEPHandler] = {}
         self.__devices: dict[EURID | BaseAddress, Device] = {}
-        self.__state_change_callbacks: list[ObservationCallback] = []
+        self.__observation_callbacks: list[ObservationCallback] = []
 
         # callbacks
         self.__esp3_receive_callbacks: list[ESP3Callback] = []
@@ -175,9 +175,9 @@ class Gateway:
     def add_response_callback(self, cb: ResponseCallback):
         self.__response_callbacks.append(cb)
 
-    def add_state_change_callback(self, cb: EntityStateChangeCallback) -> None:
-        """Add a callback for capability state changes."""
-        self.__state_change_callbacks.append(cb)
+    def add_observation_callback(self, cb: ObservationCallback) -> None:
+        """Add a callback that is called for every Observation emitted by a device observer."""
+        self.__observation_callbacks.append(cb)
 
     # ------------------------------------------------------------------
     # start and stop
@@ -350,7 +350,7 @@ class Gateway:
     async def send_command(
         self,
         destination: EURID | BaseAddress,
-        command: Command,
+        command: Instruction,
         sender: SenderAddress | None = None,
     ) -> SendResult:
         """Send a typed command to a registered device.
@@ -482,7 +482,7 @@ class Gateway:
             )
             return
 
-        cb = self.__on_capability_state_change
+        cb = self.__on_observation
         capabilities = [MetaDataObserver(device_address=address, on_state_change=cb)]
         for factory in eep.observers:
             capabilities.append(factory(address, cb))
@@ -499,9 +499,9 @@ class Gateway:
             f"Initialized device {address} with {len(device.capabilities)} capabilities"
         )
 
-    def __on_capability_state_change(self, state_change: Observation) -> None:
-        """Internal callback for capability state changes."""
-        self.__emit(self.__state_change_callbacks, state_change)
+    def __on_observation(self, observation: Observation) -> None:
+        """Internal callback forwarding observer Observations to registered callbacks."""
+        self.__emit(self.__observation_callbacks, observation)
 
     def remove_device(self, address: EURID | BaseAddress) -> None:
         """Deregister a device by its sender address (EURID or Base ID). This removes the device from the registry of known devices, so that incoming messages from this address will no longer be recognized as coming from a known device and will not be decoded as EEP messages."""

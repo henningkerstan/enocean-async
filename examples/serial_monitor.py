@@ -38,6 +38,13 @@ MESSAGEMARK = "\033[92m✉️\033[0m"
 STATECHANGEMARK = "\033[92m🔔\033[0m"
          
 
+def on_state_change(state_change: Observation) -> None:
+    """Handle state changes emitted by device capabilities."""
+    if state_change.source == ObservationSource.TIMER:
+        print(f"\n{TIMERMARK} {STATECHANGEMARK} {state_change}")
+    else:
+        print(f"╰─ {STATECHANGEMARK} {state_change}")
+
 async def main(port: str) -> None:
     # set up main loop with exit handler
     loop = asyncio.get_running_loop() 
@@ -60,16 +67,7 @@ async def main(port: str) -> None:
     gateway.add_esp3_received_callback(lambda pkt: print(f"\n{RECEIVEMARK} Received {pkt}"))
     gateway.add_erp1_received_callback(lambda erp1: print(f"├─ {TELEGRAMMARK} {erp1}"))
     gateway.add_new_device_callback(lambda addr: print(f"├─ {EXCLAMATIONMARK} new device: {addr}"))
-
-    def on_state_change(state_change: Observation) -> None:
-        """Handle state changes emitted by device capabilities."""
-        if state_change.source == ObservationSource.TIMER:
-            print(f"\n{TIMERMARK} {STATECHANGEMARK} {state_change}")
-        else:
-            print(f"╰─ {STATECHANGEMARK} {state_change}")
-
-
-    gateway.add_state_change_callback(on_state_change)
+    gateway.add_observation_callback(on_state_change)
     gateway.add_eep_message_received_callback(lambda msg: print(f"├─ {MESSAGEMARK}  {msg}"))
     gateway.add_ute_received_callback(lambda ute: print(f"╰─ {MESSAGEMARK} successfully parsed to UTE message: {ute}"))
     gateway.add_response_callback(lambda resp: print(f"╰─ {MESSAGEMARK} {resp}"))

@@ -3,18 +3,18 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ..action import Action
-from .base import Command
+from ..instructable import Instructable
+from ..instruction import Instruction
 
 
 @dataclass
-class SetCoverPosition(Command):
+class SetCoverPosition(Instruction):
     """Move a cover to a specific vertical position and rotation angle.
 
     Both ``position`` and ``angle`` are raw EEP values (0–127, where 127 = 100%).
     """
 
-    action: ClassVar[Action] = Action.SET_COVER_POSITION
+    action: ClassVar[Instructable] = Instructable.SET_COVER_POSITION
 
     position: int
     """Vertical position: 0–127 (maps to 0–100 %)."""
@@ -30,14 +30,14 @@ class SetCoverPosition(Command):
 
 
 @dataclass
-class StopCover(Command):
+class StopCover(Instruction):
     """Stop cover movement immediately."""
 
-    action: ClassVar[Action] = Action.STOP_COVER
+    action: ClassVar[Instructable] = Instructable.STOP_COVER
 
 
 @dataclass
-class QueryCoverPosition(Command):
+class QueryCoverPosition(Instruction):
     """Request the current position and angle from a cover actuator."""
 
-    action: ClassVar[Action] = Action.QUERY_COVER_POSITION
+    action: ClassVar[Instructable] = Instructable.QUERY_COVER_POSITION

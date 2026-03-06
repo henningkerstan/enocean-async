@@ -3,7 +3,7 @@
 from enum import StrEnum
 
 
-class Action(StrEnum):
+class Instructable(StrEnum):
     """Stable names for actions that can be commanded to devices.
 
     These are the canonical identifiers for things you can command a device to do —

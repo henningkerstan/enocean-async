@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 
 from ...address import Address
-from ..observation import EntityStateChangeCallback, Observation
+from ..observation import Observation, ObservationCallback
 
 if TYPE_CHECKING:
     from ...eep.message import EEPMessage
@@ -18,7 +18,7 @@ class Observer(ABC):
     It is responsible for decoding EEP messages related to that functionality and emitting state changes accordingly."""
 
     device_address: Address
-    on_state_change: Optional[EntityStateChangeCallback] = None
+    on_state_change: Optional[ObservationCallback] = None
 
     def decode(self, message: EEPMessage) -> None:
         """Decode the given EEPMessage according to this observer's logic.

@@ -8,8 +8,8 @@ Profiles in this module:
 - F6-02-02: Light and blind control - application style 2
 """
 
-from ...capabilities.observable import Observable
-from ...capabilities.observers.push_button import f6_push_button_factory
+from ...semantics.observable import Observable
+from ...semantics.observers.push_button import f6_push_button_factory
 from ..id import EEP
 from ..profile import EEPDataField, Entity, SimpleProfileSpecification
 

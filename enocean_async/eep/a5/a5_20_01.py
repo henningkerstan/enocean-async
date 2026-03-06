@@ -4,8 +4,8 @@ Only the inbound direction (actuator → controller, status report) is decoded.
 The outbound direction (controller → actuator, command) is not yet implemented.
 """
 
-from ...capabilities.observable import Observable
-from ...capabilities.observers.scalar import scalar_factory
+from ...semantics.observable import Observable
+from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
 from ..profile import EEPDataField, Entity, SimpleProfileSpecification
 

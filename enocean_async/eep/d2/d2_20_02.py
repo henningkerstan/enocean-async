@@ -1,7 +1,7 @@
 """D2-20-02: Fan control, type 0x02."""
 
-from ...capabilities.action import Action
-from ...capabilities.commands.fan import SetFanSpeed
+from ...semantics.instructable import Instructable
+from ...semantics.instructions.fan import SetFanSpeed
 from ..id import EEP
 from ..message import EEPMessage, EEPMessageType, EEPMessageValue
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram
@@ -150,6 +150,6 @@ EEP_D2_20_02 = EEPSpecification(
         ),
     },
     encoders={
-        Action.SET_FAN_SPEED: _encode_set_fan_speed,
+        Instructable.SET_FAN_SPEED: _encode_set_fan_speed,
     },
 )

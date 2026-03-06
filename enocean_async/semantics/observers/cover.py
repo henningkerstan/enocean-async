@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from ..observable import Observable
 from ..observation import Observation, ObservationSource
-from .base import Observer
+from .observer import Observer
 
 if TYPE_CHECKING:
     from ...eep.message import EEPMessage
@@ -16,8 +16,6 @@ if TYPE_CHECKING:
 
 # Watchdog timeout in seconds to detect when cover movement has stopped
 COVER_WATCHDOG_TIMEOUT = 1.5
-
-_logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -134,10 +132,6 @@ class CoverObserver(Observer):
             return "opening"
         else:
             return "stopped"  # No change in position, state remains the same
-
-
-# Backward-compatible alias
-CoverCapability = CoverObserver
 
 
 def cover_factory() -> ObserverFactory:

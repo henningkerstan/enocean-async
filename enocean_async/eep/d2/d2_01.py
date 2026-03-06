@@ -12,14 +12,14 @@ implemented, so dimming-limits sub-telegrams are registered under synthetic keys
 
 from dataclasses import dataclass
 
-from ...capabilities.action import Action
-from ...capabilities.commands.switch import (
+from ...semantics.instructable import Instructable
+from ...semantics.instructions.switch import (
     QueryActuatorMeasurement,
     QueryActuatorStatus,
     SetSwitchOutput,
 )
-from ...capabilities.observable import Observable
-from ...capabilities.observers.scalar import scalar_factory
+from ...semantics.observable import Observable
+from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
 from ..message import EEPMessage, EEPMessageType, EEPMessageValue
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram
@@ -630,9 +630,9 @@ def _encode_query_measurement(action: QueryActuatorMeasurement) -> EEPMessage:
 
 
 _COMMAND_ENCODERS = {
-    Action.SET_SWITCH_OUTPUT: _encode_set_output,
-    Action.QUERY_ACTUATOR_STATUS: _encode_query_status,
-    Action.QUERY_ACTUATOR_MEASUREMENT: _encode_query_measurement,
+    Instructable.SET_SWITCH_OUTPUT: _encode_set_output,
+    Instructable.QUERY_ACTUATOR_STATUS: _encode_query_status,
+    Instructable.QUERY_ACTUATOR_MEASUREMENT: _encode_query_measurement,
 }
 
 

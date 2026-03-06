@@ -8,12 +8,9 @@ class Observable(str, Enum):
 
     Each member has two intrinsic properties:
     - Its string value (the semantic id, e.g. "temperature") — used as dict key and in comparisons.
-    - ``unit`` — the one canonical physical unit for that quantity (``None`` for dimensionless
-      or categorical values). Units are domain-conventional, not necessarily SI base units
+    - ``unit`` — the physical unit for that quantity (``None`` for dimensionless
+      or categorical values). Units are domain-conventional (IoT / building automation domain), not necessarily SI base units
       (e.g. °C rather than K, Wh rather than J).
-
-    Observable names are semantic, not unit-encoding: the name says *what* is observed,
-    not *how* it is expressed. The unit is always ``observable.unit``.
     """
 
     def __new__(cls, value: str, unit: str | None = None):

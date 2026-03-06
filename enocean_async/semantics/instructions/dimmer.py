@@ -3,15 +3,15 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ..action import Action
-from .base import Command
+from ..instructable import Instructable
+from ..instruction import Instruction
 
 
 @dataclass
-class Dim(Command):
+class Dim(Instruction):
     """Dim a light to a specific value."""
 
-    action: ClassVar[Action] = Action.DIM
+    action: ClassVar[Instructable] = Instructable.DIM
 
     dim_value: int
     """EDIM field: 0–255. Absolute range 0–100 % or relative -100 %–+100 % depending on ``relative``."""

@@ -3,15 +3,15 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ..action import Action
-from .base import Command
+from ..instructable import Instructable
+from ..instruction import Instruction
 
 
 @dataclass
-class SetSwitchOutput(Command):
+class SetSwitchOutput(Instruction):
     """Set the output value of one or all channels of a D2-01 actuator (CMD 0x1)."""
 
-    action: ClassVar[Action] = Action.SET_SWITCH_OUTPUT
+    action: ClassVar[Instructable] = Instructable.SET_SWITCH_OUTPUT
 
     output_value: int
     """OV field: 0=OFF, 1–100=percentage ON, 0x7F=output value not valid/not applicable."""
@@ -21,17 +21,17 @@ class SetSwitchOutput(Command):
 
 
 @dataclass
-class QueryActuatorStatus(Command):
+class QueryActuatorStatus(Instruction):
     """Request the status of one or all channels of a D2-01 actuator (CMD 0x3)."""
 
-    action: ClassVar[Action] = Action.QUERY_ACTUATOR_STATUS
+    action: ClassVar[Instructable] = Instructable.QUERY_ACTUATOR_STATUS
 
 
 @dataclass
-class QueryActuatorMeasurement(Command):
+class QueryActuatorMeasurement(Instruction):
     """Request an energy or power measurement from a D2-01 actuator (CMD 0x6)."""
 
-    action: ClassVar[Action] = Action.QUERY_ACTUATOR_MEASUREMENT
+    action: ClassVar[Instructable] = Instructable.QUERY_ACTUATOR_MEASUREMENT
 
     query_power: bool = False
     """qu field: False=query energy, True=query power."""

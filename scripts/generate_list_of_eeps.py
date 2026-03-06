@@ -3,21 +3,21 @@
 This script generates a markdown file listing all supported EnOcean Equipment Profiles (EEPs) based on the EEP database in the `enocean_async` library.
 The generated file is named `SUPPORTED_EEPS.md` and contains a table with the EEP ID and its corresponding name.
 """
-from enocean_async.capabilities.metadata import MetaDataCapability
-from enocean_async.capabilities.observable_uids import ObservableUID
-from enocean_async.capabilities.position_angle import CoverCapability
-from enocean_async.capabilities.push_button import (
-    F6_02_01_02PushButtonCapability,
-    PushButtonCapability,
-)
-from enocean_async.capabilities.scalar import ScalarCapability
 from enocean_async.eep import EEP_SPECIFICATIONS
+from enocean_async.semantics.observable import Observable
+from enocean_async.semantics.observers.cover import CoverObserver
+from enocean_async.semantics.observers.metadata import MetaDataObserver
+from enocean_async.semantics.observers.push_button import (
+    F6_02_01_02PushButtonObserver,
+    PushButtonObserver,
+)
+from enocean_async.semantics.observers.scalar import ScalarObserver
 
-# Mapping of capability classes to their emitted StateChange observable_uids and possible values
+# Mapping of observer classes to their emitted StateChange observable_uids and possible values
 _BUTTON_EVENTS = ["pushed", "click", "double-click", "hold", "released"]
 
-CAPABILITY_STATE_CHANGES = {
-    F6_02_01_02PushButtonCapability: {
+OBSERVER_STATE_CHANGES = {
+    F6_02_01_02PushButtonObserver: {
         "entities": {
             "a0": _BUTTON_EVENTS,
             "a1": _BUTTON_EVENTS,
@@ -29,55 +29,55 @@ CAPABILITY_STATE_CHANGES = {
             "a1b0": _BUTTON_EVENTS,
         },
     },
-    PushButtonCapability: {
+    PushButtonObserver: {
         "entities": {
             "{button_id}": _BUTTON_EVENTS,
         },
     },
-    CoverCapability: {
+    CoverObserver: {
         "entities": {
-            ObservableUID.POSITION: ["position (0-127)"],
-            ObservableUID.ANGLE: ["angle (0-127)"],
-            ObservableUID.COVER_STATE: ["open", "opening", "closed", "closing", "stopped"],
+            Observable.POSITION: ["position (0-127)"],
+            Observable.ANGLE: ["angle (0-127)"],
+            Observable.COVER_STATE: ["open", "opening", "closed", "closing", "stopped"],
         },
     },
-    MetaDataCapability: {
+    MetaDataObserver: {
         "entities": {
-            ObservableUID.RSSI: ["signal strength (dBm)"],
-            ObservableUID.LAST_SEEN: ["timestamp"],
-            ObservableUID.TELEGRAM_COUNT: ["count"],
+            Observable.RSSI: ["signal strength (dBm)"],
+            Observable.LAST_SEEN: ["timestamp"],
+            Observable.TELEGRAM_COUNT: ["count"],
         },
     },
 }
 
 _SCALAR_ENTITY_DESCRIPTIONS = {
-    ObservableUID.TEMPERATURE: "temperature (°C)",
-    ObservableUID.HUMIDITY: "humidity (%)",
-    ObservableUID.ILLUMINATION: "illumination (lx)",
-    ObservableUID.MOTION: "motion detected / no motion / uncertain",
-    ObservableUID.VOLTAGE: "voltage (V)",
-    ObservableUID.WINDOW_STATE: "window state (open / tilted / closed)",
-    ObservableUID.OCCUPANCY_BUTTON: "occupancy button (pressed / released)",
+    Observable.TEMPERATURE: "temperature (°C)",
+    Observable.HUMIDITY: "humidity (%)",
+    Observable.ILLUMINATION: "illumination (lx)",
+    Observable.MOTION: "motion detected / no motion / uncertain",
+    Observable.VOLTAGE: "voltage (V)",
+    Observable.WINDOW_STATE: "window state (open / tilted / closed)",
+    Observable.OCCUPANCY_BUTTON: "occupancy button (pressed / released)",
 }
 
 
 def get_state_changes_for_eep(eep):
     """Get formatted list of StateChange observable_uids with their values for a given EEP."""
-    if not eep.capability_factories:
+    if not eep.observers:
         return None
 
     entity_strings = []
-    for factory in eep.capability_factories:
+    for factory in eep.observers:
         try:
             dummy = factory(None, None)
-            capability_class = type(dummy)
+            observer_class = type(dummy)
 
-            if isinstance(dummy, ScalarCapability):
-                uid = dummy.observable_uid
+            if isinstance(dummy, ScalarObserver):
+                uid = dummy.observable
                 desc = _SCALAR_ENTITY_DESCRIPTIONS.get(uid, uid)
                 entity_strings.append(f"`{uid}`: {desc}")
-            elif capability_class in CAPABILITY_STATE_CHANGES:
-                entities = CAPABILITY_STATE_CHANGES[capability_class]["entities"]
+            elif observer_class in OBSERVER_STATE_CHANGES:
+                entities = OBSERVER_STATE_CHANGES[observer_class]["entities"]
                 for observable_uid, values in entities.items():
                     values_str = ", ".join(f"`{v}`" for v in values)
                     entity_strings.append(f"`{observable_uid}`: {values_str}")

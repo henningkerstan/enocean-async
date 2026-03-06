@@ -1,13 +1,13 @@
 """D2-05-00: Blinds control for position and angle, type 0x00."""
 
-from ...capabilities.action import Action
-from ...capabilities.commands.cover import (
+from ...semantics.instructable import Instructable
+from ...semantics.instructions.cover import (
     QueryCoverPosition,
     SetCoverPosition,
     StopCover,
 )
-from ...capabilities.observable import Observable
-from ...capabilities.observers.cover import cover_factory
+from ...semantics.observable import Observable
+from ...semantics.observers.cover import cover_factory
 from ..id import EEP
 from ..message import EEPMessage, EEPMessageType, EEPMessageValue
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram, Entity
@@ -237,9 +237,9 @@ EEP_D2_05_00 = EEPSpecification(
     },
     observers=[cover_factory()],
     encoders={
-        Action.SET_COVER_POSITION: _encode_set_position,
-        Action.STOP_COVER: _encode_stop,
-        Action.QUERY_COVER_POSITION: _encode_query_position,
+        Instructable.SET_COVER_POSITION: _encode_set_position,
+        Instructable.STOP_COVER: _encode_stop,
+        Instructable.QUERY_COVER_POSITION: _encode_query_position,
     },
     entities=[
         Entity(
@@ -249,9 +249,9 @@ EEP_D2_05_00 = EEPSpecification(
             ),
             actions=frozenset(
                 {
-                    Action.SET_COVER_POSITION,
-                    Action.STOP_COVER,
-                    Action.QUERY_COVER_POSITION,
+                    Instructable.SET_COVER_POSITION,
+                    Instructable.STOP_COVER,
+                    Instructable.QUERY_COVER_POSITION,
                 }
             ),
         ),
