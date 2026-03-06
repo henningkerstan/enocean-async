@@ -13,10 +13,10 @@ from enocean_async.semantics.observers.push_button import (
 )
 from enocean_async.semantics.observers.scalar import ScalarObserver
 
-# Mapping of observer classes to their emitted StateChange observable_uids and possible values
+# Mapping of observer classes to their emitted Observations (observable → possible values)
 _BUTTON_EVENTS = ["pushed", "clicked", "double-clicked", "held", "released"]
 
-OBSERVER_STATE_CHANGES = {
+OBSERVER_OBSERVATIONS = {
     F6_02_01_02PushButtonObserver: {
         "entities": {
             "a0": _BUTTON_EVENTS,
@@ -61,8 +61,8 @@ _SCALAR_ENTITY_DESCRIPTIONS = {
 }
 
 
-def get_state_changes_for_eep(eep):
-    """Get formatted list of StateChange observable_uids with their values for a given EEP."""
+def get_observations_for_eep(eep):
+    """Get formatted list of Observations (observable → possible values) for a given EEP."""
     if not eep.observers:
         return None
 
@@ -76,8 +76,8 @@ def get_state_changes_for_eep(eep):
                 uid = dummy.observable
                 desc = _SCALAR_ENTITY_DESCRIPTIONS.get(uid, uid)
                 entity_strings.append(f"`{uid}`: {desc}")
-            elif observer_class in OBSERVER_STATE_CHANGES:
-                entities = OBSERVER_STATE_CHANGES[observer_class]["entities"]
+            elif observer_class in OBSERVER_OBSERVATIONS:
+                entities = OBSERVER_OBSERVATIONS[observer_class]["entities"]
                 for observable_uid, values in entities.items():
                     values_str = ", ".join(f"`{v}`" for v in values)
                     entity_strings.append(f"`{observable_uid}`: {values_str}")
@@ -90,8 +90,8 @@ def get_state_changes_for_eep(eep):
 with open("SUPPORTED_EEPS.md", "w", encoding="utf-8") as file:
     file.write("# List of supported EnOcean Equipment Profiles (EEPs)\n")
     file.write("<!-- This file is auto-generated via a pre-commit hook, do not edit manually. -->\n\n")
-    file.write("All EEPs listed below have three metadata sensors `rssi` (the signal strength in dBm), `last_seen` (the timestamp of the last received telegram), and `telegram_count` (the number of telegrams received since startup) in addition to the listed State Change Events.\n\n")
-    file.write("| RORG | FUNC | TYPE | Name | Telegrams | StateChange Events |\n")
+    file.write("All EEPs listed below have three metadata sensors `rssi` (the signal strength in dBm), `last_seen` (the timestamp of the last received telegram), and `telegram_count` (the number of telegrams received since startup) in addition to the listed Observations.\n\n")
+    file.write("| RORG | FUNC | TYPE | Name | Telegrams | Observations |\n")
     file.write("|---|---|---|---|---|---|\n")
 
     sorted_eeps = sorted(EEP_SPECIFICATIONS.values(), key=lambda item: str(item.eep))
@@ -107,7 +107,7 @@ with open("SUPPORTED_EEPS.md", "w", encoding="utf-8") as file:
             for key, telegram in sorted(entry.telegrams.items(), key=lambda item: item[0]):
                 telegrams_supported += f"`{key:#x}`: {telegram.name}<br>"
 
-        entity_strings = get_state_changes_for_eep(entry)
+        entity_strings = get_observations_for_eep(entry)
         observable_uids_str = "<br>".join(entity_strings) if entity_strings else "—"
 
         file.write(

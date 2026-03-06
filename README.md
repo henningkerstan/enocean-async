@@ -7,12 +7,12 @@ A light-weight, asynchronous, fully typed Python library for communicating with 
 ## Features
 
 ### Receive pipeline — observables
-Incoming radio telegrams are decoded into typed `StateChange` objects at the top of the pipeline. Callbacks are available at every stage for lower-level access:
+Incoming radio telegrams are decoded into typed `Observation` objects. Callbacks are available at every stage for lower-level access:
 
 ```python
-# Stage 4 — semantic: one StateChange per observable per device
-gateway.add_state_change_callback(lambda sc: print(sc))
-# StateChange(device_address=…, observable_uid='temperature', value=21.3, unit='°C', channel=None, …)
+# Stage 4 — semantic: one Observation per entity per device
+gateway.add_observation_callback(lambda obs: print(obs))
+# Observation(device_id=…, entity_id='temperature', values={Observable.TEMPERATURE: 21.3}, …)
 
 # Stage 3 — decoded EEP message (field values + semantic entities)
 gateway.add_eep_message_received_callback(lambda msg: ..., sender_filter=eurid)
@@ -24,16 +24,17 @@ gateway.add_erp1_received_callback(lambda erp1: ...)
 gateway.add_esp3_received_callback(lambda pkt: ...)
 ```
 
-Observable UIDs are stable string constants defined in `ObservableUID` (`temperature`, `illumination`, `switch_state`, `position`, `cover_state`, `window_state`, `energy`, `power`, …). Multi-channel actuators include a `channel` field so individual outputs can be distinguished.
+`Observable` members are stable string constants (`Observable.TEMPERATURE`, `Observable.ILLUMINATION`, `Observable.SWITCH_STATE`, `Observable.POSITION`, `Observable.COVER_STATE`, …). Each member carries its native unit as `Observable.TEMPERATURE.unit == "°C"`.
 
-### Send pipeline — typed actions
-Commands are sent to devices using typed `Action` objects:
+### Send pipeline — typed instructions
+Instructions are sent to devices using typed `Instruction` subclasses:
 
 ```python
-from enocean_async.capabilities.cover_actions import SetCoverPositionAction
-from enocean_async.capabilities.action_uid import ActionUID
+from enocean_async import SetCoverPosition, StopCover, SetSwitchOutput
 
-await gateway.send_command(destination=device_eurid, action=SetCoverPositionAction(position=75))
+await gateway.send_command(destination=device_eurid, command=SetCoverPosition(position=75))
+await gateway.send_command(destination=device_eurid, command=StopCover())
+await gateway.send_command(destination=device_eurid, command=SetSwitchOutput(state="on"))
 ```
 
 ### Device management
@@ -55,14 +56,14 @@ gateway.stop_learning()
 
 
 ## What works
-- Full receive pipeline: raw serial bytes → ESP3 → ERP1 → EEP decode → capabilities → `StateChange` callbacks
-- Full send pipeline: typed `Action` → `EEPHandler.encode()` → ERP1 → ESP3 → serial
-- Device registration with per-device EEP and capability instantiation
+- Full receive pipeline: raw serial bytes → ESP3 → ERP1 → EEP decode → observers → `Observation` callbacks
+- Full send pipeline: typed `Instruction` → `EEPHandler.encode()` → ERP1 → ESP3 → serial
+- Device registration with per-device EEP and observer instantiation
 - Learning mode: UTE teach-in (query parsing + automatic bidirectional response)
 - Auto-reconnect on connection loss
 - EURID, Base ID, firmware version retrieval; Base ID change
 - Parsing of all EEPs listed in [SUPPORTED_EEPS.md](SUPPORTED_EEPS.md)
-- Sending commands for: D2-05-00 (covers), D2-20-02 (fan), A5-38-08 (dim gateway), D2-01 (switches/dimmers)
+- Sending instructions for: D2-05-00 (covers), D2-20-02 (fan), A5-38-08 (dim gateway), D2-01 (switches/dimmers)
 
 
 ## What is missing / not yet implemented
@@ -95,29 +96,29 @@ ERP1Telegram      rorg, sender EURID, raw payload bits, rssi
     ▼
 EEPMessage
   .values    {field_id → EEPMessageValue}   ← EEP spec vocabulary: "TMP", "ILL1", "R1"
-  .entities  {observable_uid → EntityValue} ← semantic vocabulary: "temperature", "illumination"
-    │ Capability.decode()  (one call per capability in device.capabilities)
-    ├── ScalarCapability(observable_uid=TEMPERATURE)  → reads entities["temperature"]
-    ├── ScalarCapability(observable_uid=ILLUMINATION) → reads entities["illumination"]
-    ├── CoverCapability     → reads entities["position"] + entities["angle"], infers "cover_state"
-    ├── PushButtonCapability → reads values["R1"], values["EB"], … (stateful, no observable_uid)
-    └── MetaDataCapability  → emits rssi, last_seen, telegram_count
+  .entities  {observable → EntityValue}     ← semantic vocabulary: TEMPERATURE, ILLUMINATION
+    │ Observer.decode()  (one call per observer in device.capabilities)
+    ├── ScalarObserver(observable=TEMPERATURE)  → reads entities[TEMPERATURE]
+    ├── ScalarObserver(observable=ILLUMINATION) → reads entities[ILLUMINATION]
+    ├── CoverObserver    → reads entities[POSITION] + entities[ANGLE], infers COVER_STATE
+    ├── PushButtonObserver → reads values["R1"], values["EB"], … (stateful)
+    └── MetaDataObserver → emits rssi, last_seen, telegram_count
     │ _emit()
     ▼
-StateChange(device_address, observable_uid, value, unit, channel, timestamp, source)
-    │ on_state_change callback
+Observation(device_id, entity_id, values, timestamp, source)
+    │ add_observation_callback
     ▼
 Application
 ```
 
-### Send pipeline (actions)
+### Send pipeline (instructions)
 
 ```
 Application
-    │ gateway.send_command(destination, action=SetCoverPositionAction(position=75))
+    │ gateway.send_command(destination, command=SetCoverPosition(position=75))
     ▼
-Action  (typed dataclass, action_uid class variable)
-    │ EEPSpecification.command_encoders[action.action_uid](action)
+Instruction subclass  (typed dataclass with ClassVar[Instructable] action)
+    │ spec.encoders[command.action](command)
     ▼
 EEPMessage
   .message_type  ← selects which telegram type to encode
@@ -136,7 +137,7 @@ ESP3Packet
 Radio signal → Device
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for a detailed description of the EEP layer, the capability layer, and the key design decisions.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a detailed description of the EEP layer, the semantics layer, and the key design decisions.
 
 
 ## Contributing
