@@ -97,11 +97,11 @@ ERP1Telegram      rorg, sender EURID, raw payload bits, rssi
 EEPMessage
   .values    {field_id → EEPMessageValue}   ← EEP spec vocabulary: "TMP", "ILL1", "R1"
   .entities  {observable → EntityValue}     ← semantic vocabulary: TEMPERATURE, ILLUMINATION
-    │ Observer.decode()  (one call per observer in device.capabilities)
+    │ Observer.decode()  (one call per observer in device.observers)
     ├── ScalarObserver(observable=TEMPERATURE)  → reads entities[TEMPERATURE]
     ├── ScalarObserver(observable=ILLUMINATION) → reads entities[ILLUMINATION]
     ├── CoverObserver    → reads entities[POSITION] + entities[ANGLE], infers COVER_STATE
-    ├── PushButtonObserver → reads values["R1"], values["EB"], … (stateful)
+    ├── PushButtonObserver → reads values["R1"], values["EB"], … (stateful, hold timer)
     └── MetaDataObserver → emits rssi, last_seen, telegram_count
     │ _emit()
     ▼

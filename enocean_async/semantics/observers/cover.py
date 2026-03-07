@@ -139,5 +139,5 @@ def cover_factory() -> ObserverFactory:
     from ...eep.profile import ObserverFactory
 
     return ObserverFactory(
-        factory=lambda addr, cb: CoverObserver(device_address=addr, on_state_change=cb),
+        factory=lambda addr, cb: CoverObserver(device_address=addr, on_observation=cb),
     )

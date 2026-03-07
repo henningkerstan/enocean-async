@@ -243,7 +243,7 @@ ERP1Telegram      rorg, sender EURID, raw payload bits, rssi
 EEPMessage
   .values    {field_id  → EEPMessageValue}   ← EEP spec vocabulary: "TMP", "ILL1", "R1"
   .entities  {observable → EntityValue}      ← semantic vocabulary: TEMPERATURE, ILLUMINATION
-    │ Observer.decode()  (one call per observer in device.capabilities)
+    │ Observer.decode()  (one call per observer in device.observers)
     ├── ScalarObserver(observable=TEMPERATURE) → reads entities[TEMPERATURE]
     ├── ScalarObserver(observable=ILLUMINATION) → reads entities[ILLUMINATION]
     ├── CoverObserver → reads entities[POSITION]+entities[ANGLE], infers COVER_STATE
@@ -252,7 +252,7 @@ EEPMessage
     │ _emit()
     ▼
 Observation(device_id, entity_id, values, timestamp, source)
-    │ on_state_change callback  →  add_observation_callback
+    │ add_observation_callback
     ▼
 Application
 ```
@@ -338,7 +338,7 @@ Each `Observer` subclass interprets a decoded `EEPMessage` for one specific enti
 
 - **`ScalarObserver`** (`observers/scalar.py`): Generic, parameterised by `observable` and `entity_id`. Reads `message.entities[observable]` and emits an `Observation`. Covers all plain scalar observables (temperature, illumination, motion, voltage, window state, …).
 - **`CoverObserver`** (`observers/cover.py`): Stateful: takes the received position and angle values, infers `cover_state` from successive position deltas, and runs an asyncio watchdog to emit `stopped` after 1.5 s of radio silence. Emits one `Observation` with `entity_id="cover"` and `values={POSITION: …, ANGLE: …, COVER_STATE: …}`.
-- **`PushButtonObserver` / `F6_02_01_02PushButtonObserver`** (`observers/push_button.py`): Stateful: decodes rocker switch bit patterns into button events (`pushed`, `held`, `clicked`, `double-clicked`, `released`) using timeouts. Each button emits an `Observation` with its own `entity_id` (`"a0"`, `"b0"`, …).
+- **`PushButtonObserver` / `F6_02_01_02PushButtonObserver`** (`observers/push_button.py`): Stateful: decodes rocker switch bit patterns into button events using a hold timer and a release-timeout timer. Each button emits an `Observation` with its own `entity_id` (`"a0"`, `"b0"`, …). Event semantics: `pressed` fires immediately on press; `clicked` fires on release if the press was short; `held` fires when the hold threshold elapses while still pressed; `released` fires only after a hold — it is not emitted for short presses. This makes the event pairs semantically distinct: `pressed`/`clicked` bracket a tap, (`pressed`/)`held`/`released` bracket a hold.
 - **`MetaDataObserver`** (`observers/metadata.py`): Emits RSSI, last-seen timestamp, and telegram count as separate `Observation` objects. Always prepended to a device's observer list by the gateway.
 
 #### Instructions

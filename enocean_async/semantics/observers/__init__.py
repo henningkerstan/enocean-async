@@ -3,9 +3,8 @@ from .metadata import MetaDataObserver
 from .observer import Observer
 from .push_button import (
     CLICKED,
-    DOUBLE_CLICKED,
     HELD,
-    PUSHED,
+    PRESSED,
     RELEASED,
     F6_02_01_02PushButtonObserver,
     PushButtonObserver,
@@ -22,10 +21,9 @@ __all__ = [
     "PushButtonObserver",
     "F6_02_01_02PushButtonObserver",
     "f6_push_button_factory",
-    "PUSHED",
+    "PRESSED",
     "RELEASED",
     "CLICKED",
-    "DOUBLE_CLICKED",
     "HELD",
     "ScalarObserver",
     "scalar_factory",

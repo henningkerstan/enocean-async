@@ -16,6 +16,7 @@ from enocean_async.semantics.observation import Observation
 # Address fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def device_address() -> EURID:
     """A typical device EURID (in the EURID range 00:00:00:00 – FF:7F:FF:FF)."""
@@ -32,6 +33,7 @@ def base_address() -> BaseAddress:
 # State-change capture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def state_changes() -> tuple[list[Observation], callable]:
     """Returns (received_list, callback).
@@ -46,6 +48,7 @@ def state_changes() -> tuple[list[Observation], callable]:
 # ---------------------------------------------------------------------------
 # ERP1 telegram factories
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def make_4bs_erp1(device_address: EURID):
@@ -83,6 +86,7 @@ def make_rps_erp1(device_address: EURID):
 # ESP3 frame helper (used by protocol tests)
 # ---------------------------------------------------------------------------
 
+
 def build_esp3_frame(
     data: bytes,
     optional: bytes = b"",
@@ -91,12 +95,14 @@ def build_esp3_frame(
     """Assemble a valid ESP3 byte frame (sync + header + CRCs)."""
     data_len = len(data)
     opt_len = len(optional)
-    header = bytes([
-        (data_len >> 8) & 0xFF,
-        data_len & 0xFF,
-        opt_len,
-        ptype,
-    ])
+    header = bytes(
+        [
+            (data_len >> 8) & 0xFF,
+            data_len & 0xFF,
+            opt_len,
+            ptype,
+        ]
+    )
     return (
         bytes([SYNC_BYTE])
         + header

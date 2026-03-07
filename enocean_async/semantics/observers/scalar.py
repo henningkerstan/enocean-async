@@ -79,7 +79,7 @@ def scalar_factory(
     return ObserverFactory(
         factory=lambda addr, cb: ScalarObserver(
             device_address=addr,
-            on_state_change=cb,
+            on_observation=cb,
             observable=observable,
             entity_id=entity_id,
             entity_id_field=entity_id_field,

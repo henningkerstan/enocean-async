@@ -8,18 +8,33 @@ from enocean_async import BaseAddress, Gateway
 CHECKMARK = "\033[92m✓\033[0m"
 CROSSMARK = "\033[91m✗\033[0m"
 EXCLAMATIONMARK = "\033[93m!\033[0m"
-         
+
+
 async def main(port: str):
     gateway = Gateway(port)
-    
+
     # callback registration
     gateway.add_esp3_received_callback(lambda pkt: print(f"\nReceived {pkt}"))
-    gateway.add_erp1_received_callback(lambda erp1: print(f"├─ {CHECKMARK} successfully parsed to ERP1 telegram: {erp1}"))
-    gateway.add_new_device_callback(lambda addr: print(f"├─ {EXCLAMATIONMARK} new device: {addr}"))
-    gateway.add_eep_message_received_callback(lambda msg: print(f"╰─ {CHECKMARK} successfully parsed to EEP message: {msg}"))
-    gateway.add_ute_received_callback(lambda ute: print(f"╰─ {CHECKMARK} successfully parsed to UTE message: {ute}"))
-    gateway.add_response_callback(lambda resp: print(f"╰─ {CHECKMARK} successfully parsed to {resp}"))
-    gateway.add_parsing_failed_callback(lambda msg: print(f"╰─ {CROSSMARK} Further parsing failed: {msg}"))
+    gateway.add_erp1_received_callback(
+        lambda erp1: print(
+            f"├─ {CHECKMARK} successfully parsed to ERP1 telegram: {erp1}"
+        )
+    )
+    gateway.add_new_device_callback(
+        lambda addr: print(f"├─ {EXCLAMATIONMARK} new device: {addr}")
+    )
+    gateway.add_eep_message_received_callback(
+        lambda msg: print(f"╰─ {CHECKMARK} successfully parsed to EEP message: {msg}")
+    )
+    gateway.add_ute_received_callback(
+        lambda ute: print(f"╰─ {CHECKMARK} successfully parsed to UTE message: {ute}")
+    )
+    gateway.add_response_callback(
+        lambda resp: print(f"╰─ {CHECKMARK} successfully parsed to {resp}")
+    )
+    gateway.add_parsing_failed_callback(
+        lambda msg: print(f"╰─ {CROSSMARK} Further parsing failed: {msg}")
+    )
     gateway.add_esp3_send_callback(lambda pkt: print(f"Sending {pkt}"))
 
     print("Starting gateway...")
@@ -56,11 +71,18 @@ async def main(port: str):
             final_confirmation = input().strip().lower()
             if final_confirmation == "yes":
                 try:
-                    confirmed_base_id = await gateway.change_base_id(new_base_id, safety_flag=0x7B)
-                    print("Base ID changed successfully; intended new base ID:", new_base_id, "and actual new base ID after change_base_id command: ", confirmed_base_id)
+                    confirmed_base_id = await gateway.change_base_id(
+                        new_base_id, safety_flag=0x7B
+                    )
+                    print(
+                        "Base ID changed successfully; intended new base ID:",
+                        new_base_id,
+                        "and actual new base ID after change_base_id command: ",
+                        confirmed_base_id,
+                    )
                 except Exception as e:
                     print(f"Failed to change base ID: {e}")
-   
+
             else:
                 print("Base ID change cancelled.")
         else:

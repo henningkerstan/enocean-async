@@ -13,66 +13,70 @@ if TYPE_CHECKING:
 from ..observable import Observable
 from ..observation import Observation, ObservationSource
 
-PUSHED = "pushed"
+PRESSED = "pressed"
 RELEASED = "released"
 CLICKED = "clicked"
-DOUBLE_CLICKED = "double-clicked"
 HELD = "held"
 
 
 @dataclass
 class PushButtonObserver(Observer):
-    """Base observer for button devices.
+    """Base observer for push button devices.
 
     Provides timing-based state machine behavior for:
-    - pushed: Initial press event
-    - click: Short press (< hold threshold)
-    - hold: Long press - emitted immediately when threshold reached
-    - released: Button released
-    - double-click: Two clicks within double-click window
+    - pressed: Initial press event (fires immediately on button press)
+    - clicked: Short press (fires upon release if duration < hold threshold)
+    - held: Long press — emitted when hold threshold is exceeded while button is still pressed
+    - released: Button released after a hold (fires on release telegram or after timeout)
     """
 
-    hold_threshold: float = 0.5  # Time to consider press as "hold"
-    double_click_window: float = 0.4  # Max time between clicks for double-click
-    release_timeout: float = 30.0  # Max time to wait for a release telegram (as te fallback if no release is received)
+    _HOLD_THRESHOLD: float = 0.4
+    """Time in seconds to consider a press as a "hold"."""
 
-    _button_press_times: dict[str, float] = field(default_factory=dict)
-    _last_click_times: dict[str, float] = field(default_factory=dict)
-    _button_held: dict[str, bool] = field(default_factory=dict)
-    _hold_tasks: dict[str, asyncio.Task] = field(default_factory=dict)
-    _release_tasks: dict[str, asyncio.Task] = field(default_factory=dict)
+    _RELEASE_TIMEOUT: float = 30.0
+    """Time in seconds after which a button is considered released, if no release telegram was received."""
 
-    async def _emit_hold_event(self, button_id: str, press_time: float) -> None:
-        """Emit hold event after threshold is reached."""
-        await asyncio.sleep(self.hold_threshold)
+    _last_pressed_timestamps: dict[str, float] = field(default_factory=dict)
+    """Timestamp of the last press event (for each button ID)."""
 
-        if button_id in self._button_press_times:
-            duration = time() - press_time
-            self._button_held[button_id] = True
+    _button_was_held: dict[str, bool] = field(default_factory=dict)
+    """Indicates whether the button was held (for each button ID)."""
 
-            self._emit(
-                Observation(
-                    device_id=self.device_address,
-                    entity_id=button_id,
-                    values={Observable.PUSH_BUTTON: HELD},
-                    timestamp=time(),
-                    time_elapsed=duration,
-                    source=ObservationSource.TIMER,
-                )
+    _hold_timers: dict[str, asyncio.TimerHandle] = field(default_factory=dict)
+    """Hold timers for each button ID, to track when to emit `held` events (after hold threshold elapses)."""
+
+    _release_timers: dict[str, asyncio.TimerHandle] = field(default_factory=dict)
+    """Release timers for each button ID, to track when to emit `released` events (timeout)."""
+
+    def _emit_held(self, button_id: str, press_time: float) -> None:
+        """Emit held event (called by hold timer)."""
+        if button_id not in self._last_pressed_timestamps:
+            return
+
+        duration = time() - press_time
+        self._button_was_held[button_id] = True
+
+        self._emit(
+            Observation(
+                device_id=self.device_address,
+                entity_id=button_id,
+                values={Observable.PUSH_BUTTON: HELD},
+                timestamp=time(),
+                time_elapsed=duration,
+                source=ObservationSource.TIMER,
             )
+        )
 
-    async def _emit_release_timeout(self, button_id: str, press_time: float) -> None:
-        """Emit release event if no release telegram arrives within timeout."""
-        await asyncio.sleep(self.release_timeout)
-
-        if button_id not in self._button_press_times:
+    def _emit_released(self, button_id: str, press_time: float) -> None:
+        """Emit released event (called by release-timeout timer)."""
+        if button_id not in self._last_pressed_timestamps:
             return
 
         duration = time() - press_time
 
-        if button_id in self._hold_tasks:
-            self._hold_tasks[button_id].cancel()
-            del self._hold_tasks[button_id]
+        if button_id in self._hold_timers:
+            self._hold_timers[button_id].cancel()
+            del self._hold_timers[button_id]
 
         self._emit(
             Observation(
@@ -85,46 +89,17 @@ class PushButtonObserver(Observer):
             )
         )
 
-        if button_id in self._release_tasks:
-            del self._release_tasks[button_id]
+        if button_id in self._release_timers:
+            del self._release_timers[button_id]
 
     def _button_pressed(self, button_id: str) -> None:
-        """Handle a button press and emit a pushed event."""
+        """Handle a button press."""
         current_time = time()
-        self._button_press_times[button_id] = current_time
-        self._button_held[button_id] = False
-
         loop = asyncio.get_running_loop()
 
-        # Start hold timer
-        task = loop.create_task(self._emit_hold_event(button_id, current_time))
-        self._hold_tasks[button_id] = task
-
-        # Reset release timeout timer
-        if button_id in self._release_tasks:
-            self._release_tasks[button_id].cancel()
-            del self._release_tasks[button_id]
-
-        # Start new release timeout timer
-        timeout_task = loop.create_task(
-            self._emit_release_timeout(button_id, current_time)
-        )
-        self._release_tasks[button_id] = timeout_task
-
-        self._emit(
-            Observation(
-                device_id=self.device_address,
-                entity_id=button_id,
-                values={Observable.PUSH_BUTTON: PUSHED},
-                timestamp=current_time,
-                source=ObservationSource.TELEGRAM,
-            )
-        )
-
-    def _button_released(self, button_id: str, current_time: float) -> None:
-        """Handle a button release and emit click/doubleclick/release events."""
-        press_time = self._button_press_times.get(button_id)
-        if press_time is None:
+        # if button was held, emit a `released` event before emitting the new `pressed` event;
+        # this can only happen if the release telegram got lost
+        if self._button_was_held.get(button_id, False):
             self._emit(
                 Observation(
                     device_id=self.device_address,
@@ -134,63 +109,80 @@ class PushButtonObserver(Observer):
                     source=ObservationSource.TELEGRAM,
                 )
             )
-            return
 
-        duration = current_time - press_time
-
-        if button_id in self._hold_tasks:
-            self._hold_tasks[button_id].cancel()
-            del self._hold_tasks[button_id]
-
-        if button_id in self._release_tasks:
-            self._release_tasks[button_id].cancel()
-            del self._release_tasks[button_id]
-
-        was_held = self._button_held.get(button_id, False)
-
-        if not was_held and duration < self.hold_threshold:
-            last_click_time = self._last_click_times.get(button_id, 0)
-            time_since_last_click = current_time - last_click_time
-
-            if 0 < time_since_last_click <= self.double_click_window:
-                self._emit(
-                    Observation(
-                        device_id=self.device_address,
-                        entity_id=button_id,
-                        values={Observable.PUSH_BUTTON: DOUBLE_CLICKED},
-                        timestamp=current_time,
-                        time_elapsed=duration,
-                        source=ObservationSource.TELEGRAM,
-                    )
-                )
-                self._last_click_times[button_id] = 0
-            else:
-                self._emit(
-                    Observation(
-                        device_id=self.device_address,
-                        entity_id=button_id,
-                        values={Observable.PUSH_BUTTON: CLICKED},
-                        timestamp=current_time,
-                        time_elapsed=duration,
-                        source=ObservationSource.TELEGRAM,
-                    )
-                )
-                self._last_click_times[button_id] = current_time
-
+        # emit pressed event
         self._emit(
             Observation(
                 device_id=self.device_address,
                 entity_id=button_id,
-                values={Observable.PUSH_BUTTON: RELEASED},
+                values={Observable.PUSH_BUTTON: PRESSED},
                 timestamp=current_time,
-                time_elapsed=duration,
                 source=ObservationSource.TELEGRAM,
             )
         )
 
-        del self._button_press_times[button_id]
-        if button_id in self._button_held:
-            del self._button_held[button_id]
+        # store press time and reset held state
+        self._last_pressed_timestamps[button_id] = current_time
+        self._button_was_held[button_id] = False
+
+        # restart hold timer
+        if button_id in self._hold_timers:
+            self._hold_timers[button_id].cancel()
+        self._hold_timers[button_id] = loop.call_later(
+            self._HOLD_THRESHOLD, self._emit_held, button_id, current_time
+        )
+
+        # restart release timeout timer
+        if button_id in self._release_timers:
+            self._release_timers[button_id].cancel()
+        self._release_timers[button_id] = loop.call_later(
+            self._RELEASE_TIMEOUT, self._emit_released, button_id, current_time
+        )
+
+    def _button_released(self, button_id: str, current_time: float) -> None:
+        """Handle a button release."""
+        press_time = self._last_pressed_timestamps.get(button_id)
+        if press_time is None:
+            return  # release without prior press — ignore
+
+        press_duration = current_time - press_time
+
+        if button_id in self._hold_timers:
+            self._hold_timers[button_id].cancel()
+            del self._hold_timers[button_id]
+
+        if button_id in self._release_timers:
+            self._release_timers[button_id].cancel()
+            del self._release_timers[button_id]
+
+        was_held = self._button_was_held.get(button_id, False)
+
+        if was_held:
+            self._emit(
+                Observation(
+                    device_id=self.device_address,
+                    entity_id=button_id,
+                    values={Observable.PUSH_BUTTON: RELEASED},
+                    timestamp=current_time,
+                    time_elapsed=press_duration,
+                    source=ObservationSource.TELEGRAM,
+                )
+            )
+        elif press_duration < self._HOLD_THRESHOLD:
+            self._emit(
+                Observation(
+                    device_id=self.device_address,
+                    entity_id=button_id,
+                    values={Observable.PUSH_BUTTON: CLICKED},
+                    timestamp=current_time,
+                    time_elapsed=press_duration,
+                    source=ObservationSource.TELEGRAM,
+                )
+            )
+
+        del self._last_pressed_timestamps[button_id]
+        if button_id in self._button_was_held:
+            del self._button_was_held[button_id]
 
     def _decode_impl(self, message: EEPMessage) -> None:
         """Decode button messages into semantic state changes with timing."""
@@ -251,7 +243,7 @@ class F6_02_01_02PushButtonObserver(PushButtonObserver):
                 else:
                     self._button_pressed(button_id=r1_id)
             elif eb_val == "released":
-                for button_id in list(self._button_press_times.keys()):
+                for button_id in list(self._last_pressed_timestamps.keys()):
                     self._button_released(
                         button_id=button_id, current_time=current_time
                     )
@@ -266,12 +258,12 @@ def f6_push_button_factory() -> ObserverFactory:
 
     Emits ``Observable.PUSH_BUTTON`` state changes with the button ID (``"a0"``, ``"b1"``,
     ``"ab0"``, …) as ``Observation.entity_id`` and the event type (``"clicked"``, ``"held"``,
-    ``"double-clicked"``, ``"pushed"``, ``"released"``) as the value in ``values``.
+    ``"pressed"``, ``"released"``) as the value in ``values``.
     """
     from ...eep.profile import ObserverFactory
 
     return ObserverFactory(
         factory=lambda addr, cb: F6_02_01_02PushButtonObserver(
-            device_address=addr, on_state_change=cb
+            device_address=addr, on_observation=cb
         ),
     )
