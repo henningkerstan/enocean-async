@@ -45,7 +45,7 @@ type ERP1Callback = Callable[[ERP1Telegram], None]
 type EEPMessageCallback = Callable[[EEPMessage], None]
 type UTECallback = Callable[[UTEMessage], None]
 type ResponseCallback = Callable[[ResponseTelegram], None]
-type NewDeviceCallback = Callable[[SenderAddress], None]
+type NewDeviceCallback = Callable[[EURID], None]
 type ParsingFailedCallback = Callable[[str], None]
 type TeachInCallback = Callable[[FourBSTeachInTelegram], None]
 
@@ -88,10 +88,10 @@ class Gateway:
         self.__base_id: BaseAddress | None = None
 
         # device and EEP management
-        self.__known_device_eeps: dict[EURID | BaseAddress, EEP] = {}
-        self.__detected_devices: list[EURID | BaseAddress] = []
+        self.__known_device_eeps: dict[EURID, EEP] = {}
+        self.__known_senders: list[SenderAddress] = []
         self.__eep_handlers: dict[EEP, EEPHandler] = {}
-        self.__devices: dict[EURID | BaseAddress, Device] = {}
+        self.__devices: dict[EURID, Device] = {}
         self.__observation_callbacks: list[ObservationCallback] = []
 
         # callbacks
@@ -142,8 +142,9 @@ class Gateway:
         self.__esp3_send_callbacks.append(cb)
 
     def add_new_device_callback(self, cb: NewDeviceCallback):
-        """Add a callback that will be called for every newly detected sender address (EURID or Base ID) from incoming ERP1 telegrams.
+        """Add a callback that will be called for every newly detected EURID from incoming ERP1 telegrams.
 
+        BaseAddress senders (other controllers/gateways) are silently tracked but do not trigger this callback.
         This can be useful for implementing custom handling of new devices."""
         self.__new_device_callbacks.append(cb)
 
@@ -348,7 +349,7 @@ class Gateway:
 
     async def send_command(
         self,
-        destination: EURID | BaseAddress,
+        destination: EURID,
         command: Instruction,
         sender: SenderAddress | None = None,
     ) -> SendResult:
@@ -447,7 +448,7 @@ class Gateway:
     # ------------------------------------------------------------------
     def add_device(
         self,
-        address: EURID | BaseAddress,
+        address: EURID,
         eep: EEP,
         sender: SenderAddress | None = None,
         name: str | None = None,
@@ -502,8 +503,8 @@ class Gateway:
         """Internal callback forwarding observer Observations to registered callbacks."""
         self.__emit(self.__observation_callbacks, observation)
 
-    def remove_device(self, address: EURID | BaseAddress) -> None:
-        """Deregister a device by its sender address (EURID or Base ID). This removes the device from the registry of known devices, so that incoming messages from this address will no longer be recognized as coming from a known device and will not be decoded as EEP messages."""
+    def remove_device(self, address: EURID) -> None:
+        """Deregister a device by its sender address (EURID). This removes the device from the registry of known devices, so that incoming messages from this address will no longer be recognized as coming from a known device and will not be decoded as EEP messages."""
         if address in self.__known_device_eeps:
             del self.__known_device_eeps[address]
             if address in self.__devices:
@@ -514,9 +515,7 @@ class Gateway:
                 f"Tried to remove device with address {address}, but it was not found in the registry of known devices."
             )
 
-    def device_descriptor(
-        self, address: EURID | BaseAddress
-    ) -> DeviceDescriptor | None:
+    def device_descriptor(self, address: EURID) -> DeviceDescriptor | None:
         """Return a DeviceDescriptor for a registered device, or None if not found.
 
         The DeviceDescriptor describes what observables and commands the device supports,
@@ -531,11 +530,11 @@ class Gateway:
             return None
         return spec.device_descriptor()
 
-    def entities(self) -> dict["EURID | BaseAddress", DeviceDescriptor]:
+    def entities(self) -> dict[EURID, DeviceDescriptor]:
         """Return a DeviceDescriptor for every registered device, keyed by address.
         Devices whose EEP is not in the registry are silently skipped.
         """
-        result: dict[EURID | BaseAddress, DeviceDescriptor] = {}
+        result: dict[EURID, DeviceDescriptor] = {}
         for address in self.__known_device_eeps:
             descriptor = self.device_descriptor(address)
             if descriptor is not None:
@@ -753,8 +752,7 @@ class Gateway:
     def __is_sender_known(self, sender: SenderAddress) -> bool:
         """Check if the sender address is known (i.e. if we have an EEP ID for it)."""
         return (
-            sender in self.__known_device_eeps.keys()
-            or sender in self.__detected_devices
+            sender in self.__known_device_eeps.keys() or sender in self.__known_senders
         )
 
     def __process_response(self, response: ResponseTelegram):
@@ -771,11 +769,16 @@ class Gateway:
         self.__emit_with_sender_filter(self.__erp1_receive_callbacks, erp1.sender, erp1)
         self._logger.debug(f"ESP3 packet successfully decoded to ERP1 telegram: {erp1}")
 
-        # check if sender is known; if not, emit to new device callbacks and add to detected devices list
+        # check if sender is known; if not, track it and notify callbacks (EURIDs only)
         if not self.__is_sender_known(erp1.sender):
-            self.__detected_devices.append(erp1.sender)
-            self.__emit(self.__new_device_callbacks, erp1.sender)
-            self._logger.info(f"New device detected with sender address: {erp1.sender}")
+            self.__known_senders.append(erp1.sender)
+            if isinstance(erp1.sender, EURID):
+                self.__emit(self.__new_device_callbacks, erp1.sender)
+                self._logger.info(
+                    f"New device detected with sender address: {erp1.sender}"
+                )
+            else:
+                self._logger.debug(f"New non-EURID sender observed: {erp1.sender}")
 
         # if it's a UTE telegram, try to parse to UTE message; if parsing fails, ignore the packet and return;
         if erp1.rorg == RORG.RORG_UTE:

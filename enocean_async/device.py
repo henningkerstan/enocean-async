@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from .address import EURID, BaseAddress, SenderAddress
+from .address import EURID, SenderAddress
 from .eep.id import EEP
 from .semantics.observers.observer import Observer
 
@@ -9,7 +9,7 @@ from .semantics.observers.observer import Observer
 class Device:
     """Representation of an EnOcean device."""
 
-    address: EURID | BaseAddress
+    address: EURID
     eep: EEP
     name: str
     sender: SenderAddress | None = None
