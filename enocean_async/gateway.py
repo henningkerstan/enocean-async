@@ -452,7 +452,7 @@ class Gateway:
         sender: SenderAddress | None = None,
         name: str | None = None,
     ) -> None:
-        """Register a device with its sender address (EURID or Base ID) and its eep.
+        """Register a device with its sender address (EURID or Base ID) and its EEP.
 
         This allows the gateway to recognize incoming messages from this device and decode them according to the registered EEP (if a handler for that EEP is found).
         """
@@ -460,9 +460,11 @@ class Gateway:
             address=address, eep=eep, name=name or str(address), sender=sender
         )
         self.__devices[address] = device
-        self._logger.info(f"Added device with address {address} and eep {eep}")
+        self._logger.info(
+            f"Added device with address {address}, EEP {eep} and sender {sender}"
+        )
 
-        # get the EEP handler for this eep
+        # get the EEP handler for this EEP
         if eep not in self.__eep_handlers:
             # try to load
             if eep not in EEP_SPECIFICATIONS:
@@ -472,9 +474,9 @@ class Gateway:
                 return
             else:
                 self.__eep_handlers[eep] = EEPHandler(EEP_SPECIFICATIONS[eep])
-                self._logger.info(f"Loaded EEP handler for eep {eep}")
+                self._logger.info(f"Loaded EEP handler for EEP {eep}")
         else:
-            self._logger.debug(f"EEP handler for eep {eep} already loaded.")
+            self._logger.debug(f"EEP handler for EEP {eep} already loaded.")
 
         # build observer list from EEP observers
         eep_spec = EEP_SPECIFICATIONS[eep]
