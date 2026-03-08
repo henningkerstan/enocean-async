@@ -1,7 +1,7 @@
 from enocean_async.address import BroadcastAddress
 
 from ..protocol.erp1.telegram import RORG, ERP1Telegram
-from .message import EEPMessage, EEPMessageType, EEPMessageValue, EntityValue
+from .message import EEPMessage, EEPMessageType, RawEEPMessage, ValueWithContext
 from .profile import EEPSpecification
 
 
@@ -18,8 +18,6 @@ class EEPHandler:
             sender=telegram.sender,
             eep=self.__eep.eep,
             rssi=telegram.rssi,
-            values={},
-            entities={},
         )
 
         if telegram.destination is not None and not telegram.destination.is_broadcast():
@@ -49,26 +47,22 @@ class EEPHandler:
             else f"Telegram {cmd_value}",
         )
 
-        # iterate over the data fields defined in the EEP and extract values from the telegram
-        # First pass: collect all raw values for dependency resolution
-        telegram_raw_values: dict[str, int] = {}
+        # First pass: collect all raw values
         for field in self.__eep.telegrams[cmd_value].datafields:
-            telegram_raw_values[field.id] = telegram.bitstring_raw_value(
+            msg.raw[field.id] = telegram.bitstring_raw_value(
                 offset=field.offset, size=field.size
             )
 
-        # Second pass: decode values with context (for field interdependencies)
+        # Second pass: decode scaled values with context (for field interdependencies)
         for field in self.__eep.telegrams[cmd_value].datafields:
-            raw_value = telegram_raw_values[field.id]
+            raw_value = msg.raw[field.id]
             value = None
 
-            # if the field has an enumeration, convert the raw value to its corresponding string representation
             if field.range_enum is not None:
                 value = field.range_enum.get(raw_value, f"Unknown({raw_value})")
             elif field.range_min is not None and field.range_max is not None:
-                # Compute scale bounds using callbacks (with full message context)
-                scale_min = field.scale_min_fn(telegram_raw_values)
-                scale_max = field.scale_max_fn(telegram_raw_values)
+                scale_min = field.scale_min_fn(msg.raw)
+                scale_max = field.scale_max_fn(msg.raw)
 
                 if scale_min is not None and scale_max is not None:
                     value = telegram.bitstring_scaled_value(
@@ -84,38 +78,31 @@ class EEPHandler:
             else:
                 value = raw_value
 
-            # Compute unit using callback
-            unit = field.unit_fn(telegram_raw_values)
-
-            msg.values[field.id] = EEPMessageValue(
-                raw=raw_value, value=value, unit=unit
+            unit = field.unit_fn(msg.raw) or None
+            msg.decoded[field.id] = ValueWithContext(
+                name=field.name or field.id, value=value, unit=unit
             )
 
-        # Third pass: entity observable propagation — copy decoded values to semantic entity keys
+        # Third pass: entity observable propagation — copy scaled values to semantic entity keys
         for field in self.__eep.telegrams[cmd_value].datafields:
-            if field.observable is not None and field.id in msg.values:
-                field_value = msg.values[field.id]
-                msg.entities[field.observable] = EntityValue(
-                    value=field_value.value, unit=field_value.unit
-                )
+            if field.observable is not None and field.id in msg.decoded:
+                msg.values[field.observable] = msg.decoded[field.id]
 
         # Fourth pass: semantic resolvers — combine multiple fields into a single entity value
         for observable, resolver in self.__eep.semantic_resolvers.items():
-            result = resolver(msg.values)
+            result = resolver(msg.raw, msg.decoded)
             if result is not None:
-                msg.entities[observable] = EntityValue(
-                    value=result.value, unit=result.unit
-                )
+                msg.values[observable] = result
 
         return msg
 
-    def encode(self, message: EEPMessage) -> ERP1Telegram:
-        """Convert an EEPMessage into an ERP1Telegram.
+    def encode(self, message: RawEEPMessage) -> ERP1Telegram:
+        """Convert a RawEEPMessage into an ERP1Telegram.
 
         The message must have:
         - message.sender set to a valid sender address (BaseAddress or EURID) for the gateway
         - message.message_type.id set to the telegram command value (0 for single-telegram EEPs)
-        - message.values[field_id] = EEPMessageValue(raw=<int>, ...) for each field to encode
+        - message.raw_values[field_id] = <int> for each field to encode
 
         Raises:
             ValueError: if message.sender is None or the telegram type is unknown.
@@ -155,9 +142,9 @@ class EEPHandler:
 
         # Write each field's raw value
         for f in datafields:
-            mv = message.values.get(f.id)
-            if mv is not None:
-                erp1.set_bitstring_raw_value(offset=f.offset, size=f.size, value=mv.raw)
+            raw = message.raw.get(f.id)
+            if raw is not None:
+                erp1.set_bitstring_raw_value(offset=f.offset, size=f.size, value=raw)
 
         return erp1
 

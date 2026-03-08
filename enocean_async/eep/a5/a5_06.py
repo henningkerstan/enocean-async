@@ -4,33 +4,33 @@ from ...semantics.observable import Observable
 from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
 from ..manufacturer import Manufacturer
-from ..message import EEPMessageValue
+from ..message import ValueWithContext
 from ..profile import EEPDataField, Entity, SimpleProfileSpecification
 
 
 def _a5_06_illumination_resolver(
-    values: dict[str, EEPMessageValue],
-) -> EEPMessageValue | None:
+    raw: dict[str, int], scaled: dict[str, ValueWithContext]
+) -> ValueWithContext | None:
     """Select the illumination value for standard A5-06 variants using the RS range-select field."""
-    rs = values.get("RS")
-    ill1 = values.get("ILL1")
-    ill2 = values.get("ILL2")
+    rs = raw.get("RS")
+    ill1 = scaled.get("ILL1")
+    ill2 = scaled.get("ILL2")
     if rs is not None:
-        return ill1 if rs.raw == 0 else ill2
+        return ill1 if rs == 0 else ill2
 
     return ill2 or ill1
 
 
 def _a5_06_eltako_illumination_resolver(
-    values: dict[str, EEPMessageValue],
-) -> EEPMessageValue | None:
+    raw: dict[str, int], scaled: dict[str, ValueWithContext]
+) -> ValueWithContext | None:
     """Select the illumination value for the Eltako A5-06-01 variant.
 
     Uses ILL1 (low range) when ILL2 is at its minimum raw value (0), otherwise ILL2 (high range).
     """
-    ill1 = values.get("ILL1")
-    ill2 = values.get("ILL2")
-    if ill2 is not None and ill2.raw == 0:
+    ill1 = scaled.get("ILL1")
+    ill2 = scaled.get("ILL2")
+    if ill2 is not None and raw.get("ILL2", 1) == 0:
         return ill1
     return ill2 or ill1
 

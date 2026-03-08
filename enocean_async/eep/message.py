@@ -6,7 +6,7 @@ from ..eep.id import EEP
 from ..semantics.observable import Observable
 
 
-class EntityValue(NamedTuple):
+class ValueWithContext(NamedTuple):
     """A lightweight container for semantic entity values."""
 
     value: Any
@@ -14,6 +14,13 @@ class EntityValue(NamedTuple):
 
     unit: str | None = None
     """The unit of the value (e.g., '°C', '%', 'lx')."""
+
+    name: str = ""
+    """A human-readable name for the value (e.g. 'Temperature', 'Occupancy').
+
+    Populated from ``EEPDataField.name`` during decode, or set explicitly by semantic resolvers.
+    Empty string if not populated.
+    """
 
 
 @dataclass
@@ -28,52 +35,56 @@ class EEPMessageType:
 
 
 @dataclass
-class EEPMessageValue:
-    """Raw and interpreted value for a single EEP data field."""
+class RawEEPMessage:
+    """Encode-path message: envelope fields plus raw field values.
 
-    raw: int
-    """The raw integer value of the data field as extracted from the message."""
-
-    value: Any
-    """The interpreted value of the data field according to the EEP profile's data field definition"""
-
-    unit: str | None = None
-    """The unit of the interpreted value (e.g., '°C', '%', 'kWh'). Can be dynamic based on message context."""
-
-
-@dataclass
-class EEPMessage:
-    """An EEP message represents a message according to a specific EEP profile in a a dictionary of values extracted from the message according to the EEP profile's data fields. It should not be generated manually but using a proper EEPHandler.
-
-    For convenience, it can include the sender's address, the destination address, the eep of the message, and the RSSI (signal strength).
+    Produced by instruction encoders and consumed by ``EEPHandler.encode()``.
+    Contains only the information needed to write bits onto the wire — no scaling
+    or semantic interpretation.
     """
 
     sender: EURID | BaseAddress | None
-    """The sender's address. This is optional and can be None if the sender is unknown or not relevant."""
+    """Sender address. Set to ``None`` by encoders; filled in by the gateway before encoding."""
 
     destination: Address = BroadcastAddress()
-    """The destination address. This will only be different from broadcast, when addressed sending is used (i.e. for VLD telegrams)."""
+    """Destination address. Differs from broadcast only for addressed telegrams (e.g. VLD)."""
 
     eep: EEP | None = None
-    """The eep of the message. This is optional and can be None if the eep is unknown or not relevant."""
+    """EEP identifier, if known."""
 
     rssi: int | None = None
-    """The RSSI (signal strength) of the message. This is optional and can be None if the RSSI is unknown or not relevant."""
+    """Received signal strength. Always ``None`` on the encode path."""
 
     message_type: EEPMessageType | None = None
-    """The type of the message."""
+    """Telegram sub-type within the EEP (selects the CMD value). ``None`` for single-telegram EEPs."""
 
-    values: Dict[str, EEPMessageValue] = field(default_factory=dict)
-    """A dictionary of values extracted from the message according to the EEP profile's data fields.
+    raw: Dict[str, int] = field(default_factory=dict)
+    """Raw field values keyed by EEP field ID (e.g. ``'POS'``, ``'R1'``).
 
-    Keys are EEP field IDs (e.g., 'R1', 'POS'); values are corresponding raw/interpreted pairs.
+    Values are plain integers as they appear on the wire — no scaling applied.
     """
 
-    entities: Dict[Observable, EntityValue] = field(default_factory=dict)
-    """A dictionary of semantically interpreted values keyed by Observable.
 
-    Keys are Observable enum members (e.g., Observable.TEMPERATURE, Observable.POSITION).
-    Values are EntityValue tuples containing (value, unit).
+@dataclass
+class EEPMessage(RawEEPMessage):
+    """Decode-path message: extends ``RawEEPMessage`` with scaled field values and semantic entities.
+
+    Produced by ``EEPHandler.decode()``. Not intended to be constructed manually.
+    """
+
+    decoded: Dict[str, ValueWithContext] = field(default_factory=dict)
+    """Per-field decoded values keyed by EEP field ID.
+
+    Each entry holds the scaled or enum-resolved value for that field together
+    with its unit (e.g. ``ValueWithContext(value=23.4, unit='°C', name='Temperature')``).
+    Populated in parallel with ``raw`` during decode.
+    """
+
+    values: Dict[Observable, ValueWithContext] = field(default_factory=dict)
+    """Semantic entity values keyed by ``Observable``.
+
+    Populated from ``decoded`` via ``EEPDataField.observable`` annotations and
+    semantic resolvers. These are the values that observers and integrations consume.
     """
 
     def __repr__(self) -> str:
@@ -81,5 +92,5 @@ class EEPMessage:
         if self.destination is not None and not self.destination.is_broadcast():
             msg += f", destination={self.destination.to_string()}"
 
-        msg += f", values={self.values}, entities={self.entities})"
+        msg += f", raw={self.raw}, decoded={self.decoded}, values={self.values})"
         return msg

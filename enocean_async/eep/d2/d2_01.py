@@ -21,7 +21,7 @@ from ...semantics.instructions.switch import (
 from ...semantics.observable import Observable
 from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
-from ..message import EEPMessage, EEPMessageType, EEPMessageValue
+from ..message import EEPMessageType, RawEEPMessage, ValueWithContext
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram
 
 # ---------------------------------------------------------------------------
@@ -592,40 +592,36 @@ EEP_D2_01_TELEGRAMS: dict[int, EEPTelegram] = {
 # ---------------------------------------------------------------------------
 
 
-def _encode_set_output(action: SetSwitchOutput) -> EEPMessage:
-    msg = EEPMessage(
+def _encode_set_output(action: SetSwitchOutput) -> RawEEPMessage:
+    msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=0x01, description=_EEP_D2_01_Commands[0x1].name),
     )
-    msg.values["DV"] = EEPMessageValue(raw=action.dim_value, value=action.dim_value)
+    msg.raw["DV"] = action.dim_value
     io_val = int(action.entity_id) if action.entity_id.isdigit() else 0x1E
-    msg.values["I/O"] = EEPMessageValue(raw=io_val, value=io_val)
-    msg.values["OV"] = EEPMessageValue(
-        raw=action.output_value, value=action.output_value
-    )
+    msg.raw["I/O"] = io_val
+    msg.raw["OV"] = action.output_value
     return msg
 
 
-def _encode_query_status(action: QueryActuatorStatus) -> EEPMessage:
-    msg = EEPMessage(
+def _encode_query_status(action: QueryActuatorStatus) -> RawEEPMessage:
+    msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=0x03, description=_EEP_D2_01_Commands[0x3].name),
     )
     io_val = int(action.entity_id) if action.entity_id.isdigit() else 0x1E
-    msg.values["I/O"] = EEPMessageValue(raw=io_val, value=io_val)
+    msg.raw["I/O"] = io_val
     return msg
 
 
-def _encode_query_measurement(action: QueryActuatorMeasurement) -> EEPMessage:
-    msg = EEPMessage(
+def _encode_query_measurement(action: QueryActuatorMeasurement) -> RawEEPMessage:
+    msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=0x06, description=_EEP_D2_01_Commands[0x6].name),
     )
     io_val = int(action.entity_id) if action.entity_id.isdigit() else 0x1E
-    msg.values["I/O"] = EEPMessageValue(raw=io_val, value=io_val)
-    msg.values["qu"] = EEPMessageValue(
-        raw=int(action.query_power), value=int(action.query_power)
-    )
+    msg.raw["I/O"] = io_val
+    msg.raw["qu"] = int(action.query_power)
     return msg
 
 
@@ -651,34 +647,38 @@ _ENERGY_UN = {0x00, 0x01, 0x02}
 _POWER_UN = {0x03, 0x04}
 
 
-def _resolve_switch_state(values: dict[str, EEPMessageValue]) -> EEPMessageValue | None:
-    ov = values.get("OV")
-    if ov is None or ov.raw == 0x7F:
+def _resolve_switch_state(
+    raw: dict[str, int], _scaled: dict
+) -> ValueWithContext | None:
+    ov = raw.get("OV")
+    if ov is None or ov == 0x7F:
         return None
-    return EEPMessageValue(raw=ov.raw, value=ov.raw > 0, unit=None)
+    return ValueWithContext(name="Switch state", value=ov > 0, unit=None)
 
 
-def _resolve_output_value(values: dict[str, EEPMessageValue]) -> EEPMessageValue | None:
-    ov = values.get("OV")
-    if ov is None or ov.raw > 100:
+def _resolve_output_value(
+    raw: dict[str, int], _scaled: dict
+) -> ValueWithContext | None:
+    ov = raw.get("OV")
+    if ov is None or ov > 100:
         return None
-    return EEPMessageValue(raw=ov.raw, value=ov.raw, unit="%")
+    return ValueWithContext(name="Output value", value=ov, unit="%")
 
 
-def _resolve_energy(values: dict[str, EEPMessageValue]) -> EEPMessageValue | None:
-    mv = values.get("MV")
-    un = values.get("UN")
-    if mv is None or un is None or un.raw not in _ENERGY_UN:
+def _resolve_energy(raw: dict[str, int], _scaled: dict) -> ValueWithContext | None:
+    mv = raw.get("MV")
+    un = raw.get("UN")
+    if mv is None or un is None or un not in _ENERGY_UN:
         return None
-    return EEPMessageValue(raw=mv.raw, value=mv.raw, unit=_UN_TO_UNIT[un.raw])
+    return ValueWithContext(name="Energy", value=mv, unit=_UN_TO_UNIT[un])
 
 
-def _resolve_power(values: dict[str, EEPMessageValue]) -> EEPMessageValue | None:
-    mv = values.get("MV")
-    un = values.get("UN")
-    if mv is None or un is None or un.raw not in _POWER_UN:
+def _resolve_power(raw: dict[str, int], _scaled: dict) -> ValueWithContext | None:
+    mv = raw.get("MV")
+    un = raw.get("UN")
+    if mv is None or un is None or un not in _POWER_UN:
         return None
-    return EEPMessageValue(raw=mv.raw, value=mv.raw, unit=_UN_TO_UNIT[un.raw])
+    return ValueWithContext(name="Power", value=mv, unit=_UN_TO_UNIT[un])
 
 
 _BASE_RESOLVERS = {

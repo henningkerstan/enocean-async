@@ -3,20 +3,18 @@
 from ...semantics.instructable import Instructable
 from ...semantics.instructions.fan import SetFanSpeed
 from ..id import EEP
-from ..message import EEPMessage, EEPMessageType, EEPMessageValue
+from ..message import EEPMessageType, RawEEPMessage
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram
 
 
-def _encode_set_fan_speed(action: SetFanSpeed) -> EEPMessage:
-    msg = EEPMessage(
+def _encode_set_fan_speed(action: SetFanSpeed) -> RawEEPMessage:
+    msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=0, description="Fan control message"),
     )
-    msg.values["FS"] = EEPMessageValue(raw=action.fan_speed, value=action.fan_speed)
-    msg.values["RSR"] = EEPMessageValue(
-        raw=action.room_size_reference, value=action.room_size_reference
-    )
-    msg.values["RS"] = EEPMessageValue(raw=action.room_size, value=action.room_size)
+    msg.raw["FS"] = action.fan_speed
+    msg.raw["RSR"] = action.room_size_reference
+    msg.raw["RS"] = action.room_size
     return msg
 
 

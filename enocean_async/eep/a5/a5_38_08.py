@@ -4,39 +4,37 @@ from ...semantics.instructable import Instructable
 from ...semantics.instructions.dimmer import Dim
 from ...semantics.observable import Observable
 from ..id import EEP
-from ..message import EEPMessage, EEPMessageType, EEPMessageValue, EntityValue
+from ..message import EEPMessageType, RawEEPMessage, ValueWithContext
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram
 
 
-def _resolve_edim(values: dict) -> EntityValue | None:
+def _resolve_edim(raw: dict, _scaled: dict) -> ValueWithContext | None:
     """Convert EDIM raw value to a percentage using EDIMR to select the scale."""
-    edim = values.get("EDIM")
-    edimr = values.get("EDIMR")
+    edim = raw.get("EDIM")
+    edimr = raw.get("EDIMR")
     if edim is None or edimr is None:
         return None
     # EDIMR=1 (relative): raw 0–100 maps directly to 0–100 %
     # EDIMR=0 (absolute): raw 0–255 maps to 0–100 %
-    if edimr.raw == 1:
-        pct = float(edim.raw)
+    if edimr == 1:
+        pct = float(edim)
     else:
-        pct = edim.raw * 100.0 / 255.0
-    return EntityValue(value=round(pct, 1), unit="%")
+        pct = edim * 100.0 / 255.0
+    return ValueWithContext(name="Dimming value", value=round(pct, 1), unit="%")
 
 
-def _encode_dim(action: Dim) -> EEPMessage:
-    msg = EEPMessage(
+def _encode_dim(action: Dim) -> RawEEPMessage:
+    msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=2, description="Dimming"),
     )
     # dim_value is 0–100 %. Always sent as absolute (EDIMR=0): raw 0–255.
     raw_edim = max(0, min(255, round(action.dim_value / 100.0 * 255)))
-    msg.values["EDIM"] = EEPMessageValue(raw=raw_edim, value=float(action.dim_value))
-    msg.values["RMP"] = EEPMessageValue(raw=action.ramp_time, value=action.ramp_time)
-    msg.values["EDIMR"] = EEPMessageValue(raw=0, value=0)  # always absolute
-    msg.values["STR"] = EEPMessageValue(raw=int(action.store), value=int(action.store))
-    msg.values["SW"] = EEPMessageValue(
-        raw=int(action.switch_on), value=int(action.switch_on)
-    )
+    msg.raw["EDIM"] = raw_edim
+    msg.raw["RMP"] = action.ramp_time
+    msg.raw["EDIMR"] = 0  # always absolute
+    msg.raw["STR"] = int(action.store)
+    msg.raw["SW"] = int(action.switch_on)
     return msg
 
 

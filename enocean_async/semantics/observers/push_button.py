@@ -213,40 +213,25 @@ class F6_02_01_02PushButtonObserver(PushButtonObserver):
         return "".join(sorted(pair))
 
     def _decode_impl(self, message: EEPMessage) -> None:
-        if not message.values:
+        if not {"R1", "EB", "R2", "SA"}.issubset(message.decoded):
             return
 
-        if (
-            "R1" in message.values
-            and "EB" in message.values
-            and "R2" in message.values
-            and "SA" in message.values
-        ):
-            r1_value = message.values.get("R1")
-            eb_value = message.values.get("EB")
-            sa_value = message.values.get("SA")
-            r2_value = message.values.get("R2")
+        r1 = message.decoded["R1"].value
+        eb = message.decoded["EB"].value
+        sa = message.decoded["SA"].value
+        r2 = message.decoded["R2"].value
 
-            r1_val = r1_value.value if r1_value else None
-            eb_val = eb_value.value if eb_value else None
-            sa_val = sa_value.value if sa_value else None
-            r2_val = r2_value.value if r2_value else None
+        current_time = time()
 
-            current_time = time()
-
-            if eb_val == "pressed" and r1_val is not None:
-                r1_id = r1_val
-                r2_id = r2_val
-                if sa_val == "2nd action valid" and r2_val is not None:
-                    combo_id = self._combine_button_ids(r1_id, r2_id)
-                    self._button_pressed(button_id=combo_id)
-                else:
-                    self._button_pressed(button_id=r1_id)
-            elif eb_val == "released":
-                for button_id in list(self._last_pressed_timestamps.keys()):
-                    self._button_released(
-                        button_id=button_id, current_time=current_time
-                    )
+        if eb == "pressed" and r1 is not None:
+            if sa == "2nd action valid" and r2 is not None:
+                combo_id = self._combine_button_ids(r1, r2)
+                self._button_pressed(button_id=combo_id)
+            else:
+                self._button_pressed(button_id=r1)
+        elif eb == "released":
+            for button_id in list(self._last_pressed_timestamps.keys()):
+                self._button_released(button_id=button_id, current_time=current_time)
 
 
 # Backward-compatible alias

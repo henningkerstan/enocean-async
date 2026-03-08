@@ -72,8 +72,8 @@ type UnitFunction = Callable[[TelegramRawValues], str]
 
 # Type aliases for semantic resolvers and instruction encoders.
 # Using Any to avoid circular imports (capabilities/ imports from eep/).
-type SemanticResolver = Callable[[dict[str, Any]], Any | None]
-type InstructionEncoder = Callable[[Any], Any]  # Instruction → EEPMessage
+type SemanticResolver = Callable[[dict[str, Any], dict[str, Any]], Any | None]
+type InstructionEncoder = Callable[[Any], Any]  # Instruction → RawEEPMessage
 
 
 @dataclass
@@ -144,7 +144,7 @@ class EEPDataField:
 
     observable: Observable | None = None
     """Observable type to which this field's decoded value is propagated (e.g. Observable.TEMPERATURE).
-    When set, EEPHandler copies msg.values[field.id] → msg.entities[observable] after decoding."""
+    When set, EEPHandler copies msg.interpreted_values[field.id] → msg.values[observable] after decoding."""
 
     def __post_init__(self):
         if self.range_enum:
@@ -205,8 +205,8 @@ class EEPSpecification:
     """Dictionary of telegrams defined for this EEP, keyed by their command/message identifier, each with its own structure and data fields."""
 
     semantic_resolvers: dict[Observable, SemanticResolver] = field(default_factory=dict)
-    """Dict mapping Observable → resolver function. Each resolver receives the full decoded values dict
-    and returns a single EEPMessageValue (or None) to be stored under that Observable key."""
+    """Dict mapping Observable → resolver function. Each resolver receives (raw_values: dict[str, int],
+    scaled_values: dict[str, ValueWithUnit]) and returns a ValueWithUnit (or None) for that Observable."""
 
     observers: list[ObserverFactory] = field(default_factory=list)
     """Ordered list of observer factory callables. Each factory takes (device_address, on_state_change)
@@ -214,7 +214,7 @@ class EEPSpecification:
 
     encoders: dict[Instructable, InstructionEncoder] = field(default_factory=dict)
     """Dict mapping Instructable → encoder function. Each encoder takes an Instruction and returns
-    an EEPMessage with message_type.id set and values filled with raw field values (field_id → raw int).
+    a RawEEPMessage with message_type.id set and raw_values filled (field_id → raw int).
     The gateway sets message.sender and message.destination before calling EEPHandler.encode()."""
 
     entities: list[Entity] = field(default_factory=list)

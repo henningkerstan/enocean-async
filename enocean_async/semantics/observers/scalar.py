@@ -38,13 +38,13 @@ class ScalarObserver(Observer):
     def _resolve_entity_id(self, message: EEPMessage) -> str:
         """Determine the entity_id for this state change."""
         if self.entity_id_field is not None:
-            cf = message.values.get(self.entity_id_field)
-            if cf is not None and cf.raw != self.entity_id_not_applicable:
-                return str(cf.raw)
+            raw = message.raw.get(self.entity_id_field)
+            if raw is not None and raw != self.entity_id_not_applicable:
+                return str(raw)
         return self.entity_id or self.observable.value
 
     def _decode_impl(self, message: EEPMessage) -> None:
-        v = message.entities.get(self.observable)
+        v = message.values.get(self.observable)
         if v is None or v.value is None:
             return
 

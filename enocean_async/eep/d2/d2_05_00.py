@@ -9,7 +9,7 @@ from ...semantics.instructions.cover import (
 from ...semantics.observable import Observable
 from ...semantics.observers.cover import cover_factory
 from ..id import EEP
-from ..message import EEPMessage, EEPMessageType, EEPMessageValue
+from ..message import EEPMessageType, RawEEPMessage
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram, Entity
 
 # Shared CMD field definitions.
@@ -33,39 +33,37 @@ _CMD_AT_OFFSET4 = EEPDataField(
 )
 
 
-def _encode_set_position(action: SetCoverPosition) -> EEPMessage:
-    msg = EEPMessage(
+def _encode_set_position(action: SetCoverPosition) -> RawEEPMessage:
+    msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=1, description="Go to position and angle"),
     )
-    msg.values["POS"] = EEPMessageValue(raw=action.position, value=action.position)
-    msg.values["ANG"] = EEPMessageValue(raw=action.angle, value=action.angle)
-    msg.values["REPO"] = EEPMessageValue(
-        raw=action.repositioning_mode, value=action.repositioning_mode
-    )
-    msg.values["LOCK"] = EEPMessageValue(raw=action.lock_mode, value=action.lock_mode)
+    msg.raw["POS"] = action.position
+    msg.raw["ANG"] = action.angle
+    msg.raw["REPO"] = action.repositioning_mode
+    msg.raw["LOCK"] = action.lock_mode
     chn_val = int(action.entity_id) if action.entity_id.isdigit() else 15
-    msg.values["CHN"] = EEPMessageValue(raw=chn_val, value=chn_val)
+    msg.raw["CHN"] = chn_val
     return msg
 
 
-def _encode_stop(action: StopCover) -> EEPMessage:
-    msg = EEPMessage(
+def _encode_stop(action: StopCover) -> RawEEPMessage:
+    msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=2, description="Stop"),
     )
     chn_val = int(action.entity_id) if action.entity_id.isdigit() else 15
-    msg.values["CHN"] = EEPMessageValue(raw=chn_val, value=chn_val)
+    msg.raw["CHN"] = chn_val
     return msg
 
 
-def _encode_query_position(action: QueryCoverPosition) -> EEPMessage:
-    msg = EEPMessage(
+def _encode_query_position(action: QueryCoverPosition) -> RawEEPMessage:
+    msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=3, description="Query position and angle"),
     )
     chn_val = int(action.entity_id) if action.entity_id.isdigit() else 15
-    msg.values["CHN"] = EEPMessageValue(raw=chn_val, value=chn_val)
+    msg.raw["CHN"] = chn_val
     return msg
 
 

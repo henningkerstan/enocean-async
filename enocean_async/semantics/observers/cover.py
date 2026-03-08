@@ -32,7 +32,7 @@ class CoverObserver(Observer):
     """Watchdog task to detect when cover movement has stopped."""
 
     def _decode_impl(self, message: EEPMessage) -> None:
-        if not message.values:
+        if not message.decoded:
             return
 
         if message.message_type is None or message.message_type.id != 4:
@@ -40,8 +40,8 @@ class CoverObserver(Observer):
 
         current_time = time()
 
-        pos_entity = message.entities.get(Observable.POSITION)
-        ang_entity = message.entities.get(Observable.ANGLE)
+        pos_entity = message.values.get(Observable.POSITION)
+        ang_entity = message.values.get(Observable.ANGLE)
 
         pos_value = pos_entity.value if pos_entity else None
         ang_value = ang_entity.value if ang_entity else None
