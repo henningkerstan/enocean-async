@@ -2,9 +2,25 @@
 
 from ...semantics.instructable import Instructable
 from ...semantics.instructions.dimmer import Dim
+from ...semantics.observable import Observable
 from ..id import EEP
-from ..message import EEPMessage, EEPMessageType, EEPMessageValue
+from ..message import EEPMessage, EEPMessageType, EEPMessageValue, EntityValue
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram
+
+
+def _resolve_edim(values: dict) -> EntityValue | None:
+    """Convert EDIM raw value to a percentage using EDIMR to select the scale."""
+    edim = values.get("EDIM")
+    edimr = values.get("EDIMR")
+    if edim is None or edimr is None:
+        return None
+    # EDIMR=1 (relative): raw 0–100 maps directly to 0–100 %
+    # EDIMR=0 (absolute): raw 0–255 maps to 0–100 %
+    if edimr.raw == 1:
+        pct = float(edim.raw)
+    else:
+        pct = edim.raw * 100.0 / 255.0
+    return EntityValue(value=round(pct, 1), unit="%")
 
 
 def _encode_dim(action: Dim) -> EEPMessage:
@@ -12,11 +28,11 @@ def _encode_dim(action: Dim) -> EEPMessage:
         sender=None,
         message_type=EEPMessageType(id=2, description="Dimming"),
     )
-    msg.values["EDIM"] = EEPMessageValue(raw=action.dim_value, value=action.dim_value)
+    # dim_value is 0–100 %. Always sent as absolute (EDIMR=0): raw 0–255.
+    raw_edim = max(0, min(255, round(action.dim_value / 100.0 * 255)))
+    msg.values["EDIM"] = EEPMessageValue(raw=raw_edim, value=float(action.dim_value))
     msg.values["RMP"] = EEPMessageValue(raw=action.ramp_time, value=action.ramp_time)
-    msg.values["EDIMR"] = EEPMessageValue(
-        raw=int(action.relative), value=int(action.relative)
-    )
+    msg.values["EDIMR"] = EEPMessageValue(raw=0, value=0)  # always absolute
     msg.values["STR"] = EEPMessageValue(raw=int(action.store), value=int(action.store))
     msg.values["SW"] = EEPMessageValue(
         raw=int(action.switch_on), value=int(action.switch_on)
@@ -45,8 +61,9 @@ EEP_A5_38_08 = EEPSpecification(
                     name="Dimming value",
                     offset=8,
                     size=8,
-                    scale_min_fn=lambda _: 0.0,
-                    scale_max_fn=lambda _: 255.0,
+                    range_min=0,
+                    range_max=255,
+                    scale_min_fn=lambda _: None,  # scaling done by semantic resolver
                 ),
                 EEPDataField(
                     id="RMP",
@@ -89,6 +106,9 @@ EEP_A5_38_08 = EEPSpecification(
                 ),
             ],
         )
+    },
+    semantic_resolvers={
+        Observable.OUTPUT_VALUE: _resolve_edim,
     },
     encoders={
         Instructable.DIM: _encode_dim,

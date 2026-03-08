@@ -14,13 +14,10 @@ class Dim(Instruction):
     action: ClassVar[Instructable] = Instructable.DIM
 
     dim_value: int
-    """EDIM field: 0–255. Absolute range 0–100 % or relative -100 %–+100 % depending on ``relative``."""
+    """Dimming value as a percentage: 0 = off, 100 = full brightness."""
 
     ramp_time: int = 0
     """RMP field: ramping time in seconds (0 = immediately)."""
-
-    relative: bool = False
-    """EDIMR field: False = absolute dimming value, True = relative."""
 
     store: bool = False
     """STR field: False = do not store final value, True = store."""
