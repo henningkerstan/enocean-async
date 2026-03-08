@@ -36,8 +36,8 @@ class MetaDataObserver(Observer):
         if message.rssi is not None:
             self._emit(
                 Observation(
-                    device_id=self.device_address,
-                    entity_id="rssi",
+                    device=self.device_address,
+                    entity="rssi",
                     values={Observable.RSSI: message.rssi},
                     timestamp=timestamp,
                     source=ObservationSource.TELEGRAM,
@@ -47,8 +47,8 @@ class MetaDataObserver(Observer):
         # Always emit last_seen timestamp
         self._emit(
             Observation(
-                device_id=self.device_address,
-                entity_id="last_seen",
+                device=self.device_address,
+                entity="last_seen",
                 values={Observable.LAST_SEEN: timestamp},
                 timestamp=timestamp,
                 source=ObservationSource.TELEGRAM,
@@ -58,8 +58,8 @@ class MetaDataObserver(Observer):
         # Always emit telegram count
         self._emit(
             Observation(
-                device_id=self.device_address,
-                entity_id="telegram_count",
+                device=self.device_address,
+                entity="telegram_count",
                 values={Observable.TELEGRAM_COUNT: self._telegram_count},
                 timestamp=timestamp,
                 source=ObservationSource.TELEGRAM,

@@ -76,8 +76,8 @@ class CoverObserver(Observer):
         if values:
             self._emit(
                 Observation(
-                    device_id=self.device_address,
-                    entity_id="cover",
+                    device=self.device_address,
+                    entity="cover",
                     values=values,
                     timestamp=current_time,
                     source=ObservationSource.TELEGRAM,
@@ -97,8 +97,8 @@ class CoverObserver(Observer):
             # Timeout elapsed, emit stopped state
             self._emit(
                 Observation(
-                    device_id=self.device_address,
-                    entity_id="cover",
+                    device=self.device_address,
+                    entity="cover",
                     values={Observable.COVER_STATE: "stopped"},
                     timestamp=time(),
                     source=ObservationSource.TIMER,

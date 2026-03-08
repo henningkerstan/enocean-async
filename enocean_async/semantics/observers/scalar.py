@@ -50,8 +50,8 @@ class ScalarObserver(Observer):
 
         self._emit(
             Observation(
-                device_id=self.device_address,
-                entity_id=self._resolve_entity_id(message),
+                device=self.device_address,
+                entity=self._resolve_entity_id(message),
                 values={self.observable: v.value},
                 timestamp=time(),
                 source=ObservationSource.TELEGRAM,
