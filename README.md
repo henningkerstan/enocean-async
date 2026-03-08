@@ -144,6 +144,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for a detailed description of the EEP lay
 See [CONTRIBUTING](CONTRIBUTING.md).
 
 
+## Versioning
+See [VERSIONING.md](VERSIONING.md) for the version scheme and bump instructions.
+
+
 ## Dependencies
 This library has one dependency:
 - [pyserial-asyncio-fast](https://pypi.org/project/pyserial-asyncio-fast/) (BSD-3 licensed)
