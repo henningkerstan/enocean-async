@@ -13,5 +13,4 @@ class Device:
     eep: EEP
     name: str
     sender: SenderAddress | None = None
-    telegrams_received: int = 0
     capabilities: list[Observer] = field(default_factory=list)

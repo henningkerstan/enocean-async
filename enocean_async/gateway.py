@@ -88,7 +88,6 @@ class Gateway:
         self.__base_id: BaseAddress | None = None
 
         # device and EEP management
-        self.__known_device_eeps: dict[EURID, EEP] = {}
         self.__known_senders: list[SenderAddress] = []
         self.__eep_handlers: dict[EEP, EEPHandler] = {}
         self.__devices: dict[EURID, Device] = {}
@@ -369,10 +368,11 @@ class Gateway:
             ValueError: If the device is unknown, or the command is not supported by its EEP.
             ConnectionError: If not connected to the EnOcean module.
         """
-        if destination not in self.__known_device_eeps:
+        device = self.__devices.get(destination)
+        if device is None:
             raise ValueError(f"Unknown device {destination}: call add_device() first")
 
-        eep_id = self.__known_device_eeps[destination]
+        eep_id = device.eep
 
         if eep_id not in self.__eep_handlers:
             raise ValueError(f"No EEP handler loaded for {eep_id}")
@@ -385,8 +385,7 @@ class Gateway:
 
         # Resolve sender: explicit > device sender > gateway base ID
         if sender is None:
-            device = self.__devices.get(destination)
-            if device and device.sender:
+            if device.sender:
                 sender = device.sender
             else:
                 sender = await self.base_id
@@ -457,7 +456,10 @@ class Gateway:
 
         This allows the gateway to recognize incoming messages from this device and decode them according to the registered EEP (if a handler for that EEP is found).
         """
-        self.__known_device_eeps[address] = eep
+        device = Device(
+            address=address, eep=eep, name=name or str(address), sender=sender
+        )
+        self.__devices[address] = device
         self._logger.info(f"Added device with address {address} and eep {eep}")
 
         # get the EEP handler for this eep
@@ -475,8 +477,8 @@ class Gateway:
             self._logger.debug(f"EEP handler for eep {eep} already loaded.")
 
         # build observer list from EEP observers
-        eep = EEP_SPECIFICATIONS[eep]
-        if not eep.observers:
+        eep_spec = EEP_SPECIFICATIONS[eep]
+        if not eep_spec.observers:
             self._logger.debug(
                 f"EEP {eep} has no observers; StateChange processing unavailable for device {address}."
             )
@@ -484,17 +486,10 @@ class Gateway:
 
         cb = self.__on_observation
         capabilities = [MetaDataObserver(device_address=address, on_state_change=cb)]
-        for factory in eep.observers:
+        for factory in eep_spec.observers:
             capabilities.append(factory(address, cb))
 
-        device = Device(
-            address=address,
-            eep=eep,
-            name=name or str(address),
-            sender=sender,
-            capabilities=capabilities,
-        )
-        self.__devices[address] = device
+        device.capabilities = capabilities
         self._logger.debug(
             f"Initialized device {address} with {len(device.capabilities)} capabilities"
         )
@@ -505,10 +500,8 @@ class Gateway:
 
     def remove_device(self, address: EURID) -> None:
         """Deregister a device by its sender address (EURID). This removes the device from the registry of known devices, so that incoming messages from this address will no longer be recognized as coming from a known device and will not be decoded as EEP messages."""
-        if address in self.__known_device_eeps:
-            del self.__known_device_eeps[address]
-            if address in self.__devices:
-                del self.__devices[address]
+        if address in self.__devices:
+            del self.__devices[address]
             self._logger.info(f"Removed device with address {address}")
         else:
             self._logger.warning(
@@ -522,10 +515,10 @@ class Gateway:
         allowing integrations (e.g. Home Assistant) to create entities at setup time
         without waiting for the first incoming telegram.
         """
-        eep = self.__known_device_eeps.get(address)
-        if eep is None:
+        device = self.__devices.get(address)
+        if device is None:
             return None
-        spec = EEP_SPECIFICATIONS.get(eep)
+        spec = EEP_SPECIFICATIONS.get(device.eep)
         if spec is None:
             return None
         return spec.device_descriptor()
@@ -535,7 +528,7 @@ class Gateway:
         Devices whose EEP is not in the registry are silently skipped.
         """
         result: dict[EURID, DeviceDescriptor] = {}
-        for address in self.__known_device_eeps:
+        for address in self.__devices:
             descriptor = self.device_descriptor(address)
             if descriptor is not None:
                 result[address] = descriptor
@@ -751,9 +744,7 @@ class Gateway:
 
     def __is_sender_known(self, sender: SenderAddress) -> bool:
         """Check if the sender address is known (i.e. if we have an EEP ID for it)."""
-        return (
-            sender in self.__known_device_eeps.keys() or sender in self.__known_senders
-        )
+        return sender in self.__devices or sender in self.__known_senders
 
     def __process_response(self, response: ResponseTelegram):
         """Process a received RESPONSE packet. If we are currently awaiting a response, try to parse it and store it for the send() method to retrieve."""
@@ -809,8 +800,9 @@ class Gateway:
         # If we cannot find a known device for either the sender or the destination, we cannot determine the EEP ID for this telegram, so we emit a parsing failed message and return.
         # If we can find a known device for either the sender or the destination, we use that device's EEP ID for further processing.
         eep_id: EEP
-        if erp1.sender in self.__known_device_eeps:
-            eep_id = self.__known_device_eeps[erp1.sender]
+        sender_device = self.__devices.get(erp1.sender)
+        if sender_device is not None:
+            eep_id = sender_device.eep
         else:
             if erp1.destination is None or erp1.destination.is_broadcast():
                 msg = (
@@ -821,7 +813,8 @@ class Gateway:
                 self.__emit(self.__parsing_failed_callbacks, msg)
                 return
 
-            if erp1.destination not in self.__known_device_eeps:
+            destination_device = self.__devices.get(erp1.destination)
+            if destination_device is None:
                 msg = (
                     f"Failed to decode ERP1 telegram to EEP message: sender {erp1.sender} "
                     f"is unknown and destination {erp1.destination} is also unknown."
@@ -834,7 +827,7 @@ class Gateway:
                 f"Sender {erp1.sender} is unknown, but destination {erp1.destination} "
                 "is known, using EEP ID of destination for EEP decoding."
             )
-            eep_id = self.__known_device_eeps[erp1.destination]
+            eep_id = destination_device.eep
 
         if eep_id not in self.__eep_handlers:
             self._logger.debug(
