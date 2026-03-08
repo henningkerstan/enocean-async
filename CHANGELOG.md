@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.6.0] — 2026-03-08
+
+### Breaking changes
+- `Observation` fields renamed: `device_id` → `device`, `entity_id` → `entity`
+- `Observation.time_elapsed` removed
+- `EEPMessage.interpreted_values` renamed to `decoded`; `ValueWithUnit` renamed to `ValueWithContext` (with new optional `name` field)
+- `Device.address` restricted to `EURID` only (was `EURID | BaseAddress`)
+- `Gateway`'s device registry now only allows to register `EURID`s; also the new device callback only is emitted on `EURID`s
+- `Device.telegrams_received` removed (was dead code)
+- `NewDeviceCallback` now only fires for EURID senders; BaseAddress senders are silently tracked
+
+### Internal / maintenance
+- Single `__devices: dict[EURID, Device]` registry replaces the previous two-dict approach (`__known_device_eeps` + `__devices`)
+- Docstrings added to `Observation` and `ObservationSource`
+
+
 ## [0.5.3] — 2026-03-07
 
 ### Bug fixes
