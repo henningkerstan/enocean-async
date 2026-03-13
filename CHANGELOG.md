@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.6.1-dev0] — 2026-03-11
+## [0.7.0] — 2026-03-13
 
 ### Breaking changes
 - `start_learning()` parameter renamed: `timeout_seconds` → `timeout`; default changed from 60 to 30
