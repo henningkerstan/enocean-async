@@ -113,6 +113,7 @@ from .d2 import (
 )
 from .f6 import EEP_F6_02_01, EEP_F6_02_02, EEP_F6_10_00, EEP_F6_10_00_ELTAKO
 from .id import EEP
+from .manufacturer import Manufacturer
 from .profile import EEPSpecification
 
 EEP_SPECIFICATIONS: dict[EEP, EEPSpecification] = {
@@ -229,4 +230,9 @@ EEP_SPECIFICATIONS: dict[EEP, EEPSpecification] = {
 This allows for efficient lookup of the corresponding EEPSpecification for a given EEP when processing incoming telegrams. 
 """
 
-__all__ = ["EEP_SPECIFICATIONS", "EEP", "EEPSpecification"]
+__all__ = [
+    "EEP_SPECIFICATIONS",
+    "EEP",
+    "EEPSpecification",
+    "Manufacturer",
+]

@@ -62,7 +62,7 @@ async def main(port: str) -> None:
             datefmt="%Y-%m-%d %H:%M:%S",
         )
     )
-    logging.basicConfig(level=logging.INFO, handlers=[handler])
+    logging.basicConfig(level=logging.DEBUG, handlers=[handler])
 
     print(f"Setting up EnOcean Gateway for module on {port}...")
     gateway = Gateway(port)
@@ -111,18 +111,25 @@ async def main(port: str) -> None:
     # add some devices - adopt to your own devices and EEPs
     gateway.add_device(EURID.from_string("00:00:00:01"), EEP.from_string("F6-02-01"))
     gateway.add_device(EURID.from_string("00:00:00:02"), EEP.from_string("F6-02-01"))
+    try:
+        gateway.add_device(EURID.from_string("00:00:00:02"), EEP.from_string("F6-02-02"))
+    except:
+        print(f"{CROSSMARK} Failed to add device with duplicate address 00:00:00:02")
+        
+    gateway.add_device(EURID.from_string("00:00:00:03"), EEP.from_string("F6-02-05"))
+    gateway.add_device(EURID.from_string("00:00:00:04"), EEP.from_string("F6-02-05"))
 
     try:
         from devices import DEVICE_EEP_MAP
 
         print("Registering devices from device EEP map...")
-        for device_id, eep_id in DEVICE_EEP_MAP:
-            gateway.add_device(device_id, eep_id)
+        for device_id, eep_id, sender in DEVICE_EEP_MAP:
+            gateway.add_device(device_id, eep_id, sender)
     except ImportError:
         print("No 'devices.py' file found, skipping device registration.")
 
     # start learning mode
-    await gateway.start_learning(timeout_seconds=5)
+    await gateway.start_learning(allow_teach_out=True)
 
     # Keep the event loop running until CTRL+C is pressed
     print("Running... Press Ctrl+C to exit.")

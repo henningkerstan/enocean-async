@@ -61,9 +61,9 @@ class UTEMessage:
         if telegram.rorg != RORG.RORG_UTE:
             raise ValueError(f"Invalid RORG for UTE: {telegram.rorg}")
 
-        if len(telegram.telegram_data) < 6:
+        if len(telegram.telegram_data) < 7:
             raise ValueError(
-                f"Invalid data length for UTE: {len(telegram.telegram_data)} bytes but expected 6 bytes"
+                f"Invalid data length for UTE: {len(telegram.telegram_data)} bytes but expected 7 bytes"
             )
 
         communication_during_eep_operation = CommunicationDuringEEPOperation(
@@ -72,6 +72,9 @@ class UTEMessage:
 
         command = CommandIdentifier(telegram.bitstring_raw_value(4, 4))
 
+        teach_in_response_message_expectation: Optional[
+            EEPTeachInResponseMessageExpectation
+        ] = None
         if command == CommandIdentifier.TEACH_IN_QUERY:
             teach_in_response_message_expectation = (
                 EEPTeachInResponseMessageExpectation(telegram.bitstring_raw_value(1, 1))
@@ -134,20 +137,38 @@ class UTEMessage:
         )
 
     def to_erp1(self) -> ERP1Telegram:
-        data = bytearray(6)
-
-        telegram = ERP1Telegram(
-            rorg=RORG.RORG_UTE,
-            telegram_data=bytes(data),
-            sender=self.sender,
-            destination=self.destination,
-        )
-
-        telegram.set_bitstring_raw_value(
-            0, 1, self.communication_during_eep_operation.value
-        )
-
         if self.command != CommandIdentifier.TEACH_IN_RESPONSE:
             raise ValueError(
                 "Only teach-in response messages can be converted to ERP1 for sending."
             )
+
+        telegram = ERP1Telegram(
+            rorg=RORG.RORG_UTE,
+            telegram_data=bytes(7),
+            sender=self.sender,
+            destination=self.destination,
+        )
+
+        # Byte 0: control byte
+        telegram.set_bitstring_raw_value(
+            0, 1, self.communication_during_eep_operation.value
+        )
+        # bit 1 is teach_in_response_message_expectation — not applicable for responses, leave 0
+        telegram.set_bitstring_raw_value(2, 2, self.request_type.value)
+        telegram.set_bitstring_raw_value(4, 4, self.command.value)
+
+        # Byte 1: number of channels
+        telegram.set_bitstring_raw_value(8, 8, self.number_of_channels_to_be_taught_in)
+
+        # Byte 2: manufacturer ID LSB
+        telegram.set_bitstring_raw_value(16, 8, self.manufacturer.value & 0xFF)
+
+        # Byte 3: manufacturer ID MSB (lower 3 bits only)
+        telegram.set_bitstring_raw_value(24, 8, (self.manufacturer.value >> 8) & 0x07)
+
+        # Bytes 4-6: EEP (type, func, rorg)
+        telegram.set_bitstring_raw_value(32, 8, self.eep.type)
+        telegram.set_bitstring_raw_value(40, 8, self.eep.func)
+        telegram.set_bitstring_raw_value(48, 8, self.eep.rorg)
+
+        return telegram

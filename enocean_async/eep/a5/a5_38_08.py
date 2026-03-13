@@ -111,4 +111,5 @@ EEP_A5_38_08 = EEPSpecification(
     encoders={
         Instructable.DIM: _encode_dim,
     },
+    uses_addressed_sending=False,
 )

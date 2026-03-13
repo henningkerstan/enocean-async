@@ -221,6 +221,12 @@ class EEPSpecification:
     """Physical entities declared by this EEP — one per real-world sub-unit (push button,
     relay channel, sensor element, cover motor). Consumed by ``device_descriptor()``."""
 
+    uses_addressed_sending: bool = True
+    """If True (default), the device is destination-addressed (VLD): the gateway uses BaseID+0
+    and sets the destination field to the device's EURID.
+    If False, the device is sender-addressed: it learned the gateway's sender address at teach-in
+    and filters commands by sender. The gateway allocates a dedicated BaseID+n slot per device."""
+
     def device_descriptor(self) -> "DeviceDescriptor":
         """Return a setup-time descriptor of what this device type exposes and accepts.
 
@@ -253,6 +259,7 @@ class SimpleProfileSpecification(EEPSpecification):
         observers: list[ObserverFactory] | None = None,
         encoders: dict[Instructable, InstructionEncoder] | None = None,
         entities: list[Entity] | None = None,
+        uses_addressed_sending: bool = True,
     ):
         """Initialize a single-telegram EEP.
 
@@ -264,6 +271,7 @@ class SimpleProfileSpecification(EEPSpecification):
             observers: Optional list of observer factory callables.
             encoders: Optional dict of Instructable → encoder callables.
             entities: Optional list of Entity declarations for this EEP.
+            uses_addressed_sending: See EEPSpecification.uses_addressed_sending.
         """
 
         super().__init__(
@@ -276,4 +284,5 @@ class SimpleProfileSpecification(EEPSpecification):
             observers=observers or [],
             encoders=encoders or {},
             entities=entities or [],
+            uses_addressed_sending=uses_addressed_sending,
         )

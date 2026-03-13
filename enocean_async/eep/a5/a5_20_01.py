@@ -113,6 +113,7 @@ EEP_A5_20_01 = SimpleProfileSpecification(
         Entity(id="valve_position", observables=frozenset({Observable.VALVE_POSITION})),
         Entity(id="temperature", observables=frozenset({Observable.TEMPERATURE})),
     ],
+    uses_addressed_sending=False,
 )
 
 __all__ = ["EEP_A5_20_01"]

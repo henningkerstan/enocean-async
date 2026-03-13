@@ -11,10 +11,15 @@ from .device import Device
 from .eep import EEP_SPECIFICATIONS
 from .eep.handler import EEPHandler
 from .eep.id import EEP
-from .eep.manufacturer import Manufacturer
 from .eep.message import EEPMessage
 from .eep.profile import DeviceDescriptor
-from .protocol.erp1.telegram import RORG, ERP1Telegram, FourBSTeachInTelegram
+from .protocol.erp1.fourbs import (
+    FourBSLearnStatus,
+    FourBSLearnType,
+    FourBSTeachInResult,
+    FourBSTeachInTelegram,
+)
+from .protocol.erp1.telegram import RORG, ERP1Telegram
 from .protocol.erp1.ute import (
     EEPTeachInResponseMessageExpectation,
     UTEMessage,
@@ -48,6 +53,9 @@ type ResponseCallback = Callable[[ResponseTelegram], None]
 type NewDeviceCallback = Callable[[EURID], None]
 type ParsingFailedCallback = Callable[[str], None]
 type TeachInCallback = Callable[[FourBSTeachInTelegram], None]
+
+
+type DeviceTaughtInCallback = Callable[[EURID, EEP], None]
 
 
 @dataclass
@@ -102,6 +110,7 @@ class Gateway:
         self.__response_callbacks: list[ResponseCallback] = []
 
         self.__new_device_callbacks: list[NewDeviceCallback] = []
+        self.__device_taught_in_callbacks: list[DeviceTaughtInCallback] = []
 
         self.__esp3_send_callbacks: list[ESP3Callback] = []
 
@@ -139,6 +148,14 @@ class Gateway:
 
         This can be useful for debugging or for implementing custom logging of sent packets."""
         self.__esp3_send_callbacks.append(cb)
+
+    def add_device_taught_in_callback(self, cb: DeviceTaughtInCallback) -> None:
+        """Add a callback fired after a device is successfully taught in and auto-registered.
+
+        The callback receives (address: EURID, eep: EEP). It fires for UTE and
+        4BS-with-profile teach-ins that carry a complete EEP.
+        """
+        self.__device_taught_in_callbacks.append(cb)
 
     def add_new_device_callback(self, cb: NewDeviceCallback):
         """Add a callback that will be called for every newly detected EURID from incoming ERP1 telegrams.
@@ -226,28 +243,53 @@ class Gateway:
                 f"Serial connection to EnOcean module on {self.__port} closed"
             )
 
-    @property
-    async def valid_senders(self) -> list[SenderAddress]:
-        """Return the list of valid sender addresses for this gateway, which includes the gateway's EURID and the range of Base IDs derived from the gateway's base ID."""
-        base_id = await self.base_id
-        senders = [await self.eurid, base_id]
-
-        base_id_number = base_id.to_number()
-        for i in range(1, 128):
-            senders.append(BaseAddress(base_id_number + i))
-
-        return senders
-
     async def is_valid_sender(self, sender: SenderAddress) -> bool:
-        """Check if the sender address is a valid sender for this gateway (i.e. is either the gateway's EURID, or a BaseAddress in the range of the gateway's base ID)."""
-        valid_senders = await self.valid_senders
-        return sender in valid_senders
+        """Return ``True`` if *sender* is a valid sender for this gateway.
+
+        Valid senders are the gateway's EURID and any ``BaseAddress`` in the
+        range ``base_id … base_id+127``.
+        """
+        if sender == await self.eurid:
+            return True
+        if isinstance(sender, BaseAddress):
+            offset = sender.to_number() - (await self.base_id).to_number()
+            return 0 <= offset <= 127
+        return False
+
+    @property
+    async def sender_slots(self) -> dict[SenderAddress, list[EURID]]:
+        """Return every valid sender address mapped to the list of devices using it.
+
+        Keys are the gateway EURID and BaseID+0…+127.
+        An empty list means the address is unoccupied.  Normally each BaseID+n slot
+        holds at most one device, but ``list`` handles manual duplicates gracefully.
+
+        Useful for building a sender-address selection UI: present each address with
+        an indication of whether it is already in use and, if so, by which device.
+        Pass the chosen ``BaseAddress`` as ``sender_id`` to `start_learning`
+        to override automatic allocation (the gateway EURID is a technically valid
+        but poor choice as a learning sender).
+        """
+        base_id = await self.base_id
+        eurid = await self.eurid
+        base_number = base_id.to_number()
+
+        # Group registered devices by their assigned sender address
+        occupied: dict[SenderAddress, list[EURID]] = {}
+        for device in self.__devices.values():
+            if device.sender is not None:
+                occupied.setdefault(device.sender, []).append(device.address)
+
+        senders: list[SenderAddress] = [eurid, base_id] + [
+            BaseAddress(base_number + i) for i in range(1, 128)
+        ]
+        return {s: occupied.get(s, []) for s in senders}
 
     async def start_learning(
         self,
-        timeout_seconds: int = 60,
-        sender_id: SenderAddress | None = None,
+        timeout: int = 30,
         allow_teach_out: bool = False,
+        sender_id: SenderAddress | None = None,
     ) -> None:
         """Start learning mode for pairing new EnOcean devices.
 
@@ -256,13 +298,18 @@ class Gateway:
         session will automatically terminate after the specified timeout period.
 
         Args:
-            timeout_seconds (int, optional): Duration in seconds before learning mode automatically
-                stops. Defaults to 60 seconds.
-            sender_id (SenderAddress | None, optional): The sender ID to use for learning mode.
-                If not provided, the gateway's base ID will be used.
-            allow_teach_out (bool, optional): If True, allows devices to be removed (teach-out)
-                during learning mode. Defaults to False.
+            timeout: Duration in seconds before learning mode automatically stops. Defaults to 30.
+            allow_teach_out: If True, teach-out requests are honored during this session.
+                Defaults to False.
+            sender_id: Sender address used in UTE responses. Defaults to the gateway's base ID.
         """
+
+        base_id = await self.base_id
+        if base_id is None:
+            raise RuntimeError(
+                "Cannot start learning mode: gateway's base ID is not set. Ensure the gateway is properly connected and configured."
+            )
+
         self.__is_learning = True
         self.__allow_teach_out = allow_teach_out
 
@@ -271,17 +318,29 @@ class Gateway:
                 f"Invalid sender_id {sender_id} for learning mode. Must be a valid sender address for this gateway."
             )
 
-        self.__sender_id_for_learning = (
-            sender_id if sender_id is not None else await self.base_id
-        )
+        self.__sender_id_for_learning = sender_id if sender_id is not None else base_id
 
+        if sender_id is not None:
+            sender_info = f"Manually selected sender {self.__sender_id_for_learning}"
+        else:
+            try:
+                next_sender = self.__next_available_sender()
+            except RuntimeError:
+                next_sender = None
+            if next_sender is not None:
+                sender_info = (
+                    f"Gateway selected sender {base_id} (base ID) for destination-addressed devices and "
+                    f"{next_sender} (base ID + {next_sender.to_number() - base_id.to_number()}) for sender-addressed devices"
+                )
+            else:
+                sender_info = f"Gateway selected sender {base_id} (base ID), but no sender-addressed slots are available; consider freeing up sender-addressed slots"
         self._logger.info(
-            f"Learning mode started. Will automatically stop after {timeout_seconds} seconds."
+            f"Learning mode started. {sender_info}. Learning mode will timeout after {timeout} seconds."
         )
         if self.__learning_timeout_task is not None:
             self.__learning_timeout_task.cancel()
         self.__learning_timeout_task = asyncio.create_task(
-            self.__learning_timeout(timeout_seconds)
+            self.__learning_timeout(timeout)
         )
 
     def stop_learning(self) -> None:
@@ -389,6 +448,12 @@ class Gateway:
                 sender = device.sender
             else:
                 sender = await self.base_id
+                if sender is not None:
+                    # Backfill: device was registered before base ID was available
+                    device.sender = sender
+                    self._logger.debug(
+                        f"Device {destination} did not have a sender configured; using base ID {sender}."
+                    )
         if sender is None:
             raise ValueError(
                 "Could not determine sender address; pass sender= explicitly or connect first"
@@ -456,6 +521,24 @@ class Gateway:
 
         This allows the gateway to recognize incoming messages from this device and decode them according to the registered EEP (if a handler for that EEP is found).
         """
+        if address in self.__devices:
+            self._logger.warning(
+                f"Tried to add device with address {address}, but it is already registered."
+            )
+            raise ValueError(f"Device {address} is already registered.")
+
+        if sender is None:
+            sender = self.__base_id
+            if sender is None:
+                self._logger.debug(
+                    f"No sender provided when adding device {address} and base ID not yet fetched; "
+                    "sender will be set on first send."
+                )
+            else:
+                self._logger.debug(
+                    f"No sender provided when adding device {address}; using base ID {sender} as sender."
+                )
+
         device = Device(
             address=address, eep=eep, name=name or str(address), sender=sender
         )
@@ -466,23 +549,22 @@ class Gateway:
 
         # get the EEP handler for this EEP
         if eep not in self.__eep_handlers:
-            # try to load
             if eep not in EEP_SPECIFICATIONS:
                 self._logger.warning(
                     f"EEP {eep} is not supported. Messages from device {address} will not be decoded."
                 )
                 return
-            else:
-                self.__eep_handlers[eep] = EEPHandler(EEP_SPECIFICATIONS[eep])
-                self._logger.info(f"Loaded EEP handler for EEP {eep}")
+            self.__eep_handlers[eep] = EEPHandler(EEP_SPECIFICATIONS[eep])
+            self._logger.info(f"Loaded EEP handler for previously unused EEP {eep}")
         else:
-            self._logger.debug(f"EEP handler for EEP {eep} already loaded.")
+            self._logger.debug(f"Reusing existing EEP handler for EEP {eep}.")
+
+        eep_spec = EEP_SPECIFICATIONS[eep]
 
         # build observer list from EEP observers
-        eep_spec = EEP_SPECIFICATIONS[eep]
         if not eep_spec.observers:
             self._logger.debug(
-                f"EEP {eep} has no observers; StateChange processing unavailable for device {address}."
+                f"EEP {eep} has no observers; Observation processing unavailable for device {address}."
             )
             return
 
@@ -705,6 +787,9 @@ class Gateway:
             try:
                 response = ResponseTelegram.from_esp3_packet(packet)
             except Exception as e:
+                self._logger.debug(
+                    f"Failed to parse ESP3 RESPONSE packet: {packet}. Ignoring packet. Error: {e}"
+                )
                 return
             self.__process_response(response)
             return
@@ -729,11 +814,11 @@ class Gateway:
 
         self.__process_erp1_telegram(erp1)
 
-    def __emit(self, callbacks: list[Callable], obj):
-        """Emit an object to all registered callbacks of the given type."""
+    def __emit(self, callbacks: list[Callable], *args):
+        """Emit arguments to all registered callbacks of the given type."""
         loop = asyncio.get_running_loop()
         for cb in callbacks:
-            loop.call_soon(cb, obj)
+            loop.call_soon(cb, *args)
 
     def __emit_with_sender_filter(
         self, callbacks: list[CallbackWithFilter], sender: SenderAddress, obj
@@ -778,17 +863,21 @@ class Gateway:
             try:
                 ute_message = UTEMessage.from_erp1(erp1)
             except Exception as e:
+                self._logger.debug(
+                    f"Failed to parse ERP1 telegram to UTE message: {erp1}. Ignoring packet. Error: {e}"
+                )
                 return
 
             self.__handle_ute_message(ute_message)
             return
 
-        # handle 1BS teach-in telegrams; for now, we just ignore them (NOT IMPLEMENTED)
+        # 1BS teach-in: no EEP info available; NewDeviceCallback already fired above
         if erp1.rorg == RORG.RORG_1BS and erp1.is_learning_telegram:
-            self.__handle_1bs_teach_in_telegram(erp1)
+            self._logger.debug(
+                f"1BS teach-in from {erp1.sender}: no EEP info in telegram; cannot auto-register."
+            )
             return
 
-        # handle 4BS teach-in telegrams; for now, we just ignore them (NOT IMPLEMENTED)
         if erp1.rorg == RORG.RORG_4BS and erp1.is_learning_telegram:
             self.__handle_4bs_teach_in_telegram(erp1)
             return
@@ -893,13 +982,13 @@ class Gateway:
 
     async def __send_ute_response(self, response: UTEMessage) -> None:
         try:
-            self._logger.info(f"Sending UTE teach-in response message: {response}")
+            self._logger.debug(f"Sending UTE response: {response}")
             erp1 = response.to_erp1()
             esp3 = erp1.to_esp3()
             send_result = await self.send_esp3_packet(esp3)
 
         except Exception as e:
-            self._logger.error(f"Failed to send UTE teach-in response message: {e}")
+            self._logger.error(f"Failed to send UTE response: {e}")
             return
 
         if (
@@ -907,77 +996,318 @@ class Gateway:
             or send_result.response.return_code != ResponseCode.OK
         ):
             self._logger.error(
-                f"Failed to send UTE teach-in response message. Send result: {send_result}"
+                f"Failed to send UTE response. Send result: {send_result}"
             )
+            return
 
+        action = (
+            "teach-out"
+            if response.request_type == UTEResponseType.ACCEPTED_DELETION_OF_TEACH_IN
+            else "teach-in"
+        )
         self._logger.info(
-            f"Successfully completed bidirectional UTE teach-in for device {response.sender} with EEP {response.eep}."
+            f"Successfully confirmed bidirectional UTE {action} for device {response.sender} with EEP {response.eep}."
         )
 
-    def __handle_ute_message(self, ute_message: UTEMessage):
-        self.__emit(self.__ute_receive_callbacks, ute_message)
+    async def __send_4bs_teach_in_response(
+        self, response: FourBSTeachInTelegram
+    ) -> None:
+        try:
+            erp1 = response.to_erp1()
+            esp3 = erp1.to_esp3()
+            send_result = await self.send_esp3_packet(esp3)
+        except Exception as e:
+            self._logger.error(f"Failed to send 4BS teach-in response: {e}")
+            return
 
-        # if we are not currently in learning mode, we ignore all UTE messages, because they are only relevant during learning mode
+        if (
+            send_result.response is None
+            or send_result.response.return_code != ResponseCode.OK
+        ):
+            self._logger.error(
+                f"Failed to send 4BS teach-in response. Send result: {send_result}"
+            )
+            return
+
+        result = (
+            "accepted"
+            if response.learn_result == FourBSTeachInResult.SENDER_ID_STORED
+            else "not accepted"
+        )
+        self._logger.info(
+            f"Successfully sent bidirectional 4BS teach-in response ({result})  with EEP {response.eep}."
+        )
+
+    def __handle_ute_message(self, ute: UTEMessage):
+        self.__emit(self.__ute_receive_callbacks, ute)
+
+        # ignore messages when not in learning mode — teach-out also requires an active session
         if not self.__is_learning:
+            self._logger.debug(
+                f"UTE message from {ute.sender} received but not in learning mode; ignoring."
+            )
             return
 
-        # ignore response messages, we only want to process teach-in query messages during learning mode
-        if isinstance(ute_message.request_type, UTEResponseType):
+        # ignore responses
+        if isinstance(ute.request_type, UTEResponseType):
             return
 
-        request_type = ute_message.request_type
+        request_type = ute.request_type
         response_expected = (
-            ute_message.teach_in_response_message_expectation
+            ute.teach_in_response_message_expectation
             == EEPTeachInResponseMessageExpectation.RESPONSE_EXPECTED
         )
+        device_address = ute.sender  # always set when decoded from ERP1
 
         match request_type:
-            case (
-                UTEQueryRequestType.TEACH_IN,
-                UTEQueryRequestType.TEACH_IN_OR_DELETION_OF_TEACH_IN,
-            ):
-                self._logger.info(
-                    f"Received UTE teach-in / teach-in or deletion of teach-in message: {ute_message}"
-                )
-                if response_expected and self.__is_learning:
+            case UTEQueryRequestType.TEACH_IN:
+                self._logger.info(f"UTE teach-in query from {device_address}.")
+                self.__handle_ute_teach_in(ute, device_address, response_expected)
+
+            case UTEQueryRequestType.TEACH_IN_OR_DELETION_OF_TEACH_IN:
+                if device_address in self.__devices:
                     self._logger.info(
-                        "Preparing to send UTE teach-in response message."
+                        f"UTE teach-in or deletion-of-teach-in from {device_address}: device registered → treating as teach-out."
                     )
-                    # TODO: check if EEP is supported and send appropriate response; for now, we just send a generic "accepted" response without checking the EEP or other details of the message, which is not ideal but should be sufficient for testing purposes
-                    response = UTEMessage.response_for_query(
-                        ute_message,
-                        UTEResponseType.ACCEPTED_TEACH_IN,
-                        sender=self.__sender_id_for_learning,
+                    self.__handle_ute_teach_out(ute, device_address, response_expected)
+                else:
+                    self._logger.info(
+                        f"UTE teach-in or deletion-of-teach-in from {device_address}: device not registered → treating as teach-in."
                     )
-                    asyncio.create_task(self.__send_ute_response(response))
+                    self.__handle_ute_teach_in(ute, device_address, response_expected)
 
             case UTEQueryRequestType.TEACH_IN_DELETION:
                 self._logger.info(
-                    f"Received UTE teach-in deletion query message: {ute_message}"
+                    f"UTE explicit teach-out request from {device_address}."
                 )
+                self.__handle_ute_teach_out(ute, device_address, response_expected)
 
-    def __handle_1bs_teach_in_telegram(self, erp1: ERP1Telegram):
-        pass
+    def __handle_ute_teach_in(
+        self,
+        ute: UTEMessage,
+        device_address: EURID,
+        response_expected: bool,
+    ) -> None:
+        generic_eep = EEP(ute.eep.rorg, ute.eep.func, ute.eep.type)
+        if ute.eep in EEP_SPECIFICATIONS:
+            eep = ute.eep
+        elif generic_eep in EEP_SPECIFICATIONS:
+            eep = generic_eep
+        else:
+            eep = None
+        if eep is None:
+            self._logger.info(
+                f"UTE teach-in from {device_address}: EEP {ute.eep} not supported."
+            )
+            if response_expected:
+                asyncio.create_task(
+                    self.__send_ute_response(
+                        UTEMessage.response_for_query(
+                            ute,
+                            UTEResponseType.NOT_ACCEPTED_EEP_NOT_SUPPORTED,
+                            sender=self.__sender_id_for_learning,
+                        )
+                    )
+                )
+            return
+
+        spec = EEP_SPECIFICATIONS[eep]
+        # Re-teach-in of a known device: reuse existing sender slot
+        existing = self.__devices.get(device_address)
+        if existing is not None:
+            self._logger.info(
+                f"UTE re-teach-in from {device_address}: device already registered; reusing sender slot."
+            )
+            sender = existing.sender
+        elif spec.uses_addressed_sending:
+            sender = self.__sender_id_for_learning or self.__base_id
+        else:
+            sender = self.__next_available_sender()
+
+        if response_expected:
+            asyncio.create_task(
+                self.__send_ute_response(
+                    UTEMessage.response_for_query(
+                        ute,
+                        UTEResponseType.ACCEPTED_TEACH_IN,
+                        sender=sender or self.__sender_id_for_learning,
+                    )
+                )
+            )
+        if existing is None:
+            self.add_device(address=device_address, eep=eep, sender=sender)
+        if not response_expected:
+            self._logger.info(
+                f"UTE teach-in from {device_address}: successfully registered with EEP {eep}."
+            )
+        self.__emit(self.__device_taught_in_callbacks, device_address, eep)
+
+    def __handle_ute_teach_out(
+        self,
+        ute: UTEMessage,
+        device_address: EURID,
+        response_expected: bool,
+    ) -> None:
+        if not self.__allow_teach_out:
+            self._logger.info(
+                f"UTE teach-out from {device_address}: teach-out not allowed in this learning session; rejecting."
+            )
+            if response_expected:
+                asyncio.create_task(
+                    self.__send_ute_response(
+                        UTEMessage.response_for_query(
+                            ute,
+                            UTEResponseType.NOT_ACCEPTED_GENERAL_REASON,
+                            sender=self.__sender_id_for_learning,
+                        )
+                    )
+                )
+            return
+
+        if device_address not in self.__devices:
+            self._logger.info(
+                f"UTE teach-out from {device_address}: device not registered; rejecting."
+            )
+            if response_expected:
+                asyncio.create_task(
+                    self.__send_ute_response(
+                        UTEMessage.response_for_query(
+                            ute,
+                            UTEResponseType.NOT_ACCEPTED_GENERAL_REASON,
+                            sender=self.__sender_id_for_learning,
+                        )
+                    )
+                )
+            return
+
+        self.remove_device(device_address)
+        self._logger.info(
+            f"UTE teach-out from {device_address}: device successfully removed."
+        )
+        if response_expected:
+            asyncio.create_task(
+                self.__send_ute_response(
+                    UTEMessage.response_for_query(
+                        ute,
+                        UTEResponseType.ACCEPTED_DELETION_OF_TEACH_IN,
+                        sender=self.__sender_id_for_learning,
+                    )
+                )
+            )
+
+    def __next_available_sender(self) -> BaseAddress:
+        """Return the lowest free BaseAddress slot (offset 1–127).
+
+        Derives used offsets from Device.sender values already in the live device registry.
+        Raises RuntimeError if the pool is exhausted (> 127 broadcast devices).
+        """
+        if self.__base_id is None:
+            raise RuntimeError(
+                "Base ID not available; cannot assign sender address for new device. Make sure to connect to the EnOcean module and fetch the base ID before adding devices without explicit sender addresses."
+            )
+        used = {
+            device.sender.to_number() - self.__base_id.to_number()
+            for device in self.__devices.values()
+            if isinstance(device.sender, BaseAddress)
+        }
+        offset = next((o for o in range(1, 128) if o not in used), None)
+        if offset is None:
+            raise RuntimeError(
+                "Sender address pool exhausted (127 sender-addressed devices maximum)"
+            )
+        return BaseAddress(self.__base_id.to_number() + offset)
 
     def __handle_4bs_teach_in_telegram(self, erp1: ERP1Telegram):
+        if not self.__is_learning:
+            self._logger.debug(
+                "4BS teach-in telegram received but not in learning mode; ignoring telegram."
+            )
+            return
         try:
             teach_in_telegram = FourBSTeachInTelegram.from_erp1(erp1)
-            self._logger.info(f"4BS teach-in telegram: {teach_in_telegram}")
-
         except ValueError as e:
             self._logger.warning(f"Failed to parse 4BS teach-in telegram: {e}")
+            return
 
-        learn_type = erp1.bitstring_raw_value(24, 1)
-
-        if learn_type == 0:  # unidirectional profileless
-            # todo: this will just add a device
-            pass
-        else:  # unidirectional with profile
-            func = erp1.bitstring_raw_value(0, 6)
-            type_ = erp1.bitstring_raw_value(6, 7)
-            manufacturer_id = erp1.bitstring_raw_value(13, 11)
-            manufacturer = Manufacturer(manufacturer_id)
-            eep = EEP(0xA5, func, type_, manufacturer)
-            self._logger.info(
-                f"4BS learn telegram with EEP A5-{func:02X}-{type_:02X} and manufacturer '{manufacturer}', hence {eep}"
+        if teach_in_telegram.learn_status != FourBSLearnStatus.QUERY:
+            self._logger.debug(
+                f"Received 4BS learn telegram which is not QUERY; ignoring telegram."
             )
+            return
+
+        if (
+            teach_in_telegram.learn_type
+            == FourBSLearnType.TELEGRAM_WITHOUT_EEP_AND_NO_MANUFACTURER
+        ):
+            self._logger.info(
+                f"4BS profileless teach-in from {erp1.sender}; "
+                "cannot auto-register without EEP."
+            )
+            return
+
+        existing = self.__devices.get(erp1.sender)
+        if existing is not None:
+            self._logger.info(
+                f"4BS re-teach-in from {erp1.sender}: device already registered; checking if EEP matches."
+            )
+            if existing.eep == teach_in_telegram.eep:
+                self._logger.info(
+                    f"4BS re-teach-in from {erp1.sender}: received EEP {teach_in_telegram.eep} matches existing registration ({existing.eep}); ignoring."
+                )
+                return
+
+            self._logger.info(
+                f"4BS re-teach-in from {erp1.sender}: device previously registered with different EEP {existing.eep}; taught-in EEP is {teach_in_telegram.eep} - checking if that is available."
+            )
+
+        eep = teach_in_telegram.eep
+        if eep is None or eep not in EEP_SPECIFICATIONS:
+            self._logger.info(
+                f"4BS teach-in from {erp1.sender}: EEP {eep} not supported; ignoring."
+            )
+            return
+
+        spec = EEP_SPECIFICATIONS[eep]
+
+        if existing is not None:
+            existing.eep = eep
+            if eep not in self.__eep_handlers:
+                self.__eep_handlers[eep] = EEPHandler(spec)
+                self._logger.info(
+                    f"Loaded EEP handler for previously unused EEP {eep} due to re-teach-in."
+                )
+            self._logger.info(
+                f"4BS re-teach-in from {erp1.sender}: updated EEP of existing device registration to {eep}."
+            )
+
+            asyncio.create_task(
+                self.__send_4bs_teach_in_response(
+                    FourBSTeachInTelegram.response_for_query(
+                        teach_in_telegram,
+                        FourBSTeachInResult.SENDER_ID_STORED,
+                        existing.sender,
+                    )
+                )
+            )
+            return
+
+        sender = (
+            self.__next_available_sender()
+            if not spec.uses_addressed_sending
+            else self.__sender_id_for_learning or self.__base_id
+        )
+        self.add_device(address=erp1.sender, eep=eep, sender=sender)
+        self._logger.info(
+            f"4BS teach-in from {erp1.sender}: successfully registered with EEP {eep}"
+            + (f" using sender slot {sender}" if sender is not None else "")
+            + "."
+        )
+
+        asyncio.create_task(
+            self.__send_4bs_teach_in_response(
+                FourBSTeachInTelegram.response_for_query(
+                    teach_in_telegram, FourBSTeachInResult.SENDER_ID_STORED, sender
+                )
+            )
+        )
+        self.__emit(self.__device_taught_in_callbacks, erp1.sender, eep)

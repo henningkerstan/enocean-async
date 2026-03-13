@@ -309,6 +309,10 @@ Radio signal → Device
 
 `ERP1Telegram` provides bit-addressable access to the payload (`bitstring_raw_value`, `set_bitstring_raw_value`) used by both the decode and encode paths.
 
+`protocol/erp1/ute.py` holds `UTEMessage` — parsing (`from_erp1`), response construction (`response_for_query`), and serialisation (`to_erp1`) for UTE (0xD4) teach-in/teach-out telegrams.
+
+`protocol/erp1/fourbs.py` holds `FourBSTeachInTelegram` and its associated enums (`FourBSLearnType`, `FourBSLearnStatus`, `FourBSTeachInResult`, `FourBSEEPResult`) — parsing, response construction, and serialisation for 4BS (0xA5) teach-in telegrams.
+
 `protocol/version.py` holds `VersionIdentifier` and `VersionInfo` — data classes for the dongle firmware version returned by the gateway's common-command query.
 
 ### 2. EEP Layer
@@ -320,11 +324,13 @@ Every supported EEP is a module-level `EEPSpecification` (or `SimpleProfileSpeci
 The two key types are:
 
 - **`EEP`** (`eep/id.py`): The 4-tuple identifier — `rorg`, `func`, `type_`, optional `manufacturer`. Used as the dict key in `EEP_SPECIFICATIONS` and as a reference in `EEPMessage.eep`.
-- **`EEPSpecification`** (`eep/profile.py`): The full profile — `cmd_size`, `cmd_offset`, `telegrams` dict, `semantic_resolvers`, `observers`, `encoders`, `entities`. The simpler `SimpleProfileSpecification` is a convenience subclass for single-telegram EEPs (no CMD field; wraps datafields into a single `EEPTelegram` at key `0`).
+- **`EEPSpecification`** (`eep/profile.py`): The full profile — `cmd_size`, `cmd_offset`, `telegrams` dict, `semantic_resolvers`, `observers`, `encoders`, `entities`, and `uses_addressed_sending`. The simpler `SimpleProfileSpecification` is a convenience subclass for single-telegram EEPs (no CMD field; wraps datafields into a single `EEPTelegram` at key `0`).
 
 `EEPDataField` is the atomic unit: bit offset, size, scale functions, unit function, enum map, and optional `observable` annotation that bridges the spec and semantic vocabularies.
 
 `EEPSpecification` carries five extension points: `telegrams`, `semantic_resolvers`, `observers` (receive path behaviour), `encoders` (send path encoding), and `entities` (static declaration of physical entities).
+
+`uses_addressed_sending: bool` (default `True`) distinguishes destination-addressed devices (VLD / D2 family, use BaseID+0 + destination field) from sender-addressed devices (4BS actuators, learn the gateway's sender at teach-in time and filter by it). The gateway uses this flag at teach-in time to decide whether to allocate a dedicated sender slot from the pool.
 
 ### 3. Semantics Layer
 
@@ -362,6 +368,16 @@ Layered callbacks for application code:
 - `add_erp1_received_callback` — parsed telegram (filterable by sender)
 - `add_eep_message_received_callback` — decoded EEP message (filterable by sender)
 - `add_observation_callback` — semantic entity state updates from observers
+- `add_new_device_callback` — first telegram seen from an unknown EURID
+- `add_device_taught_in_callback` — fires after a device is successfully taught in and auto-registered, carrying `(address: EURID, eep: EEP)`
+
+#### Teach-in
+
+The gateway handles UTE and 4BS teach-in telegrams during an active learning session (`start_learning()`). On a successful teach-in it calls `add_device()` internally and emits `DeviceTaughtInCallback`. For sender-addressed devices it allocates the lowest free slot from the BaseID+1…+127 pool.
+
+Both UTE and 4BS-with-profile support bidirectional teach-in: the gateway sends a protocol-level response acknowledging or rejecting the pairing. For UTE this is mandatory; for 4BS it is conditional on the device requesting a response (`learn_status=QUERY`). Re-teach-in of an already-registered device is handled gracefully — same EEP is acknowledged and ignored; a different EEP updates the registration.
+
+See [TEACHIN.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/TEACHIN.md) for the full behavior.
 
 #### Auto-reconnect
 
@@ -405,7 +421,8 @@ Some EEP profiles spread one observable across multiple fields (A5-06: two illum
 2. Declare `entities` — one `Entity` per physical entity, with its `observables` and `actions`.
 3. Annotate fields with `observable` where a 1:1 mapping to an observable exists. Add a `SemanticResolver` for multi-field combinations.
 4. Populate `observers` with the appropriate factory callables (e.g. `scalar_factory`, `cover_factory`, `f6_push_button_factory`).
-5. Optionally populate `encoders` if the device accepts instructions. Add the corresponding `Instruction` subclass in `semantics/instructions/<profile>.py`.
-6. Register in `eep/__init__.py`'s `EEP_SPECIFICATIONS`.
+5. Set `uses_addressed_sending=False` if the device is sender-addressed (learns the gateway's BaseID+n at teach-in). Default is `True` (VLD / destination-addressed).
+6. Optionally populate `encoders` if the device accepts instructions. Add the corresponding `Instruction` subclass in `semantics/instructions/<profile>.py`.
+7. Register in `eep/__init__.py`'s `EEP_SPECIFICATIONS`.
 
 No changes to `gateway.py`, `device.py`, or any observer class are required.

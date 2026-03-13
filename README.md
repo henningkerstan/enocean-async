@@ -44,10 +44,21 @@ gateway.add_device(address=eurid, eep=EEP.from_string("D2-05-00"), name="Living 
 
 ### Learning / teach-in
 ```python
-await gateway.start_learning(timeout_seconds=60)
-# Gateway accepts UTE teach-in (with automatic response); 4BS teach-in, and 1BS teach-in are NOT YET SUPPORTED
+def on_taught_in(address: EURID, eep: EEP) -> None:
+    print(f"New device: {address} ({eep})")
+
+gateway.add_device_taught_in_callback(on_taught_in)
+await gateway.start_learning(timeout=30)
+# gateway now accepts teach-in telegrams and auto-registers devices
 gateway.stop_learning()
 ```
+
+Supported teach-in methods:
+- **UTE**: automatic bidirectional response; sender address auto-allocated from the base ID pool
+- **4BS with profile**: auto-registered when EEP is supported; bidirectional response always sent
+1BS teach-in is intentionally not auto-registered (no EEP information available). The `NewDeviceCallback` fires in all cases.
+
+See [TEACHIN.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/TEACHIN.md) for the full teach-in and teach-out behavior.
 
 ### Gateway utilities
 - Retrieve EURID, Base ID and firmware version info
@@ -59,22 +70,22 @@ gateway.stop_learning()
 - Full receive pipeline: raw serial bytes → ESP3 → ERP1 → EEP decode → observers → `Observation` callbacks
 - Full send pipeline: typed `Instruction` → `EEPHandler.encode()` → ERP1 → ESP3 → serial
 - Device registration with per-device EEP and observer instantiation
-- Learning mode: UTE teach-in (query parsing + automatic bidirectional response)
+- Learning mode: UTE and 4BS-with-profile teach-in (auto-response, device registration, sender pool allocation); 4BS re-teach-in with EEP change supported
+- `DeviceTaughtInCallback` with EURID + EEP on successful teach-in
 - Auto-reconnect on connection loss
 - EURID, Base ID, firmware version retrieval; Base ID change
-- Parsing of all EEPs listed in [SUPPORTED_EEPS.md](SUPPORTED_EEPS.md)
+- Parsing of all EEPs listed in [SUPPORTED_EEPS.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/SUPPORTED_EEPS.md)
 - Sending instructions for: D2-05-00 (covers), D2-20-02 (fan), A5-38-08 (dim gateway), D2-01 (switches/dimmers)
 
 
 ## What is missing / not yet implemented
 - ECID sub-dispatch for D2-01 extended commands
-- More EEPs (contributions welcome — see [SKILLS.md](SKILLS.md) for the step-by-step guide)
+- More EEPs (contributions welcome — see [SKILLS.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/SKILLS.md) for the step-by-step guide)
 - Logging coverage is partial
-- 4BS teach-in, 1BS teach-in
 
 
 ## Implemented EEPs
-See [SUPPORTED_EEPS.md](SUPPORTED_EEPS.md).
+See [SUPPORTED_EEPS.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/SUPPORTED_EEPS.md).
 
 
 ## Architecture
@@ -137,15 +148,15 @@ ESP3Packet
 Radio signal → Device
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for a detailed description of the EEP layer, the semantics layer, and the key design decisions.
+See [ARCHITECTURE.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/ARCHITECTURE.md) for a detailed description of the EEP layer, the semantics layer, and the key design decisions.
 
 
 ## Contributing
-See [CONTRIBUTING](CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/henningkerstan/enocean-async/blob/main/CONTRIBUTING.md).
 
 
 ## Versioning
-See [VERSIONING.md](VERSIONING.md) for the version scheme and bump instructions.
+See [VERSIONING.md](https://github.com/henningkerstan/enocean-async/blob/main/VERSIONING.md) for the version scheme and bump instructions.
 
 
 ## Dependencies

@@ -7,9 +7,11 @@ __date__ = "2026-03-08"
 
 from .address import EURID, BaseAddress, BroadcastAddress, SenderAddress
 from .device import Device
+from .eep import EEP_SPECIFICATIONS
 from .eep.id import EEP
+from .eep.manufacturer import Manufacturer
 from .eep.profile import DeviceDescriptor
-from .gateway import Gateway
+from .gateway import DeviceTaughtInCallback, Gateway
 from .semantics.entity_type import EntityType
 from .semantics.instructable import Instructable
 from .semantics.instruction import Instruction
@@ -32,15 +34,18 @@ from .semantics.value_kind import ValueKind
 __all__ = [
     # Gateway
     "Gateway",
+    "DeviceTaughtInCallback",
     # Addresses
     "BaseAddress",
     "BroadcastAddress",
     "EURID",
     "SenderAddress",
-    # Device
+    # Device / EEP
     "Device",
     "DeviceDescriptor",
     "EEP",
+    "EEP_SPECIFICATIONS",
+    "Manufacturer",
     # Receive side
     "EntityType",
     "Observable",

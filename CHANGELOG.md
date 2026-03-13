@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.6.1-dev0] — 2026-03-11
+
+### Breaking changes
+- `start_learning()` parameter renamed: `timeout_seconds` → `timeout`; default changed from 60 to 30
+- `start_learning()` now raises `RuntimeError` immediately if the gateway's base ID is not yet available (previously the error surfaced later at first teach-in)
+- `Gateway.add_device()` now raises `ValueError` if the device address is already registered (previously silently overwrote)
+
+### New features
+- Full UTE teach-in: EEP validation, auto-registration, bidirectional response, sender pool allocation
+- Full UTE teach-out: `TEACH_IN_DELETION` and toggle `TEACH_IN_OR_DELETION_OF_TEACH_IN` handling; requires `allow_teach_out=True` in `start_learning()`
+- 4BS teach-in: learning mode guard + auto-registration (with profile); profileless telegrams are logged and ignored
+- 4BS teach-in bidirectional response: gateway always echoes the EEP back with `SENDER_ID_STORED` / `EEP_SUPPORTED` result bits; `learn_status=RESPONSE` telegrams are discarded to avoid processing loopback responses
+- 4BS re-teach-in: same-EEP re-teach-in is acknowledged and ignored; EEP-change re-teach-in updates the registered EEP and responds `ACCEPTED`
+- 1BS teach-in: learning mode guard; `NewDeviceCallback` fires; no auto-registration (no EEP in telegram)
+- `DeviceTaughtInCallback = Callable[[EURID, EEP], None]` — fires after successful teach-in and auto-registration
+- `Gateway.add_device_taught_in_callback()` to register teach-in callbacks
+- `EEPSpecification.uses_addressed_sending: bool` flag to distinguish destination-addressed (VLD) from sender-addressed (4BS actuator) devices; `A5-38-08` and `A5-20-01` set to `False`
+- `start_learning()` log message now shows the effective sender address(es) — addressed devices (BaseID+0) and the next available sender-addressed slot
+
+### Internal / maintenance
+- Sender address pool: lowest free BaseID+1…+127 slot allocated at teach-in time for sender-addressed devices; derived on-demand from device registry
+- UTE response encoding (`to_erp1()`) completed; `from_erp1()` length check corrected
+- 4BS teach-in classes (`FourBSTeachInTelegram`, `FourBSLearnType`, `FourBSLearnStatus`, `FourBSTeachInResult`, `FourBSEEPResult`) moved to `protocol/erp1/fourbs.py`
+- Docs moved to `docs/` folder; all README cross-links updated to absolute GitHub URLs
+
+
 ## [0.6.0] — 2026-03-08
 
 ### Breaking changes

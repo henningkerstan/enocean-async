@@ -55,3 +55,13 @@ class EEP:
 
     def __hash__(self):
         return hash((self.rorg, self.func, self.type, self.manufacturer))
+
+    def __eq__(self, other):
+        if not isinstance(other, EEP):
+            return NotImplemented
+        return (
+            self.rorg == other.rorg
+            and self.func == other.func
+            and self.type == other.type
+            and self.manufacturer == other.manufacturer
+        )
