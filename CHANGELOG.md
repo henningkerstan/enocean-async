@@ -31,6 +31,8 @@
 - UTE response encoding (`to_erp1()`) completed; `from_erp1()` length check corrected
 - 4BS teach-in classes (`FourBSTeachInTelegram`, `FourBSLearnType`, `FourBSLearnStatus`, `FourBSTeachInResult`, `FourBSEEPResult`) moved to `protocol/erp1/fourbs.py`
 - Docs moved to `docs/` folder; all README cross-links updated to absolute GitHub URLs
+- `Entity` and `EntityType` moved to `semantics/entity.py` (merged from separate `entity_type.py`)
+- `ObserverFactory` moved to `semantics/observer_factory.py`; `SemanticResolver` and `InstructionEncoder` type aliases moved to `semantics/types.py`; `DeviceDescriptor` moved to `semantics/device_descriptor.py`; all re-exported from `eep/profile.py` for backward compatibility
 
 
 ## [0.6.0] — 2026-03-08

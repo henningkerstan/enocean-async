@@ -146,26 +146,26 @@ When an observer processes a telegram and produces an update, it emits an `Obser
 ```python
 @dataclass
 class Observation:
-    device_id: SenderAddress    # which device
-    entity_id: str              # which entity within the device
+    device: SenderAddress       # which device
+    entity: str                 # which entity within the device
     values: dict[Observable, Any]  # all observable values reported in this telegram
     timestamp: float            # wall-clock time
     source: ObservationSource   # TELEGRAM or TIMER
 ```
 
-The complete entity identity is the pair `(device_id, entity_id)`; the `entity_id` is only sufficient within the scope of a device. The `values` dict may be a partial update — a telegram may only carry a subset of an entity's observables (e.g. a D2-01 measurement response carries `POWER` but not `SWITCH_STATE`). The unit for any value is always `observable.unit`.
+The complete entity identity is the pair `(device, entity)`; the `entity` is only sufficient within the scope of a device. The `values` dict may be a partial update — a telegram may only carry a subset of an entity's observables (e.g. a D2-01 measurement response carries `POWER` but not `SWITCH_STATE`). The unit for any value is always `observable.unit`.
 
 Examples:
 
 ```python
 # Cover — all three observables arrive in one telegram
-Observation(entity_id="cover", values={POSITION: 75, COVER_STATE: "open", ANGLE: 0})
+Observation(entity="cover", values={POSITION: 75, COVER_STATE: "open", ANGLE: 0})
 
 # Push button — single observable entity, timer-sourced hold event
-Observation(entity_id="a0", values={PUSH_BUTTON: "held"}, source=ObservationSource.TIMER)
+Observation(entity="a0", values={PUSH_BUTTON: "held"}, source=ObservationSource.TIMER)
 
 # D2-01 actuator status — partial update
-Observation(entity_id="0", values={SWITCH_STATE: "on", ERROR_LEVEL: 0})
+Observation(entity="0", values={SWITCH_STATE: "on", ERROR_LEVEL: 0})
 ```
 
 ---
@@ -217,7 +217,7 @@ await gateway.send_command(
 
 ## DeviceDescriptor
 
-`DeviceDescriptor` is the setup-time description of what a device type exposes and accepts. It is returned by `Gateway.device_descriptor(address)` after calling `add_device()`, before any telegrams arrive:
+`DeviceDescriptor` (`semantics/device_descriptor.py`) is the setup-time description of what a device type exposes and accepts. It is returned by `Gateway.device_descriptor(address)` after calling `add_device()`, before any telegrams arrive:
 
 ```python
 @dataclass
@@ -264,7 +264,7 @@ EEPMessage
     └── MetaDataObserver → reads rssi, generates timestamps
     │ _emit()
     ▼
-Observation(device_id, entity_id, values, timestamp, source)
+Observation(device, entity, values, timestamp, source)
     │ add_observation_callback
     ▼
 Application
@@ -343,6 +343,12 @@ The two key types are:
 
 `EEPSpecification` carries five extension points: `telegrams`, `semantic_resolvers`, `observers` (receive path behaviour), `encoders` (send path encoding), and `entities` (static declaration of physical entities).
 
+The types referenced by `EEPSpecification` that belong conceptually to the semantics layer live in `semantics/` and are re-exported by `eep/profile.py` for convenience:
+- `ObserverFactory` (`semantics/observer_factory.py`) — wraps an observer constructor callable
+- `SemanticResolver`, `InstructionEncoder` (`semantics/types.py`) — type aliases for resolver and encoder callables
+- `DeviceDescriptor` (`semantics/device_descriptor.py`) — setup-time description of a device's entities
+- `Entity`, `EntityType` (`semantics/entity.py`) — physical entity declaration and its classification
+
 `uses_addressed_sending: bool` (default `True`) distinguishes destination-addressed devices (VLD / D2 family, use BaseID+0 + destination field) from sender-addressed devices (4BS actuators, learn the gateway's sender at teach-in time and filter by it). The gateway uses this flag at teach-in time to decide whether to allocate a dedicated sender slot from the pool.
 
 ### 3. Semantics Layer
@@ -350,6 +356,12 @@ The two key types are:
 **Files:** `semantics/`
 
 The semantics layer is the behavioural abstraction between raw EEP bytes and typed Python objects. It contains both the receive side (observers, observables, observations) and the send side (instructables, instructions).
+
+Key semantic types:
+- `entity.py` — `Entity` (physical entity declaration) and `EntityType` (sensor / actuator / combined classification)
+- `observer_factory.py` — `ObserverFactory` (wraps an observer constructor for `EEPSpecification.observers`)
+- `types.py` — `SemanticResolver` and `InstructionEncoder` type aliases
+- `device_descriptor.py` — `DeviceDescriptor` (setup-time snapshot of a device's EEP and entities)
 
 #### Observers
 
