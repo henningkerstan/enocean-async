@@ -1,11 +1,13 @@
 # Changelog
 
-## [0.7.0] — 2026-03-13
+## [0.7.0] — 2026-03-14
 
 ### Breaking changes
 - `start_learning()` parameter renamed: `timeout_seconds` → `timeout`; default changed from 60 to 30
 - `start_learning()` now raises `RuntimeError` immediately if the gateway's base ID is not yet available (previously the error surfaced later at first teach-in)
 - `Gateway.add_device()` now raises `ValueError` if the device address is already registered (previously silently overwrote)
+- `Address` API simplified — removed `to_number()` (use `int(addr)`), `to_string()` (use `str(addr)`), `to_bytelist()` (use `.bytelist`), `to_json()`, `from_number()`, `from_string()` (pass value directly to constructor), `broadcast()`, and `validate_string()`
+- `Address._address` replaces the previously name-mangled `Address.__address`
 
 ### New features
 - Full UTE teach-in: EEP validation, auto-registration, bidirectional response, sender pool allocation
@@ -18,6 +20,12 @@
 - `Gateway.add_device_taught_in_callback()` to register teach-in callbacks
 - `EEPSpecification.uses_addressed_sending: bool` flag to distinguish destination-addressed (VLD) from sender-addressed (4BS actuator) devices; `A5-38-08` and `A5-20-01` set to `False`
 - `start_learning()` log message now shows the effective sender address(es) — addressed devices (BaseID+0) and the next available sender-addressed slot
+- `Address` constructor now accepts `bytes`, `bytearray`, or `list[int]` (4-element big-endian) in addition to `int` and `str`
+- `Address.bytelist` property (replaces `to_bytelist()` method)
+- `Entity` exported from the top-level `enocean_async` package
+
+### Bug fixes
+- `BaseAddress` upper bound corrected from `FF:FF:FF:80` to `FF:FF:FF:FE` (the broadcast address `FF:FF:FF:FF` is excluded; valid base address sender slots extend to `FF:FF:FF:FE`)
 
 ### Internal / maintenance
 - Sender address pool: lowest free BaseID+1…+127 slot allocated at teach-in time for sender-addressed devices; derived on-demand from device registry

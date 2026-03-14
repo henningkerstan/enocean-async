@@ -13,6 +13,20 @@ Each pipeline layers protocol detail away from the application. The gateway orch
 
 ---
 
+## Address model
+
+All 32-bit EnOcean addresses are represented by the `Address` class and its three subclasses in `address.py`. The constructor accepts an `int`, a colon-separated hex string (`"AB:CD:EF:01"`), or a 4-byte sequence (`bytes`, `bytearray`, `list[int]`). Use `int(addr)` / `str(addr)` for numeric / string conversion; `addr.bytelist` for the big-endian byte list.
+
+| Class | Range | Role |
+|---|---|---|
+| `EURID` | `00:00:00:00` – `FF:7F:FF:FF` | Permanent chip ID of a device |
+| `BaseAddress` | `FF:80:00:00` – `FF:FF:FF:FE` | Gateway base ID and its 128 sender slots (BaseID+0…+127) |
+| `BroadcastAddress` | `FF:FF:FF:FF` | Broadcast destination |
+
+`SenderAddress = EURID | BaseAddress` — the union of all addresses that may appear as the sender of a telegram.
+
+---
+
 ## Entities, Observables, and Instructables
 
 These three concepts form the semantic vocabulary of the library.
@@ -136,7 +150,6 @@ class Observation:
     entity_id: str              # which entity within the device
     values: dict[Observable, Any]  # all observable values reported in this telegram
     timestamp: float            # wall-clock time
-    time_elapsed: float         # duration since last related event (e.g. hold duration)
     source: ObservationSource   # TELEGRAM or TIMER
 ```
 
