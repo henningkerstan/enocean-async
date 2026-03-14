@@ -10,7 +10,7 @@ from .device import Device
 from .eep import EEP_SPECIFICATIONS
 from .eep.id import EEP
 from .eep.manufacturer import Manufacturer
-from .eep.profile import DeviceDescriptor
+from .eep.profile import DeviceDescriptor, Entity
 from .gateway import DeviceTaughtInCallback, Gateway
 from .semantics.entity_type import EntityType
 from .semantics.instructable import Instructable
@@ -43,6 +43,7 @@ __all__ = [
     # Device / EEP
     "Device",
     "DeviceDescriptor",
+    "Entity",
     "EEP",
     "EEP_SPECIFICATIONS",
     "Manufacturer",
