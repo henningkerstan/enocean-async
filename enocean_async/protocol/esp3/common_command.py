@@ -40,7 +40,7 @@ class CommonCommandTelegram:
     def CO_WR_IDBASE(cls, id_base: BaseAddress) -> "CommonCommandTelegram":
         """Create a Common Command Telegram to set the base ID."""
 
-        id_base_bytes = id_base.to_bytelist()
+        id_base_bytes = id_base.bytelist
         return cls(
             common_command_code=CommonCommandCode.CO_WR_IDBASE,
             common_command_data=id_base_bytes,

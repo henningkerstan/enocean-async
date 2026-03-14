@@ -98,7 +98,7 @@ async def main(port: str) -> None:
         f"Base ID: {await gateway.base_id} (remaining write cycles: {await gateway.base_id_remaining_write_cycles})"
     )
     print(
-        f"Valid sender addresses: {await gateway.eurid} and {await gateway.base_id}-{BaseAddress.from_number((await gateway.base_id).to_number() + 127)}"
+        f"Valid sender addresses: {await gateway.eurid} and {await gateway.base_id}-{BaseAddress(int(await gateway.base_id) + 127)}"
     )
 
     version_info = await gateway.version_info
@@ -109,15 +109,15 @@ async def main(port: str) -> None:
     print(f"Device version: {version_info.device_version}")
 
     # add some devices - adopt to your own devices and EEPs
-    gateway.add_device(EURID.from_string("00:00:00:01"), EEP.from_string("F6-02-01"))
-    gateway.add_device(EURID.from_string("00:00:00:02"), EEP.from_string("F6-02-01"))
+    gateway.add_device(EURID("00:00:00:01"), EEP.from_string("F6-02-01"))
+    gateway.add_device(EURID("00:00:00:02"), EEP.from_string("F6-02-01"))
     try:
-        gateway.add_device(EURID.from_string("00:00:00:02"), EEP.from_string("F6-02-02"))
+        gateway.add_device(EURID("00:00:00:02"), EEP.from_string("F6-02-02"))
     except:
         print(f"{CROSSMARK} Failed to add device with duplicate address 00:00:00:02")
         
-    gateway.add_device(EURID.from_string("00:00:00:03"), EEP.from_string("F6-02-05"))
-    gateway.add_device(EURID.from_string("00:00:00:04"), EEP.from_string("F6-02-05"))
+    gateway.add_device(EURID("00:00:00:03"), EEP.from_string("F6-02-05"))
+    gateway.add_device(EURID("00:00:00:04"), EEP.from_string("F6-02-05"))
 
     try:
         from devices import DEVICE_EEP_MAP

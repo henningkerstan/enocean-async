@@ -135,7 +135,7 @@ class ERP1Telegram:
 
     def __repr__(self) -> str:
         return (
-            f"ERP1Telegram(sender={self.sender.to_string()}, RORG={self.rorg.simple_name}, destination={self.destination.to_string() if self.destination else '*'}, "
+            f"ERP1Telegram(sender={str(self.sender)}, RORG={self.rorg.simple_name}, destination={str(self.destination) if self.destination else '*'}, "
             f"telegram_data={self.telegram_data.hex().upper()}, "
             f"status=0x{self.status:02X} (hash function: {self.hash_function}, repeater count: {self.repeater_count}), "
             f"sub_tel_num={self.sub_tel_num}, "
@@ -224,7 +224,7 @@ class ERP1Telegram:
 
         # determine sender address
         try:
-            s = Address.from_bytelist(data[-5:-1])
+            s = Address(data[-5:-1])
         except ValueError:
             raise ERP1ParseError(
                 f"Invalid sender address in ERP1 telegram: {data[-5:-1].hex().upper()}"
@@ -232,9 +232,9 @@ class ERP1Telegram:
 
         # determine if sender is EURID or Base ID
         if s.is_eurid():
-            sender = EURID.from_number(s.to_number())
+            sender = EURID(int(s))
         elif s.is_base_address():
-            sender = BaseAddress.from_number(s.to_number())
+            sender = BaseAddress(int(s))
         else:
             raise ERP1ParseError(f"Invalid sender address: {sender}")
 
@@ -244,13 +244,13 @@ class ERP1Telegram:
         sub_tel_num = opt[0] if len(opt) > 0 else None
 
         destination_bytes = opt[1:5] if len(opt) > 4 else None
-        d = Address.from_bytelist(destination_bytes) if destination_bytes else None
+        d = Address(destination_bytes) if destination_bytes else None
 
         destination = None
         if d is not None and d.is_broadcast():
             destination = BroadcastAddress()
         elif d is not None and d.is_eurid():
-            destination = EURID.from_number(d.to_number())
+            destination = EURID(int(d))
 
         rssi = opt[5] if len(opt) > 5 else None
         sec_level = opt[6] if len(opt) > 6 else None
@@ -270,7 +270,7 @@ class ERP1Telegram:
         data = (
             bytes([self.rorg])
             + self.telegram_data
-            + bytes(self.sender.to_bytelist())
+            + bytes(self.sender.bytelist)
             + bytes([self.status])
         )
         optional = bytes()
@@ -278,9 +278,9 @@ class ERP1Telegram:
             bytes([self.sub_tel_num]) if self.sub_tel_num is not None else bytes([0x03])
         )
         optional += (
-            bytes(self.destination.to_bytelist())
+            bytes(self.destination.bytelist)
             if self.destination is not None
-            else bytes(BroadcastAddress().to_bytelist())
+            else bytes(BroadcastAddress().bytelist)
         )
         optional += bytes([self.rssi]) if self.rssi is not None else bytes([0xFF])
         optional += (

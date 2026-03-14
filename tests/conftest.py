@@ -20,13 +20,13 @@ from enocean_async.semantics.observation import Observation
 @pytest.fixture
 def device_address() -> EURID:
     """A typical device EURID (in the EURID range 00:00:00:00 – FF:7F:FF:FF)."""
-    return EURID.from_string("01:23:45:67")
+    return EURID("01:23:45:67")
 
 
 @pytest.fixture
 def base_address() -> BaseAddress:
     """A typical gateway BaseAddress (in the range FF:80:00:00 – FF:FF:FF:80)."""
-    return BaseAddress.from_string("FF:80:00:01")
+    return BaseAddress("FF:80:00:01")
 
 
 # ---------------------------------------------------------------------------

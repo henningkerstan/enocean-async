@@ -1,222 +1,104 @@
-"""EnOcean address classes for Home Assistant integration.
-
-This module provides the EnOceanAddress class for handling EnOcean four byte (32 bit) addresses,
-including parsing, validation, and conversion between integer and string formats.
-
-For more information on EnOcean addressing, see
-  - https://www.enocean-alliance.org/wp-content/uploads/2021/03/EURID-v1.2.pdf
-  - https://www.enocean.com/de/faq-knowledge-base/what-is-difference-between-base-id-and-chip-id/
-"""
-
 type SenderAddress = EURID | BaseAddress
-"""Addresses that can be used as the sender of a telegram. This includes both EURIDs (device addresses) and Base IDs, hence ranges from 00:00:00:00 to FF:FF:FF:80."""
+"""Addresses that can be used as the sender of a telegram. This includes both EURIDs (device addresses) and Base IDs, hence ranges from 00:00:00:00 to FF:FF:FF:FE."""
 
 
 class Address:
-    """Implementation of the EnOcean four byte (32 bit) addresses to identify devices.
+    """EnOcean four byte (32 bit) address to identify devices, usually denoted as a colon-separated string (e.g., 00:00:00:00)."""
 
-    # A note about sending addresses
-    Each EnOcean device has a unique ID (called *Chip ID*) which it can use
-    for sending telegrams. Alternatively, EnOcean gateways can also use a range
-    of 128 consecutive addresses for sending, starting at the so-called
-    _Base ID_ of the gateway. A gateway's *Base ID* is a four byte address in
-    the range FF:80:00:00 to FF:FF:FF:80. The Base ID is a predefined address,
-    which can be changed by the user only a few times (at most 10 times for the
-    TCM310 chip). The allowed addresses for sending a telegram are thus the
-    following 129 addresses:
-
-    - Chip ID (= device ID),
-    - Base ID,
-    - Base ID + 1,
-    - Base ID + 2,
-    - ...
-    - Base ID + 126, and
-    - Base ID + 127.
-
-    All other addresses must not be used for sending (and will be rejected by
-    official EnOcean modules). This is meant as a basic security feature. Have a
-    look at the EnOcean [knowledge base](https://www.enocean.com/de/faq-knowledge-base/what-is-difference-between-base-id-and-chip-id/) for the official explanation of the differences between chip ID and base IDs.
-
-    Base IDs are always in the range FF:80:00:00 to FF:FF:FF:80.
-    """
-
-    def __init__(self, from_value: int | str) -> None:
-        """Initialize the EnOceanID from an integer or string."""
-        numeric_id = -1
-        if isinstance(from_value, str):
-            numeric_id = Address.from_string(from_value).to_number()
-        if isinstance(from_value, int):
-            numeric_id = from_value
-        if not isinstance(numeric_id, int):
+    def __init__(self, value: int | str | bytes | bytearray | list[int]) -> None:
+        """Create an address from an integer, a colon-separated hex string (e.g. ``"AB:CD:EF:01"``), or a 4-byte sequence."""
+        if isinstance(value, (bytes, bytearray, list)):
+            if len(value) != 4:
+                raise ValueError("Byte sequence must have exactly 4 elements.")
+            value = int.from_bytes(value, "big")
+        elif isinstance(value, str):
+            parts = value.strip().split(":")
+            if len(parts) != 4:
+                raise ValueError(
+                    f"Invalid address string '{value}': expected 4 colon-separated hex bytes."
+                )
+            value = int("".join(part.zfill(2) for part in parts), 16)
+        elif not isinstance(value, int):
             raise TypeError(
-                "ID must be an integer or a hex string that can be converted to an integer."
+                "Address must be an integer, a colon-separated hex string, or a 4-byte sequence."
             )
-        if numeric_id < 0:
-            raise ValueError("ID out of bounds (must be at least 0).")
-        if numeric_id > 0xFFFFFFFF:
+        if not (0 <= value <= 0xFFFFFFFF):
             raise ValueError(
-                "ID out of bounds (must be smaller than 0xFFFFFFFF = 4294967295)."
+                f"Address out of range: must be between 0x00000000 and 0xFFFFFFFF, got {value}."
             )
-        self.__address = numeric_id
-
-    @classmethod
-    def from_number(cls, id: int) -> "Address":
-        """Create an EnOceanID instance from an integer."""
-        return cls(id)
-
-    @classmethod
-    def from_string(cls, id_string: str) -> "Address":
-        """Create an EnOceanID instance from a colon-separated string."""
-        if not id_string:
-            raise ValueError("from_string called with undefined argument")
-        parts = id_string.strip().split(":")
-        if len(parts) != 4:
-            raise ValueError("Wrong format.")
-        hex_string = "".join(part.zfill(2) for part in parts)
-        return cls(int(hex_string, 16))
-
-    @classmethod
-    def from_bytelist(cls, byte_list: list[int]) -> "Address":
-        """Create an EnOceanID instance from a list of 4 bytes."""
-        if len(byte_list) != 4:
-            raise ValueError("Byte list must have exactly 4 elements.")
-        numeric_id = (
-            (byte_list[0] << 24)
-            | (byte_list[1] << 16)
-            | (byte_list[2] << 8)
-            | byte_list[3]
-        )
-        return cls(numeric_id)
-
-    @classmethod
-    def broadcast(cls) -> "Address":
-        """Return the broadcast ID (FF:FF:FF:FF)."""
-        return cls(0xFFFFFFFF)
-
-    @classmethod
-    def validate_string(cls, id_string: str) -> bool:
-        """Check that the supplied string is a valid EnOcean address."""
-        parts = id_string.strip().split(":")
-
-        if len(parts) != 4:
-            return False
-
-        hex_string = "".join(part.zfill(2) for part in parts)
-        try:
-            int(hex_string, 16)
-        except ValueError:
-            return False
-
-        return True
-
-    def to_number(self) -> int:
-        """Return the EnOcean address as integer."""
-        return self.__address
-
-    def to_string(self) -> str:
-        """Return the EnOcean address as colon-separated hex string."""
-        s = f"{self.__address:08X}"
-        return f"{s[0:2]}:{s[2:4]}:{s[4:6]}:{s[6:8]}"
-
-    def to_json(self) -> str:
-        """Return the EnOcean address as JSON string."""
-        return self.to_string()
-
-    def to_bytelist(self) -> list[int]:
-        """Return the EnOcean address as list of bytes."""
-        return [
-            (self.__address >> 24) & 0xFF,
-            (self.__address >> 16) & 0xFF,
-            (self.__address >> 8) & 0xFF,
-            self.__address & 0xFF,
-        ]
+        self._address = value
 
     def is_eurid(self) -> bool:
-        """Check if the address is a EURID (EnOcean Unique Radio Identifier)."""
-        return 0x00000000 <= self.__address <= 0xFF7FFFFF
+        """Return ``True`` if this address is in the EURID range (00:00:00:00–FF:7F:FF:FF)."""
+        return 0x00000000 <= self._address <= 0xFF7FFFFF
 
     def is_base_address(self) -> bool:
-        """Check if the address is a Base address."""
-        return 0xFF800000 <= self.__address <= 0xFFFFFF80
+        """Return ``True`` if this address is in the base address range (FF:80:00:00–FF:FF:FF:FE)."""
+        return 0xFF800000 <= self._address <= 0xFFFFFFFE
 
     def is_broadcast(self) -> bool:
-        """Check if the address is the broadcast address."""
-        return self.__address == 0xFFFFFFFF
+        """Return ``True`` if this is the broadcast address (FF:FF:FF:FF)."""
+        return self._address == 0xFFFFFFFF
+
+    @property
+    def bytelist(self) -> list[int]:
+        """Return the address as a list of 4 big-endian bytes."""
+        return [
+            (self._address >> 24) & 0xFF,
+            (self._address >> 16) & 0xFF,
+            (self._address >> 8) & 0xFF,
+            self._address & 0xFF,
+        ]
+
+    def __int__(self) -> int:
+        """Return the address as a 32-bit integer."""
+        return self._address
 
     def __str__(self) -> str:
-        """Return the EnOcean address as string."""
-        return self.to_string()
+        """Return the address as a colon-separated uppercase hex string (e.g. ``"AB:CD:EF:01"``)."""
+        s = f"{self._address:08X}"
+        return f"{s[0:2]}:{s[2:4]}:{s[4:6]}:{s[6:8]}"
 
     def __hash__(self):
-        return self.__address
+        """Return a hash based on the integer value of the address, so addresses are usable as dict keys."""
+        return self._address
 
     def __eq__(self, other):
-        return self.to_number() == other.to_number()
+        """Compare by integer value, regardless of subclass."""
+        return int(self) == int(other)
 
     def __repr__(self) -> str:
-        return f"Address({self.to_string()})"
+        """Colon-separated hex string representation (e.g. ``"AB:CD:EF:01"``)."""
+        return str(self)
 
 
 class EURID(Address):
-    """Representation of an EnOcean device address (EnOcean Unique Radio Identifier / EURID).
+    """Representation of an EnOcean device address (EnOcean Unique Radio Identifier / EURID) - range ``00:00:00:00`` to ``FF:7F:FF:FF``."""
 
-    Device addresses are in the range 00:00:00:00 to FF:7F:FF:FF.
-    """
-
-    def __init__(self, from_value: int | str) -> None:
-        """Initialize the EnOcean device address from an integer or string."""
-        numeric_address = -1
-        if isinstance(from_value, str):
-            numeric_address = Address.from_string(from_value).to_number()
-        if isinstance(from_value, int):
-            numeric_address = from_value
-        if not isinstance(numeric_address, int):
-            raise TypeError(
-                "Address must be an integer or a hex string that can be converted to an integer."
-            )
-        if not (0x00000000 <= numeric_address <= 0xFF7FFFFF):
+    def __init__(self, value: int | str | bytes | bytearray | list[int]) -> None:
+        """Create a EURID; raises ``ValueError`` if the value is outside the EURID range."""
+        super().__init__(value)
+        if not (0x00000000 <= self._address <= 0xFF7FFFFF):
             raise ValueError(
-                f"Device address must be in the range 00:00:00:00 to FF:7F:FF:FF, but is {numeric_address:08X}."
+                f"Device address must be in the range 00:00:00:00 to FF:7F:FF:FF, but is {self._address:08X}."
             )
-        super().__init__(numeric_address)
-
-    def __repr__(self) -> str:
-        return f"EURID({self.to_string()})"
 
 
 class BaseAddress(Address):
-    """Representation of an EnOcean base address.
+    """Representation of an EnOcean base address - range ``FF:80:00:00`` to ``FF:FF:FF:FE``."""
 
-    Base addresses are in the range FF:80:00:00 to FF:FF:FF:80.
-    """
-
-    def __init__(self, from_value: int | str) -> None:
-        """Initialize the EnOcean base address from an integer or string."""
-        numeric_address = -1
-        if isinstance(from_value, str):
-            numeric_address = Address.from_string(from_value).to_number()
-        if isinstance(from_value, int):
-            numeric_address = from_value
-        if not isinstance(numeric_address, int):
-            raise TypeError(
-                "Address must be an integer or a hex string that can be converted to an integer."
-            )
-        if not (0xFF800000 <= numeric_address <= 0xFFFFFF80):
+    def __init__(self, value: int | str | bytes | bytearray | list[int]) -> None:
+        """Create a BaseAddress; raises ``ValueError`` if the value is outside the base address range."""
+        super().__init__(value)
+        if not (0xFF800000 <= self._address <= 0xFFFFFFFE):
             raise ValueError(
-                "Base address must be in the range FF:80:00:00 to FF:FF:FF:80."
+                "Base address must be in the range FF:80:00:00 to FF:FF:FF:FE."
             )
-        super().__init__(numeric_address)
-
-    def __repr__(self) -> str:
-        return f"BaseAddress({self.to_string()})"
 
 
 class BroadcastAddress(Address):
     """Representation of the EnOcean broadcast address (FF:FF:FF:FF)."""
 
     def __init__(self) -> None:
-        """Initialize the EnOcean broadcast address."""
+        """Create the broadcast address (FF:FF:FF:FF)."""
         super().__init__(0xFFFFFFFF)
-
-    def __repr__(self) -> str:
-        return "BroadcastAddress(FF:FF:FF:FF)"

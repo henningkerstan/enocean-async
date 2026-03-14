@@ -252,7 +252,7 @@ class Gateway:
         if sender == await self.eurid:
             return True
         if isinstance(sender, BaseAddress):
-            offset = sender.to_number() - (await self.base_id).to_number()
+            offset = int(sender) - int(await self.base_id)
             return 0 <= offset <= 127
         return False
 
@@ -272,7 +272,7 @@ class Gateway:
         """
         base_id = await self.base_id
         eurid = await self.eurid
-        base_number = base_id.to_number()
+        base_number = int(base_id)
 
         # Group registered devices by their assigned sender address
         occupied: dict[SenderAddress, list[EURID]] = {}
@@ -330,7 +330,7 @@ class Gateway:
             if next_sender is not None:
                 sender_info = (
                     f"Gateway selected sender {base_id} (base ID) for destination-addressed devices and "
-                    f"{next_sender} (base ID + {next_sender.to_number() - base_id.to_number()}) for sender-addressed devices"
+                    f"{next_sender} (base ID + {int(next_sender) - int(base_id)}) for sender-addressed devices"
                 )
             else:
                 sender_info = f"Gateway selected sender {base_id} (base ID), but no sender-addressed slots are available; consider freeing up sender-addressed slots"
@@ -642,7 +642,7 @@ class Gateway:
         ):
             return None
 
-        self.__base_id = BaseAddress.from_bytelist(response.response_data[:4])
+        self.__base_id = BaseAddress(response.response_data[:4])
 
         if len(response.optional_data) >= 1:
             self.__base_id_remaining_write_cycles = response.optional_data[0]
@@ -747,7 +747,7 @@ class Gateway:
                 alpha=response.response_data[6],
                 build=response.response_data[7],
             ),
-            eurid=EURID.from_bytelist(response.response_data[8:12]),
+            eurid=EURID(response.response_data[8:12]),
             device_version=response.response_data[12],
             app_description=response.response_data[16:32]
             .decode("ascii")
@@ -1206,7 +1206,7 @@ class Gateway:
                 "Base ID not available; cannot assign sender address for new device. Make sure to connect to the EnOcean module and fetch the base ID before adding devices without explicit sender addresses."
             )
         used = {
-            device.sender.to_number() - self.__base_id.to_number()
+            int(device.sender) - int(self.__base_id)
             for device in self.__devices.values()
             if isinstance(device.sender, BaseAddress)
         }
@@ -1215,7 +1215,7 @@ class Gateway:
             raise RuntimeError(
                 "Sender address pool exhausted (127 sender-addressed devices maximum)"
             )
-        return BaseAddress(self.__base_id.to_number() + offset)
+        return BaseAddress(int(self.__base_id) + offset)
 
     def __handle_4bs_teach_in_telegram(self, erp1: ERP1Telegram):
         if not self.__is_learning:

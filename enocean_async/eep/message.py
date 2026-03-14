@@ -88,9 +88,9 @@ class EEPMessage(RawEEPMessage):
     """
 
     def __repr__(self) -> str:
-        msg = f"EEPMessage(sender={self.sender.to_string()}, eep={self.eep}, message_type={self.message_type if self.message_type else 'default'}"
+        msg = f"EEPMessage(sender={str(self.sender)}, eep={self.eep}, message_type={self.message_type if self.message_type else 'default'}"
         if self.destination is not None and not self.destination.is_broadcast():
-            msg += f", destination={self.destination.to_string()}"
+            msg += f", destination={str(self.destination)}"
 
         msg += f", raw={self.raw}, decoded={self.decoded}, values={self.values})"
         return msg
