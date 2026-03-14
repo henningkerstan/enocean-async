@@ -7,7 +7,6 @@
 - `start_learning()` now raises `RuntimeError` immediately if the gateway's base ID is not yet available (previously the error surfaced later at first teach-in)
 - `Gateway.add_device()` now raises `ValueError` if the device address is already registered (previously silently overwrote)
 - `Address` API simplified — removed `to_number()` (use `int(addr)`), `to_string()` (use `str(addr)`), `to_bytelist()` (use `.bytelist`), `to_json()`, `from_number()`, `from_string()` (pass value directly to constructor), `broadcast()`, and `validate_string()`
-- `Address._address` replaces the previously name-mangled `Address.__address`
 
 ### New features
 - Full UTE teach-in: EEP validation, auto-registration, bidirectional response, sender pool allocation
