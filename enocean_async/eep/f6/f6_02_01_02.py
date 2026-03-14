@@ -74,7 +74,7 @@ _F6_02_ENTITIES = [
 
 # Define all F6-02-xx variants using the shared datafields structure
 EEP_F6_02_01 = SimpleProfileSpecification(
-    eep=EEP.from_string("F6-02-01"),
+    eep=EEP("F6-02-01"),
     name="Light and blind control - application style 1",
     datafields=_F6_02_DATAFIELDS,
     observers=_F6_02_FACTORIES,
@@ -82,7 +82,7 @@ EEP_F6_02_01 = SimpleProfileSpecification(
 )
 
 EEP_F6_02_02 = SimpleProfileSpecification(
-    eep=EEP.from_string("F6-02-02"),
+    eep=EEP("F6-02-02"),
     name="Light and blind control - application style 2",
     datafields=_F6_02_DATAFIELDS,
     observers=_F6_02_FACTORIES,

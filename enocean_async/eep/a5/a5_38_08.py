@@ -39,7 +39,7 @@ def _encode_dim(action: Dim) -> RawEEPMessage:
 
 
 EEP_A5_38_08 = EEPSpecification(
-    eep=EEP.from_string("A5-38-08"),
+    eep=EEP("A5-38-08"),
     name="Central command - gateway",
     cmd_size=8,
     cmd_offset=0,

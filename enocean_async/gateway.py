@@ -1089,7 +1089,7 @@ class Gateway:
         device_address: EURID,
         response_expected: bool,
     ) -> None:
-        generic_eep = EEP(ute.eep.rorg, ute.eep.func, ute.eep.type)
+        generic_eep = EEP([ute.eep.rorg, ute.eep.func, ute.eep.type])
         if ute.eep in EEP_SPECIFICATIONS:
             eep = ute.eep
         elif generic_eep in EEP_SPECIFICATIONS:

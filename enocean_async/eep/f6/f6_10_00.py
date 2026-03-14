@@ -11,7 +11,7 @@ _WIN_ENTITIES = [
 ]
 
 EEP_F6_10_00 = SimpleProfileSpecification(
-    eep=EEP.from_string("F6-10-00"),
+    eep=EEP("F6-10-00"),
     name="Window handle",
     datafields=[
         EEPDataField(
@@ -34,7 +34,7 @@ EEP_F6_10_00 = SimpleProfileSpecification(
 )
 
 EEP_F6_10_00_ELTAKO = SimpleProfileSpecification(
-    eep=EEP(rorg=0xF6, func=0x10, type_=0x00, manufacturer=Manufacturer.ELTAKO),
+    eep=EEP("F6-10-00", Manufacturer.ELTAKO),
     name="Window handle (Eltako variant)",
     datafields=[
         EEPDataField(

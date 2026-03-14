@@ -13,7 +13,7 @@ class _EEP_A5_02(SimpleProfileSpecification):
         self, _type: int, scale_min: float, scale_max: float, ten_bit: bool = False
     ):
         super().__init__(
-            eep=EEP.from_string(f"A5-02-{_type:02X}"),
+            eep=EEP(f"A5-02-{_type:02X}"),
             name=("10 bit t" if ten_bit else "T")
             + "emperature sensor, range "
             + str(scale_min)

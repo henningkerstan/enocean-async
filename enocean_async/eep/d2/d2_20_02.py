@@ -19,7 +19,7 @@ def _encode_set_fan_speed(action: SetFanSpeed) -> RawEEPMessage:
 
 
 EEP_D2_20_02 = EEPSpecification(
-    eep=EEP.from_string("D2-20-02"),
+    eep=EEP("D2-20-02"),
     name="Fan control, type 0x02",
     cmd_size=7,
     cmd_offset=1,

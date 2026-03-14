@@ -1,57 +1,64 @@
-from dataclasses import dataclass
-
 from .manufacturer import Manufacturer
 
 
-@dataclass
 class EEP:
-    """Identifier of an EnOcean Equipment Profile (EEP), e.g. F6-02-01 or D2-05-00."""
+    """Identifier of an EnOcean Equipment Profile (EEP), e.g. F6-02-01 or D2-05-00.
+
+    Construct from a dash-separated hex string or a 3-element int list:
+
+        EEP("A5-08-01")
+        EEP("A5-08-01", Manufacturer.ELTAKO)
+        EEP("A5-08-01.ELTAKO")          # manufacturer embedded in string
+        EEP([0xA5, 0x08, 0x01])
+        EEP([0xA5, func, type_], mfr)   # used internally when parsing telegrams
+    """
 
     def __init__(
-        self, rorg: int, func: int, type_: int, manufacturer: Manufacturer | None = None
+        self, eep: str | list[int], manufacturer: Manufacturer | None = None
     ) -> None:
-        """Construct an EnOcean Equipment Profile."""
-        self.rorg = rorg
-        self.func = func
-        self.type = type_
-        self.manufacturer = manufacturer  # see https://www.enocean.com/wp-content/uploads/application-notes/new_AN514_EnOcean_Link_Profiles.pdf
-
-    @classmethod
-    def from_string(cls, eep_string: str) -> "EEP":
-        """Create an EEP instance from a dash-separated string, optionally with manufacturer suffix.
-
-        Examples:
-            "A5-08-01" -> EEP(0xA5, 0x08, 0x01)
-            "A5-08-01.ELTAKO" -> EEP(0xA5, 0x08, 0x01, Manufacturer.ELTAKO)
-        """
-        # Split manufacturer suffix if present
-        eep_part, _, manufacturer_part = eep_string.strip().partition(".")
-
-        parts = eep_part.split("-")
-        if len(parts) != 3:
-            raise ValueError(
-                "Wrong format. Expected 'XX-XX-XX' or 'XX-XX-XX.MANUFACTURER'"
+        if isinstance(eep, str):
+            eep_part, _, manufacturer_part = eep.strip().partition(".")
+            parts = eep_part.split("-")
+            if len(parts) != 3:
+                raise ValueError(
+                    f"Invalid EEP string '{eep}': expected 'XX-XX-XX' or 'XX-XX-XX.MANUFACTURER'."
+                )
+            self.rorg = int(parts[0], 16)
+            self.func = int(parts[1], 16)
+            self.type = int(parts[2], 16)
+            if manufacturer_part:
+                try:
+                    embedded = Manufacturer[manufacturer_part.upper()]
+                except KeyError:
+                    raise ValueError(f"Unknown manufacturer: '{manufacturer_part}'.")
+                if manufacturer is not None and manufacturer != embedded:
+                    raise ValueError(
+                        f"Conflicting manufacturers: string has '{embedded.name}' but kwarg has '{manufacturer.name}'."
+                    )
+                self.manufacturer = embedded
+            else:
+                self.manufacturer = manufacturer
+        elif isinstance(eep, list):
+            if len(eep) != 3:
+                raise ValueError(
+                    f"List form requires exactly 3 elements [rorg, func, type_], got {len(eep)}."
+                )
+            self.rorg = eep[0]
+            self.func = eep[1]
+            self.type = eep[2]
+            self.manufacturer = manufacturer
+        else:
+            raise TypeError(
+                "EEP requires a dash-separated string ('A5-08-01') or a 3-element int list ([0xA5, 0x08, 0x01])."
             )
-        rorg = int(parts[0], 16)
-        func = int(parts[1], 16)
-        type_ = int(parts[2], 16)
-
-        manufacturer = None
-        if manufacturer_part:
-            # Try to look up manufacturer by name
-            try:
-                manufacturer = Manufacturer[manufacturer_part.upper()]
-            except KeyError:
-                raise ValueError(f"Unknown manufacturer: {manufacturer_part}")
-
-        return cls(rorg, func, type_, manufacturer)
 
     def __str__(self) -> str:
-        """Return the EEP as a dash-separated string, optionally with manufacturer suffix."""
-        return f"{self.rorg:02X}-{self.func:02X}-{self.type:02X}{'.' + self.manufacturer.name if self.manufacturer is not None else ''}"
+        """Dash-separated hex string, e.g. ``'A5-08-01'`` or ``'A5-08-01.ELTAKO'``."""
+        base = f"{self.rorg:02X}-{self.func:02X}-{self.type:02X}"
+        return base if self.manufacturer is None else f"{base}.{self.manufacturer.name}"
 
     def __repr__(self) -> str:
-        return f"EEP({str(self)})"
+        return str(self)
 
     def __hash__(self):
         return hash((self.rorg, self.func, self.type, self.manufacturer))

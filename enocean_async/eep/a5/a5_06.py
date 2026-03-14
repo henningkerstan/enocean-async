@@ -51,7 +51,7 @@ class _EEP_A5_06(SimpleProfileSpecification):
         ill1_max: float,
     ):
         super().__init__(
-            eep=EEP.from_string(f"A5-06-{_type:02X}"),
+            eep=EEP(f"A5-06-{_type:02X}"),
             name=f"Light sensor, range {min(ill1_min, ill2_min)}lx to {max(ill1_max, ill2_max)}lx",
             datafields=[
                 EEPDataField(
@@ -109,7 +109,7 @@ EEP_A5_06_05 = _EEP_A5_06(
 )
 
 EEP_A5_06_03 = SimpleProfileSpecification(
-    eep=EEP.from_string(f"A5-06-03"),
+    eep=EEP(f"A5-06-03"),
     name=f"Light sensor, 10-bit measurement, range 0lx to 1000lx",
     datafields=[
         EEPDataField(
@@ -138,7 +138,7 @@ EEP_A5_06_03 = SimpleProfileSpecification(
 )
 
 EEP_A5_06_04 = SimpleProfileSpecification(
-    eep=EEP.from_string(f"A5-06-04"),
+    eep=EEP(f"A5-06-04"),
     name=f"Curtain wall brightness sensor",
     datafields=[
         EEPDataField(
@@ -202,7 +202,7 @@ EEP_A5_06_04 = SimpleProfileSpecification(
 )
 
 EEP_A5_06_01_ELTAKO = SimpleProfileSpecification(
-    eep=EEP(rorg=0xA5, func=0x06, type_=0x01, manufacturer=Manufacturer.ELTAKO),
+    eep=EEP("A5-06-01", Manufacturer.ELTAKO),
     name="Light sensor (Eltako variant), dual-range 0–100lx / 300–30000lx",
     datafields=[
         EEPDataField(

@@ -19,7 +19,7 @@ _TEMP_HUM_ENTITIES = [
 class _EEP_A5_04_01_02(SimpleProfileSpecification):
     def __init__(self, _type: int, min_temp: float, max_temp: float):
         super().__init__(
-            eep=EEP.from_string(f"A5-04-{_type:02X}"),
+            eep=EEP(f"A5-04-{_type:02X}"),
             name=f"Temperature and humidity sensor, range {min_temp}°C to {max_temp}°C and 0% to 100%",
             datafields=[
                 EEPDataField(
@@ -65,7 +65,7 @@ class _EEP_A5_04_01_02(SimpleProfileSpecification):
 EEP_A5_04_01 = _EEP_A5_04_01_02(_type=0x01, min_temp=0.0, max_temp=40.0)
 EEP_A5_04_02 = _EEP_A5_04_01_02(_type=0x02, min_temp=-20.0, max_temp=60.0)
 EEP_A5_04_03 = SimpleProfileSpecification(
-    eep=EEP.from_string(f"A5-04-03"),
+    eep=EEP(f"A5-04-03"),
     name="Temperature and humidity sensor, range -20°C to 60°C 10bit-measurement and 0% to 100%",
     datafields=[
         EEPDataField(

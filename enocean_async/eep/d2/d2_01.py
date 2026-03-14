@@ -729,7 +729,7 @@ def _factories(dimming: bool) -> list:
 def _spec(type_id: int, name: str, *, dimming: bool = False) -> EEPSpecification:
     """All variants share the same telegram format and action encoders."""
     return EEPSpecification(
-        eep=EEP.from_string(f"D2-01-{type_id:02X}"),
+        eep=EEP(f"D2-01-{type_id:02X}"),
         name=f"Electronic switches and dimmers with local control – {name}",
         cmd_size=4,
         cmd_offset=4,

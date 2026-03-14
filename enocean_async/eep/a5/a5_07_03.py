@@ -6,7 +6,7 @@ from ..id import EEP
 from ..profile import EEPDataField, Entity, SimpleProfileSpecification
 
 EEP_A5_07_03 = SimpleProfileSpecification(
-    eep=EEP.from_string("A5-07-03"),
+    eep=EEP("A5-07-03"),
     name="Occupancy with supply voltage monitor and 10-bit illumination measurement",
     datafields=[
         EEPDataField(

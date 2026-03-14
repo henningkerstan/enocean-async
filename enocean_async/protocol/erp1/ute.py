@@ -99,11 +99,7 @@ class UTEMessage:
         except ValueError:
             manufacturer = Manufacturer.RESERVED
 
-        eep = EEP(
-            type_=telegram.data_byte(2),
-            func=telegram.data_byte(1),
-            rorg=telegram.data_byte(0),
-        )
+        eep = EEP([telegram.data_byte(0), telegram.data_byte(1), telegram.data_byte(2)])
 
         return cls(
             communication_during_eep_operation=communication_during_eep_operation,

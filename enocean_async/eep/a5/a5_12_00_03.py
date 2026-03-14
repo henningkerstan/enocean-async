@@ -24,7 +24,7 @@ class _EEP_A5_12_00_03(SimpleProfileSpecification):
                 name_suffix = "water"
 
         super().__init__(
-            eep=EEP.from_string(f"A5-12-{_type:02X}"),
+            eep=EEP(f"A5-12-{_type:02X}"),
             name=f"Automated meter reading (AMR), {name_suffix}",
             datafields=[
                 EEPDataField(

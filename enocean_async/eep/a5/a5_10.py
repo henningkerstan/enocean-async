@@ -527,7 +527,7 @@ def _spec(
     entities: list[Entity] | None = None,
 ) -> SimpleProfileSpecification:
     return SimpleProfileSpecification(
-        eep=EEP.from_string(f"A5-10-{type_id:02X}"),
+        eep=EEP(f"A5-10-{type_id:02X}"),
         name=name,
         datafields=datafields,
         observers=observers,

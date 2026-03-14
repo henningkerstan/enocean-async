@@ -68,7 +68,7 @@ def _encode_query_position(action: QueryCoverPosition) -> RawEEPMessage:
 
 
 EEP_D2_05_00 = EEPSpecification(
-    eep=EEP.from_string("D2-05-00"),
+    eep=EEP("D2-05-00"),
     name="Blinds control for position and angle, type 0x00",
     cmd_size=4,
     cmd_offset=-4,

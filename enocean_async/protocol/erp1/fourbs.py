@@ -61,7 +61,7 @@ class FourBSTeachInTelegram:
             type_ = erp1.bitstring_raw_value(6, 7)
             manufacturer_id = erp1.bitstring_raw_value(13, 11)
             manufacturer = Manufacturer(manufacturer_id)
-            eep = EEP(0xA5, func, type_, manufacturer)
+            eep = EEP([0xA5, func, type_], manufacturer)
 
         return cls(
             learn_type=learn_type,

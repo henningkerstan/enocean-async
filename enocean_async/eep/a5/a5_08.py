@@ -38,7 +38,7 @@ _ELTAKO_ENTITIES = [
 class _EEP_A5_08(SimpleProfileSpecification):
     def __init__(self, _type: int, ill_max: float, temp_min: float, temp_max: float):
         super().__init__(
-            eep=EEP.from_string(f"A5-08-{_type:02X}"),
+            eep=EEP(f"A5-08-{_type:02X}"),
             name=f"Light, temperature and occupancy sensor, range 0lx to {ill_max}lx, {temp_min}°C to {temp_max}°C and occupancy button",
             datafields=[
                 EEPDataField(
@@ -104,7 +104,7 @@ EEP_A5_08_02 = _EEP_A5_08(_type=0x02, ill_max=1020, temp_min=0.0, temp_max=51.0)
 EEP_A5_08_03 = _EEP_A5_08(_type=0x03, ill_max=1530, temp_min=-30.0, temp_max=50.0)
 
 EEP_A5_08_01_ELTAKO = SimpleProfileSpecification(
-    eep=EEP(0xA5, 0x08, 0x01, Manufacturer.ELTAKO),
+    eep=EEP("A5-08-01", Manufacturer.ELTAKO),
     name="Light and occupancy sensor, range 0lx to 510lx, Eltako variant (FABH65S, FBH65, FBH65TF, FBH65SB, FBH55SB, FBHF65SB, F4USM61B)",
     datafields=[
         EEPDataField(

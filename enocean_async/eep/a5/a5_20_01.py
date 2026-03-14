@@ -10,7 +10,7 @@ from ..id import EEP
 from ..profile import EEPDataField, Entity, SimpleProfileSpecification
 
 EEP_A5_20_01 = SimpleProfileSpecification(
-    eep=EEP.from_string("A5-20-01"),
+    eep=EEP("A5-20-01"),
     name="HVAC component – battery powered actuator (BI-DIR)",
     datafields=[
         # DB3: current valve position 0–100 %
