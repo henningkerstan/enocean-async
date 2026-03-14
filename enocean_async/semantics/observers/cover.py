@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING
 
 from ..observable import Observable
 from ..observation import Observation, ObservationSource
+from ..observer_factory import ObserverFactory
 from .observer import Observer
 
 if TYPE_CHECKING:
     from ...eep.message import EEPMessage
-    from ...eep.profile import ObserverFactory
 
 # Watchdog timeout in seconds to detect when cover movement has stopped
 COVER_WATCHDOG_TIMEOUT = 1.5
@@ -136,8 +136,6 @@ class CoverObserver(Observer):
 
 def cover_factory() -> ObserverFactory:
     """Return an ``ObserverFactory`` that creates a ``CoverObserver``."""
-    from ...eep.profile import ObserverFactory
-
     return ObserverFactory(
         factory=lambda addr, cb: CoverObserver(device_address=addr, on_observation=cb),
     )

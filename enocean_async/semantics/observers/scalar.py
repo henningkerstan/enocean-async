@@ -6,13 +6,13 @@ from dataclasses import dataclass, field
 from time import time
 from typing import TYPE_CHECKING
 
+from ..observable import Observable
+from ..observation import Observation, ObservationSource
+from ..observer_factory import ObserverFactory
 from .observer import Observer
 
 if TYPE_CHECKING:
     from ...eep.message import EEPMessage
-    from ...eep.profile import ObserverFactory
-from ..observable import Observable
-from ..observation import Observation, ObservationSource
 
 
 @dataclass
@@ -74,8 +74,6 @@ def scalar_factory(
         entity_id_field: Optional field ID to read the entity ID from (e.g. ``"I/O"`` for D2-01).
         entity_id_not_applicable: Raw field value meaning "not channel-specific"; falls back to entity_id.
     """
-    from ...eep.profile import ObserverFactory
-
     return ObserverFactory(
         factory=lambda addr, cb: ScalarObserver(
             device_address=addr,

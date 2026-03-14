@@ -5,13 +5,13 @@ from dataclasses import dataclass, field
 from time import time
 from typing import TYPE_CHECKING
 
+from ..observable import Observable
+from ..observation import Observation, ObservationSource
+from ..observer_factory import ObserverFactory
 from .observer import Observer
 
 if TYPE_CHECKING:
     from ...eep.message import EEPMessage
-    from ...eep.profile import ObserverFactory
-from ..observable import Observable
-from ..observation import Observation, ObservationSource
 
 PRESSED = "pressed"
 RELEASED = "released"
@@ -238,8 +238,6 @@ def f6_push_button_factory() -> ObserverFactory:
     ``"ab0"``, …) as ``Observation.entity`` and the event type (``"clicked"``, ``"held"``,
     ``"pressed"``, ``"released"``) as the value in ``values``.
     """
-    from ...eep.profile import ObserverFactory
-
     return ObserverFactory(
         factory=lambda addr, cb: F6_02_01_02PushButtonObserver(
             device_address=addr, on_observation=cb

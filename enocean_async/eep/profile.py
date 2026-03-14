@@ -1,52 +1,21 @@
 from dataclasses import dataclass, field
 import math
-from typing import Any, Callable
+from typing import Callable
 
+from ..semantics.device_descriptor import DeviceDescriptor  # noqa: F401  (re-exported)
 from ..semantics.entity import Entity  # noqa: F401  (re-exported for EEP files)
 from ..semantics.instructable import Instructable
 from ..semantics.observable import Observable
+from ..semantics.observer_factory import ObserverFactory  # noqa: F401  (re-exported)
+from ..semantics.types import (  # noqa: F401  (re-exported)
+    InstructionEncoder,
+    SemanticResolver,
+)
 from .id import EEP
 
 type TelegramRawValues = dict[str, int]
 type ScaleFunction = Callable[[TelegramRawValues], float]
 type UnitFunction = Callable[[TelegramRawValues], str]
-
-# Type aliases for semantic resolvers and instruction encoders.
-# Using Any to avoid circular imports (capabilities/ imports from eep/).
-type SemanticResolver = Callable[[dict[str, Any], dict[str, Any]], Any | None]
-type InstructionEncoder = Callable[[Any], Any]  # Instruction → RawEEPMessage
-
-
-@dataclass
-class ObserverFactory:
-    """Wraps an observer constructor for use in ``EEPSpecification.observers``.
-
-    Entity metadata (observables, actions) is now declared separately via
-    ``EEPSpecification.entities`` rather than on the factory itself.
-    """
-
-    factory: Callable[[Any, Any], Any]
-    """Callable that takes ``(device_address, on_state_change)`` and returns an Observer."""
-
-    def __call__(self, device_address: Any, on_state_change: Any) -> Any:
-        return self.factory(device_address, on_state_change)
-
-
-@dataclass
-class DeviceDescriptor:
-    """Setup-time description of what a device type exposes and accepts.
-
-    Returned by ``EEPSpecification.device_descriptor()``.  An integration can obtain
-    this immediately after calling ``gateway.add_device()`` — before any telegrams arrive
-    — and use it to create all required platform entities.
-    """
-
-    eep: EEP
-
-    entities: list[Entity]
-    """All entities this device type exposes, including the three metadata entities
-    (rssi, last_seen, telegram_count) always added by the gateway.
-    """
 
 
 @dataclass

@@ -12,7 +12,6 @@ from .eep import EEP_SPECIFICATIONS
 from .eep.handler import EEPHandler
 from .eep.id import EEP
 from .eep.message import EEPMessage
-from .eep.profile import DeviceDescriptor
 from .protocol.erp1.fourbs import (
     FourBSLearnStatus,
     FourBSLearnType,
@@ -31,6 +30,7 @@ from .protocol.esp3.packet import ESP3Packet, ESP3PacketType
 from .protocol.esp3.protocol import EnOceanSerialProtocol3
 from .protocol.esp3.response import ResponseCode, ResponseTelegram
 from .protocol.version import VersionIdentifier, VersionInfo
+from .semantics.device_descriptor import DeviceDescriptor
 from .semantics.instruction import Instruction
 from .semantics.observation import Observation, ObservationCallback
 from .semantics.observers.metadata import MetaDataObserver
