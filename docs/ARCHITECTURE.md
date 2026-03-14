@@ -396,6 +396,8 @@ Layered callbacks for application code:
 - `add_new_device_callback` — first telegram seen from an unknown EURID
 - `add_device_taught_in_callback` — fires after a device is successfully taught in and auto-registered, carrying `(address: EURID, eep: EEP)`
 
+`gateway.device_descriptor(address)` returns a `DeviceDescriptor` for one registered device. `gateway.device_descriptors` (property) returns `dict[EURID, DeviceDescriptor]` for all registered devices.
+
 #### Teach-in
 
 The gateway handles UTE and 4BS teach-in telegrams during an active learning session (`start_learning()`). On a successful teach-in it calls `add_device()` internally and emits `DeviceTaughtInCallback`. For sender-addressed devices it allocates the lowest free slot from the BaseID+1…+127 pool.

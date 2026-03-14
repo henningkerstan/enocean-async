@@ -607,7 +607,8 @@ class Gateway:
             return None
         return spec.device_descriptor()
 
-    def entities(self) -> dict[EURID, DeviceDescriptor]:
+    @property
+    def device_descriptors(self) -> dict[EURID, DeviceDescriptor]:
         """Return a DeviceDescriptor for every registered device, keyed by address.
         Devices whose EEP is not in the registry are silently skipped.
         """
