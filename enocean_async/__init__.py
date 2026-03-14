@@ -10,9 +10,9 @@ from .device import Device
 from .eep import EEP_SPECIFICATIONS
 from .eep.id import EEP
 from .eep.manufacturer import Manufacturer
-from .eep.profile import DeviceDescriptor, Entity
+from .eep.profile import DeviceDescriptor
 from .gateway import DeviceTaughtInCallback, Gateway
-from .semantics.entity_type import EntityType
+from .semantics.entity import Entity, EntityType
 from .semantics.instructable import Instructable
 from .semantics.instruction import Instruction
 from .semantics.instructions.cover import (

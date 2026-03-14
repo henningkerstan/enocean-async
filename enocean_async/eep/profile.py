@@ -2,69 +2,10 @@ from dataclasses import dataclass, field
 import math
 from typing import Any, Callable
 
-from ..semantics.entity_type import EntityType
+from ..semantics.entity import Entity  # noqa: F401  (re-exported for EEP files)
 from ..semantics.instructable import Instructable
 from ..semantics.observable import Observable
-from ..semantics.value_kind import ValueKind
 from .id import EEP
-
-_METADATA_OBSERVABLES = frozenset(
-    {
-        Observable.RSSI,
-        Observable.LAST_SEEN,
-        Observable.TELEGRAM_COUNT,
-    }
-)
-_COVER_INSTRUCTABLES = frozenset(
-    {
-        Instructable.SET_COVER_POSITION,
-        Instructable.STOP_COVER,
-        Instructable.QUERY_COVER_POSITION,
-    }
-)
-
-
-@dataclass(frozen=True)
-class Entity:
-    """A physical real-world sub-unit of a device (push button, relay channel, cover motor, sensor).
-
-    Declared statically in the EEP specification. Each entity has a stable string ``id``
-    within the device, a set of ``observables`` it reports, and a set of ``actions`` it accepts.
-    A unique physical thing in the system is the pair ``(device_address, entity_id)``.
-    """
-
-    id: str
-    observables: frozenset[Observable]
-    actions: frozenset[Instructable] = field(default_factory=frozenset)
-
-    @property
-    def entity_type(self) -> EntityType:
-        """Classify this entity's functional type from its observables and actions.
-
-        The classification priority (first match wins):
-        1. Instructable-driven actuator types (dimmer, fan, switch, cover).
-        2. Push button (identified by Observable.PUSH_BUTTON).
-        3. Metadata (rssi, last_seen, telegram_count).
-        4. Binary sensor (any BINARY-kind observable).
-        5. Sensor (default — scalar or enum read-only).
-        """
-        obs, act = self.observables, self.actions
-        if Instructable.DIM in act:
-            return EntityType.DIMMER
-        if Instructable.SET_FAN_SPEED in act:
-            return EntityType.FAN
-        if Instructable.SET_SWITCH_OUTPUT in act:
-            return EntityType.SWITCH
-        if act & _COVER_INSTRUCTABLES:
-            return EntityType.COVER
-        if Observable.PUSH_BUTTON in obs:
-            return EntityType.PUSH_BUTTON
-        if obs <= _METADATA_OBSERVABLES:
-            return EntityType.METADATA
-        if any(o.kind == ValueKind.BINARY for o in obs):
-            return EntityType.BINARY
-        return EntityType.SENSOR
-
 
 type TelegramRawValues = dict[str, int]
 type ScaleFunction = Callable[[TelegramRawValues], float]
