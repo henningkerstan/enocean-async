@@ -3,6 +3,9 @@
 ## [0.7.0] — 2026-03-14
 
 ### Breaking changes
+- `EEP` constructor redesigned: accepts `str | list[int]` instead of positional ints; `from_string()` classmethod removed; `__repr__` now returns `"A5-02-05"` (not `"EEP(A5-02-05)"`)
+  - String form: `EEP("A5-02-05")`, `EEP("A5-08-01", Manufacturer.ELTAKO)`
+  - List form for protocol-level use: `EEP([0xA5, 0x02, 0x05])`
 - `start_learning()` parameter renamed: `timeout_seconds` → `timeout`; default changed from 60 to 30
 - `start_learning()` now raises `RuntimeError` immediately if the gateway's base ID is not yet available (previously the error surfaced later at first teach-in)
 - `Gateway.add_device()` now raises `ValueError` if the device address is already registered (previously silently overwrote)
