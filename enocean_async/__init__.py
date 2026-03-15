@@ -11,7 +11,7 @@ from .eep import EEP_SPECIFICATIONS
 from .eep.id import EEP
 from .eep.manufacturer import Manufacturer
 from .gateway import DeviceTaughtInCallback, Gateway
-from .semantics.device_descriptor import DeviceDescriptor
+from .semantics.device_spec import DeviceSpec
 from .semantics.entity import Entity, EntityType
 from .semantics.instructable import Instructable
 from .semantics.instruction import Instruction
@@ -44,7 +44,7 @@ __all__ = [
     "SenderAddress",
     # Device / EEP
     "Device",
-    "DeviceDescriptor",
+    "DeviceSpec",
     "Entity",
     "EEP",
     "EEP_SPECIFICATIONS",

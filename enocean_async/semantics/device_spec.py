@@ -5,10 +5,10 @@ from .entity import Entity
 
 
 @dataclass
-class DeviceDescriptor:
+class DeviceSpec:
     """Setup-time description of what a device type exposes and accepts.
 
-    Returned by ``EEPSpecification.device_descriptor()``.  An integration can obtain
+    Returned by ``EEPSpecification.device_spec()``.  An integration can obtain
     this immediately after calling ``gateway.add_device()`` — before any telegrams arrive
     — and use it to create all required platform entities.
     """

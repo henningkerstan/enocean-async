@@ -54,7 +54,7 @@ class Observable(str, Enum):
     POWER = ("power", "W", _S)
 
     # Button / occupancy / contact
-    PUSH_BUTTON = ("push_button", None, _E)
+    BUTTON_EVENT = ("button_event", None, _E)
     CONTACT_STATE = ("contact_state", None, _B)
     DAY_NIGHT = ("day_night", None, _B)
     OCCUPANCY_BUTTON = ("occupancy_button", None, _B)

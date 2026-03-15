@@ -20,8 +20,8 @@ HELD = "held"
 
 
 @dataclass
-class PushButtonObserver(Observer):
-    """Base observer for push button devices.
+class ButtonObserver(Observer):
+    """Base observer for button devices.
 
     Provides timing-based state machine behavior for:
     - pressed: Initial press event (fires immediately on button press)
@@ -59,7 +59,7 @@ class PushButtonObserver(Observer):
             Observation(
                 device=self.device_address,
                 entity=button_id,
-                values={Observable.PUSH_BUTTON: HELD},
+                values={Observable.BUTTON_EVENT: HELD},
                 timestamp=time(),
                 source=ObservationSource.TIMER,
             )
@@ -78,7 +78,7 @@ class PushButtonObserver(Observer):
             Observation(
                 device=self.device_address,
                 entity=button_id,
-                values={Observable.PUSH_BUTTON: RELEASED},
+                values={Observable.BUTTON_EVENT: RELEASED},
                 timestamp=time(),
                 source=ObservationSource.TIMER,
             )
@@ -99,7 +99,7 @@ class PushButtonObserver(Observer):
                 Observation(
                     device=self.device_address,
                     entity=button_id,
-                    values={Observable.PUSH_BUTTON: RELEASED},
+                    values={Observable.BUTTON_EVENT: RELEASED},
                     timestamp=current_time,
                     source=ObservationSource.TELEGRAM,
                 )
@@ -110,7 +110,7 @@ class PushButtonObserver(Observer):
             Observation(
                 device=self.device_address,
                 entity=button_id,
-                values={Observable.PUSH_BUTTON: PRESSED},
+                values={Observable.BUTTON_EVENT: PRESSED},
                 timestamp=current_time,
                 source=ObservationSource.TELEGRAM,
             )
@@ -157,7 +157,7 @@ class PushButtonObserver(Observer):
                 Observation(
                     device=self.device_address,
                     entity=button_id,
-                    values={Observable.PUSH_BUTTON: RELEASED},
+                    values={Observable.BUTTON_EVENT: RELEASED},
                     timestamp=current_time,
                     source=ObservationSource.TELEGRAM,
                 )
@@ -167,7 +167,7 @@ class PushButtonObserver(Observer):
                 Observation(
                     device=self.device_address,
                     entity=button_id,
-                    values={Observable.PUSH_BUTTON: CLICKED},
+                    values={Observable.BUTTON_EVENT: CLICKED},
                     timestamp=current_time,
                     source=ObservationSource.TELEGRAM,
                 )
@@ -183,7 +183,7 @@ class PushButtonObserver(Observer):
 
 
 @dataclass
-class F6_02_01_02PushButtonObserver(PushButtonObserver):
+class F6_02_01_02_ButtonObserver(ButtonObserver):
     """Button observer for F6-02-01/02 rocker switches.
 
     Handles R1/EB/R2/SA fields from F6-02-01 and F6-02-02 telegrams.
@@ -227,19 +227,18 @@ class F6_02_01_02PushButtonObserver(PushButtonObserver):
                 self._button_released(button_id=button_id, current_time=current_time)
 
 
-# Backward-compatible alias
-F6_02_01_02PushButtonCapability = F6_02_01_02PushButtonObserver
+#
 
 
-def f6_push_button_factory() -> ObserverFactory:
-    """Return an ``ObserverFactory`` that creates an ``F6_02_01_02PushButtonObserver``.
+def f6_button_factory() -> ObserverFactory:
+    """Return an ``ObserverFactory`` that creates an ``F6_02_01_02_ButtonObserver``.
 
-    Emits ``Observable.PUSH_BUTTON`` state changes with the button ID (``"a0"``, ``"b1"``,
+    Emits ``Observable.BUTTON_EVENT`` state changes with the button ID (``"a0"``, ``"b1"``,
     ``"ab0"``, …) as ``Observation.entity`` and the event type (``"clicked"``, ``"held"``,
     ``"pressed"``, ``"released"``) as the value in ``values``.
     """
     return ObserverFactory(
-        factory=lambda addr, cb: F6_02_01_02PushButtonObserver(
+        factory=lambda addr, cb: F6_02_01_02_ButtonObserver(
             device_address=addr, on_observation=cb
         ),
     )

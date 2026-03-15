@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import math
 from typing import Callable
 
-from ..semantics.device_descriptor import DeviceDescriptor  # noqa: F401  (re-exported)
+from ..semantics.device_spec import DeviceSpec  # noqa: F401  (re-exported)
 from ..semantics.entity import Entity  # noqa: F401  (re-exported for EEP files)
 from ..semantics.instructable import Instructable
 from ..semantics.observable import Observable
@@ -129,7 +129,7 @@ class EEPSpecification:
 
     entities: list[Entity] = field(default_factory=list)
     """Physical entities declared by this EEP — one per real-world sub-unit (push button,
-    relay channel, sensor element, cover motor). Consumed by ``device_descriptor()``."""
+    relay channel, sensor element, cover motor). Consumed by ``device_spec()``."""
 
     uses_addressed_sending: bool = True
     """If True (default), the device is destination-addressed (VLD): the gateway uses BaseID+0
@@ -137,7 +137,7 @@ class EEPSpecification:
     If False, the device is sender-addressed: it learned the gateway's sender address at teach-in
     and filters commands by sender. The gateway allocates a dedicated BaseID+n slot per device."""
 
-    def device_descriptor(self) -> "DeviceDescriptor":
+    def device_spec(self) -> "DeviceSpec":
         """Return a setup-time descriptor of what this device type exposes and accepts.
 
         Combines ``self.entities`` with the three metadata entities (rssi, last_seen,
@@ -150,7 +150,7 @@ class EEPSpecification:
                 id="telegram_count", observables=frozenset({Observable.TELEGRAM_COUNT})
             ),
         ]
-        return DeviceDescriptor(
+        return DeviceSpec(
             eep=self.eep,
             entities=self.entities + _METADATA_ENTITIES,
         )

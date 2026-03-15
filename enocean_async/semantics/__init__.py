@@ -14,9 +14,9 @@ from .instructions.switch import (
 )
 from .observable import Observable
 from .observation import Observation, ObservationCallback, ObservationSource
+from .observers.button import ButtonObserver, F6_02_01_02_ButtonObserver
 from .observers.cover import CoverObserver
 from .observers.metadata import MetaDataObserver
-from .observers.push_button import F6_02_01_02PushButtonObserver, PushButtonObserver
 from .observers.scalar import ScalarObserver
 
 __all__ = [
@@ -27,10 +27,10 @@ __all__ = [
     "Observation",
     "ObservationCallback",
     "ObservationSource",
-    "F6_02_01_02PushButtonObserver",
+    "F6_02_01_02_ButtonObserver",
     "MetaDataObserver",
     "Observable",
-    "PushButtonObserver",
+    "ButtonObserver",
     "QueryActuatorMeasurement",
     "QueryActuatorStatus",
     "CoverQueryPositionAndAngle",

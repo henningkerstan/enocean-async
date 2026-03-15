@@ -114,7 +114,7 @@ EEPMessage
     ├── ScalarObserver(observable=TEMPERATURE)  → reads entities[TEMPERATURE]
     ├── ScalarObserver(observable=ILLUMINATION) → reads entities[ILLUMINATION]
     ├── CoverObserver    → reads entities[POSITION] + entities[ANGLE], infers COVER_STATE
-    ├── PushButtonObserver → reads values["R1"], values["EB"], … (stateful, hold timer)
+    ├── ButtonObserver → reads values["R1"], values["EB"], … (stateful, hold timer)
     └── MetaDataObserver → emits rssi, last_seen, telegram_count
     │ _emit()
     ▼

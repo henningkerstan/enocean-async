@@ -1,15 +1,15 @@
-from .cover import COVER_WATCHDOG_TIMEOUT, CoverObserver, cover_factory
-from .metadata import MetaDataObserver
-from .observer import Observer
-from .push_button import (
+from .button import (
     CLICKED,
     HELD,
     PRESSED,
     RELEASED,
-    F6_02_01_02PushButtonObserver,
-    PushButtonObserver,
-    f6_push_button_factory,
+    ButtonObserver,
+    F6_02_01_02_ButtonObserver,
+    f6_button_factory,
 )
+from .cover import COVER_WATCHDOG_TIMEOUT, CoverObserver, cover_factory
+from .metadata import MetaDataObserver
+from .observer import Observer
 from .scalar import ScalarObserver, scalar_factory
 
 __all__ = [
@@ -18,9 +18,9 @@ __all__ = [
     "COVER_WATCHDOG_TIMEOUT",
     "cover_factory",
     "MetaDataObserver",
-    "PushButtonObserver",
-    "F6_02_01_02PushButtonObserver",
-    "f6_push_button_factory",
+    "ButtonObserver",
+    "F6_02_01_02_ButtonObserver",
+    "f6_button_factory",
     "PRESSED",
     "RELEASED",
     "CLICKED",

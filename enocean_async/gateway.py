@@ -30,7 +30,7 @@ from .protocol.esp3.packet import ESP3Packet, ESP3PacketType
 from .protocol.esp3.protocol import EnOceanSerialProtocol3
 from .protocol.esp3.response import ResponseCode, ResponseTelegram
 from .protocol.version import VersionIdentifier, VersionInfo
-from .semantics.device_descriptor import DeviceDescriptor
+from .semantics.device_spec import DeviceSpec
 from .semantics.instruction import Instruction
 from .semantics.observation import Observation, ObservationCallback
 from .semantics.observers.metadata import MetaDataObserver
@@ -592,10 +592,10 @@ class Gateway:
                 f"Tried to remove device with address {address}, but it was not found in the registry of known devices."
             )
 
-    def device_descriptor(self, address: EURID) -> DeviceDescriptor | None:
-        """Return a DeviceDescriptor for a registered device, or None if not found.
+    def device_spec(self, address: EURID) -> DeviceSpec | None:
+        """Return a DeviceSpec for a registered device, or None if not found.
 
-        The DeviceDescriptor describes what observables and commands the device supports,
+        The DeviceSpec describes what observables and commands the device supports,
         allowing integrations (e.g. Home Assistant) to create entities at setup time
         without waiting for the first incoming telegram.
         """
@@ -605,18 +605,18 @@ class Gateway:
         spec = EEP_SPECIFICATIONS.get(device.eep)
         if spec is None:
             return None
-        return spec.device_descriptor()
+        return spec.device_spec()
 
     @property
-    def device_descriptors(self) -> dict[EURID, DeviceDescriptor]:
-        """Return a DeviceDescriptor for every registered device, keyed by address.
+    def device_specs(self) -> dict[EURID, DeviceSpec]:
+        """Return a DeviceSpec for every registered device, keyed by address.
         Devices whose EEP is not in the registry are silently skipped.
         """
-        result: dict[EURID, DeviceDescriptor] = {}
+        result: dict[EURID, DeviceSpec] = {}
         for address in self.__devices:
-            descriptor = self.device_descriptor(address)
-            if descriptor is not None:
-                result[address] = descriptor
+            ds = self.device_spec(address)
+            if ds is not None:
+                result[address] = ds
         return result
 
     # ------------------------------------------------------------------

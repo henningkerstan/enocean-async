@@ -54,14 +54,14 @@ Examples as declared in EEP files:
 ```python
 # F6-02: four single-rocker entities + four combined-rocker entities
 # Combined presses are distinct telegram types (SA=1 flag), not timing coincidences.
-Entity(id="a0",   observables=frozenset({PUSH_BUTTON}))  # rocker A, down
-Entity(id="b0",   observables=frozenset({PUSH_BUTTON}))  # rocker B, down
-Entity(id="a1",   observables=frozenset({PUSH_BUTTON}))  # rocker A, up
-Entity(id="b1",   observables=frozenset({PUSH_BUTTON}))  # rocker B, up
-Entity(id="ab0",  observables=frozenset({PUSH_BUTTON}))  # A-down + B-down simultaneously
-Entity(id="ab1",  observables=frozenset({PUSH_BUTTON}))  # A-up   + B-up   simultaneously
-Entity(id="a0b1", observables=frozenset({PUSH_BUTTON}))  # A-down + B-up   simultaneously
-Entity(id="a1b0", observables=frozenset({PUSH_BUTTON}))  # A-up   + B-down simultaneously
+Entity(id="a0",   observables=frozenset({BUTTON_EVENT}))  # rocker A, down
+Entity(id="b0",   observables=frozenset({BUTTON_EVENT}))  # rocker B, down
+Entity(id="a1",   observables=frozenset({BUTTON_EVENT}))  # rocker A, up
+Entity(id="b1",   observables=frozenset({BUTTON_EVENT}))  # rocker B, up
+Entity(id="ab0",  observables=frozenset({BUTTON_EVENT}))  # A-down + B-down simultaneously
+Entity(id="ab1",  observables=frozenset({BUTTON_EVENT}))  # A-up   + B-up   simultaneously
+Entity(id="a0b1", observables=frozenset({BUTTON_EVENT}))  # A-down + B-up   simultaneously
+Entity(id="a1b0", observables=frozenset({BUTTON_EVENT}))  # A-up   + B-down simultaneously
 
 # A5-04: two independent sensor entities (separate concerns)
 Entity(id="temperature", observables=frozenset({TEMPERATURE}))
@@ -90,7 +90,7 @@ A fully unique physical thing in the system is the pair `(device_address, entity
 
 An **observable** is a quantity that an entity reports. It has two intrinsic properties:
 
-- A **unique id** — what it is observing (e.g. `"temperature"`, `"switch_state"`, `"push_button"`).
+- A **unique id** — what it is observing (e.g. `"temperature"`, `"switch_state"`, `"button_event"`).
 - A **native unit** — the one canonical physical unit for that quantity (`None` for dimensionless or categorical values).
 
 ```python
@@ -107,7 +107,7 @@ class Observable(str, Enum):
     POWER         = ("power",         "W")
     ENERGY        = ("energy",        "Wh")
     SWITCH_STATE  = ("switch_state",  None)
-    PUSH_BUTTON   = ("push_button",   None)
+    BUTTON_EVENT   = ("button_event",  None)
     POSITION      = ("position",      "%")
     COVER_STATE   = ("cover_state",   None)
     ...
@@ -162,7 +162,7 @@ Examples:
 Observation(entity="cover", values={POSITION: 75, COVER_STATE: "open", ANGLE: 0})
 
 # Push button — single observable entity, timer-sourced hold event
-Observation(entity="a0", values={PUSH_BUTTON: "held"}, source=ObservationSource.TIMER)
+Observation(entity="a0", values={BUTTON_EVENT: "held"}, source=ObservationSource.TIMER)
 
 # D2-01 actuator status — partial update
 Observation(entity="0", values={SWITCH_STATE: "on", ERROR_LEVEL: 0})
@@ -215,13 +215,13 @@ await gateway.send_command(
 
 ---
 
-## DeviceDescriptor
+## DeviceSpec
 
-`DeviceDescriptor` (`semantics/device_descriptor.py`) is the setup-time description of what a device type exposes and accepts. It is returned by `Gateway.device_descriptor(address)` after calling `add_device()`, before any telegrams arrive:
+`DeviceSpec` (`semantics/device_spec.py`) is the setup-time description of what a device type exposes and accepts. It is returned by `Gateway.device_spec(address)` after calling `add_device()`, before any telegrams arrive:
 
 ```python
 @dataclass
-class DeviceDescriptor:
+class DeviceSpec:
     eep: EEP
     entities: list[Entity]
 ```
@@ -234,7 +234,7 @@ Entity(id="last_seen",      observables=frozenset({LAST_SEEN}),      actions=[])
 Entity(id="telegram_count", observables=frozenset({TELEGRAM_COUNT}), actions=[])
 ```
 
-An integration (e.g. Home Assistant) uses `DeviceDescriptor.entities` to create platform entities at setup time — without waiting for a single telegram.
+An integration (e.g. Home Assistant) uses `DeviceSpec.entities` to create platform entities at setup time — without waiting for a single telegram.
 
 ---
 
@@ -260,7 +260,7 @@ EEPMessage
     ├── ScalarObserver(observable=TEMPERATURE) → reads entities[TEMPERATURE]
     ├── ScalarObserver(observable=ILLUMINATION) → reads entities[ILLUMINATION]
     ├── CoverObserver → reads entities[POSITION]+entities[ANGLE], infers COVER_STATE
-    ├── PushButtonObserver → reads values["R1"], values["EB"], … (raw field access)
+    ├── ButtonObserver → reads values["R1"], values["EB"], … (raw field access)
     └── MetaDataObserver → reads rssi, generates timestamps
     │ _emit()
     ▼
@@ -346,7 +346,7 @@ The two key types are:
 The types referenced by `EEPSpecification` that belong conceptually to the semantics layer live in `semantics/` and are re-exported by `eep/profile.py` for convenience:
 - `ObserverFactory` (`semantics/observer_factory.py`) — wraps an observer constructor callable
 - `SemanticResolver`, `InstructionEncoder` (`semantics/types.py`) — type aliases for resolver and encoder callables
-- `DeviceDescriptor` (`semantics/device_descriptor.py`) — setup-time description of a device's entities
+- `DeviceSpec` (`semantics/device_spec.py`) — setup-time description of a device's entities
 - `Entity`, `EntityType` (`semantics/entity.py`) — physical entity declaration and its classification
 
 `uses_addressed_sending: bool` (default `True`) distinguishes destination-addressed devices (VLD / D2 family, use BaseID+0 + destination field) from sender-addressed devices (4BS actuators, learn the gateway's sender at teach-in time and filter by it). The gateway uses this flag at teach-in time to decide whether to allocate a dedicated sender slot from the pool.
@@ -361,7 +361,7 @@ Key semantic types:
 - `entity.py` — `Entity` (physical entity declaration) and `EntityType` (sensor / actuator / combined classification)
 - `observer_factory.py` — `ObserverFactory` (wraps an observer constructor for `EEPSpecification.observers`)
 - `types.py` — `SemanticResolver` and `InstructionEncoder` type aliases
-- `device_descriptor.py` — `DeviceDescriptor` (setup-time snapshot of a device's EEP and entities)
+- `device_descriptor.py` — `DeviceSpec` (setup-time snapshot of a device's EEP and entities)
 
 #### Observers
 
@@ -369,7 +369,7 @@ Each `Observer` subclass interprets a decoded `EEPMessage` for one specific enti
 
 - **`ScalarObserver`** (`observers/scalar.py`): Generic, parameterised by `observable` and `entity_id`. Reads `message.entities[observable]` and emits an `Observation`. Covers all plain scalar observables (temperature, illumination, motion, voltage, window state, …).
 - **`CoverObserver`** (`observers/cover.py`): Stateful: takes the received position and angle values, infers `cover_state` from successive position deltas, and runs an asyncio watchdog to emit `stopped` after 1.5 s of radio silence. Emits one `Observation` with `entity_id="cover"` and `values={POSITION: …, ANGLE: …, COVER_STATE: …}`.
-- **`PushButtonObserver` / `F6_02_01_02PushButtonObserver`** (`observers/push_button.py`): Stateful: decodes rocker switch bit patterns into button events using a hold timer and a release-timeout timer. Each button emits an `Observation` with its own `entity_id` (`"a0"`, `"b0"`, …). Event semantics: `pressed` fires immediately on press; `clicked` fires on release if the press was short; `held` fires when the hold threshold elapses while still pressed; `released` fires only after a hold — it is not emitted for short presses. This makes the event pairs semantically distinct: `pressed`/`clicked` bracket a tap, (`pressed`/)`held`/`released` bracket a hold.
+- **`ButtonObserver` / `F6_02_01_02_ButtonObserver`** (`observers/button.py`): Stateful: decodes rocker switch bit patterns into button events using a hold timer and a release-timeout timer. Each button emits an `Observation` with its own `entity_id` (`"a0"`, `"b0"`, …). Event semantics: `pressed` fires immediately on press; `clicked` fires on release if the press was short; `held` fires when the hold threshold elapses while still pressed; `released` fires only after a hold — it is not emitted for short presses. This makes the event pairs semantically distinct: `pressed`/`clicked` bracket a tap, (`pressed`/)`held`/`released` bracket a hold.
 - **`MetaDataObserver`** (`observers/metadata.py`): Emits RSSI, last-seen timestamp, and telegram count as separate `Observation` objects. Always prepended to a device's observer list by the gateway.
 
 #### Instructions
@@ -396,7 +396,7 @@ Layered callbacks for application code:
 - `add_new_device_callback` — first telegram seen from an unknown EURID
 - `add_device_taught_in_callback` — fires after a device is successfully taught in and auto-registered, carrying `(address: EURID, eep: EEP)`
 
-`gateway.device_descriptor(address)` returns a `DeviceDescriptor` for one registered device. `gateway.device_descriptors` (property) returns `dict[EURID, DeviceDescriptor]` for all registered devices.
+`gateway.device_spec(address)` returns a `DeviceSpec` for one registered device. `gateway.device_specs` (property) returns `dict[EURID, DeviceSpec]` for all registered devices.
 
 #### Teach-in
 
@@ -426,7 +426,7 @@ This is possible because EnOcean EEP variants are fixed: `D2-01-00` has exactly 
 
 ### Observable carries its native unit
 
-`Observable` is a `str, Enum` whose members carry a `unit: str | None` property. The unit is intrinsic to what is being observed: temperature is always in `°C`, illumination always in `lx`. If two quantities differ in unit, they are distinct `Observable` members. This eliminates all scattered `(Observable, str | None)` unit pairs that previously appeared in factory declarations, `DeviceDescriptor`, and `Observation`.
+`Observable` is a `str, Enum` whose members carry a `unit: str | None` property. The unit is intrinsic to what is being observed: temperature is always in `°C`, illumination always in `lx`. If two quantities differ in unit, they are distinct `Observable` members. This eliminates all scattered `(Observable, str | None)` unit pairs that previously appeared in factory declarations, `DeviceSpec`, and `Observation`.
 
 ### Observation is entity-centric, not observable-centric
 
@@ -447,7 +447,7 @@ Some EEP profiles spread one observable across multiple fields (A5-06: two illum
 1. Create a module under `eep/<rorg>/` with an `EEPSpecification` or `SimpleProfileSpecification` instance.
 2. Declare `entities` — one `Entity` per physical entity, with its `observables` and `actions`.
 3. Annotate fields with `observable` where a 1:1 mapping to an observable exists. Add a `SemanticResolver` for multi-field combinations.
-4. Populate `observers` with the appropriate factory callables (e.g. `scalar_factory`, `cover_factory`, `f6_push_button_factory`).
+4. Populate `observers` with the appropriate factory callables (e.g. `scalar_factory`, `cover_factory`, `f6_button_factory`).
 5. Set `uses_addressed_sending=False` if the device is sender-addressed (learns the gateway's BaseID+n at teach-in). Default is `True` (VLD / destination-addressed).
 6. Optionally populate `encoders` if the device accepts instructions. Add the corresponding `Instruction` subclass in `semantics/instructions/<profile>.py`.
 7. Register in `eep/__init__.py`'s `EEP_SPECIFICATIONS`.

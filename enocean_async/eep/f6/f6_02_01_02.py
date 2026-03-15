@@ -9,7 +9,7 @@ Profiles in this module:
 """
 
 from ...semantics.observable import Observable
-from ...semantics.observers.push_button import f6_push_button_factory
+from ...semantics.observers.button import f6_button_factory
 from ..id import EEP
 from ..profile import EEPDataField, Entity, SimpleProfileSpecification
 
@@ -59,17 +59,17 @@ _F6_02_DATAFIELDS = [
     ),
 ]
 
-_F6_02_FACTORIES = [f6_push_button_factory()]
+_F6_02_FACTORIES = [f6_button_factory()]
 
 _F6_02_ENTITIES = [
-    Entity(id="a0", observables=frozenset({Observable.PUSH_BUTTON})),
-    Entity(id="a1", observables=frozenset({Observable.PUSH_BUTTON})),
-    Entity(id="b0", observables=frozenset({Observable.PUSH_BUTTON})),
-    Entity(id="b1", observables=frozenset({Observable.PUSH_BUTTON})),
-    Entity(id="ab0", observables=frozenset({Observable.PUSH_BUTTON})),
-    Entity(id="ab1", observables=frozenset({Observable.PUSH_BUTTON})),
-    Entity(id="a0b1", observables=frozenset({Observable.PUSH_BUTTON})),
-    Entity(id="a1b0", observables=frozenset({Observable.PUSH_BUTTON})),
+    Entity(id="a0", observables=frozenset({Observable.BUTTON_EVENT})),
+    Entity(id="a1", observables=frozenset({Observable.BUTTON_EVENT})),
+    Entity(id="b0", observables=frozenset({Observable.BUTTON_EVENT})),
+    Entity(id="b1", observables=frozenset({Observable.BUTTON_EVENT})),
+    Entity(id="ab0", observables=frozenset({Observable.BUTTON_EVENT})),
+    Entity(id="ab1", observables=frozenset({Observable.BUTTON_EVENT})),
+    Entity(id="a0b1", observables=frozenset({Observable.BUTTON_EVENT})),
+    Entity(id="a1b0", observables=frozenset({Observable.BUTTON_EVENT})),
 ]
 
 # Define all F6-02-xx variants using the shared datafields structure
