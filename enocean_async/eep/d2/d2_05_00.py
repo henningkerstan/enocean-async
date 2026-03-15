@@ -2,9 +2,11 @@
 
 from ...semantics.instructable import Instructable
 from ...semantics.instructions.cover import (
-    QueryCoverPosition,
-    SetCoverPosition,
-    StopCover,
+    CoverClose,
+    CoverOpen,
+    CoverQueryPositionAndAngle,
+    CoverSetPositionAndAngle,
+    CoverStop,
 )
 from ...semantics.observable import Observable
 from ...semantics.observers.cover import cover_factory
@@ -33,13 +35,16 @@ _CMD_AT_OFFSET4 = EEPDataField(
 )
 
 
-def _encode_set_position(action: SetCoverPosition) -> RawEEPMessage:
+def _encode_set_position(action: CoverSetPositionAndAngle) -> RawEEPMessage:
     msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=1, description="Go to position and angle"),
     )
-    msg.raw["POS"] = action.position
-    msg.raw["ANG"] = action.angle
+    # 0–100 = percent directly; 127 = "do not change" sentinel; 101–126 unused.
+    msg.raw["POS"] = (
+        127 if action.position is None else max(0, min(100, action.position))
+    )
+    msg.raw["ANG"] = 127 if action.angle is None else max(0, min(100, action.angle))
     msg.raw["REPO"] = action.repositioning_mode
     msg.raw["LOCK"] = action.lock_mode
     chn_val = int(action.entity_id) if action.entity_id.isdigit() else 15
@@ -47,7 +52,7 @@ def _encode_set_position(action: SetCoverPosition) -> RawEEPMessage:
     return msg
 
 
-def _encode_stop(action: StopCover) -> RawEEPMessage:
+def _encode_stop(action: CoverStop) -> RawEEPMessage:
     msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=2, description="Stop"),
@@ -57,7 +62,21 @@ def _encode_stop(action: StopCover) -> RawEEPMessage:
     return msg
 
 
-def _encode_query_position(action: QueryCoverPosition) -> RawEEPMessage:
+def _encode_open(action: CoverOpen) -> RawEEPMessage:
+    """Open fully: encode as go-to-position 0%, keep current angle."""
+    return _encode_set_position(
+        CoverSetPositionAndAngle(position=0, angle=None, entity_id=action.entity_id)
+    )
+
+
+def _encode_close(action: CoverClose) -> RawEEPMessage:
+    """Close fully: encode as go-to-position 100%, keep current angle."""
+    return _encode_set_position(
+        CoverSetPositionAndAngle(position=100, angle=None, entity_id=action.entity_id)
+    )
+
+
+def _encode_query_position(action: CoverQueryPositionAndAngle) -> RawEEPMessage:
     msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=3, description="Query position and angle"),
@@ -235,9 +254,11 @@ EEP_D2_05_00 = EEPSpecification(
     },
     observers=[cover_factory()],
     encoders={
-        Instructable.SET_COVER_POSITION: _encode_set_position,
-        Instructable.STOP_COVER: _encode_stop,
-        Instructable.QUERY_COVER_POSITION: _encode_query_position,
+        Instructable.COVER_SET_POSITION: _encode_set_position,
+        Instructable.COVER_STOP: _encode_stop,
+        Instructable.COVER_OPEN: _encode_open,
+        Instructable.COVER_CLOSE: _encode_close,
+        Instructable.COVER_QUERY_POSITION: _encode_query_position,
     },
     entities=[
         Entity(
@@ -247,9 +268,11 @@ EEP_D2_05_00 = EEPSpecification(
             ),
             actions=frozenset(
                 {
-                    Instructable.SET_COVER_POSITION,
-                    Instructable.STOP_COVER,
-                    Instructable.QUERY_COVER_POSITION,
+                    Instructable.COVER_SET_POSITION,
+                    Instructable.COVER_STOP,
+                    Instructable.COVER_OPEN,
+                    Instructable.COVER_CLOSE,
+                    Instructable.COVER_QUERY_POSITION,
                 }
             ),
         ),

@@ -16,11 +16,13 @@ from .semantics.entity import Entity, EntityType
 from .semantics.instructable import Instructable
 from .semantics.instruction import Instruction
 from .semantics.instructions.cover import (
-    QueryCoverPosition,
-    SetCoverPosition,
-    StopCover,
+    CoverClose,
+    CoverOpen,
+    CoverQueryPositionAndAngle,
+    CoverSetPositionAndAngle,
+    CoverStop,
 )
-from .semantics.instructions.dimmer import Dim
+from .semantics.instructions.dimmer import Dim, Switch
 from .semantics.instructions.fan import SetFanSpeed
 from .semantics.instructions.switch import (
     QueryActuatorMeasurement,
@@ -57,12 +59,15 @@ __all__ = [
     # Send side
     "Instructable",
     "Instruction",
+    "CoverClose",
+    "CoverOpen",
+    "CoverQueryPositionAndAngle",
+    "CoverSetPositionAndAngle",
+    "CoverStop",
     "Dim",
+    "Switch",
     "QueryActuatorMeasurement",
     "QueryActuatorStatus",
-    "QueryCoverPosition",
-    "SetCoverPosition",
     "SetFanSpeed",
     "SetSwitchOutput",
-    "StopCover",
 ]

@@ -1,6 +1,10 @@
 from .instructable import Instructable
 from .instruction import Instruction
-from .instructions.cover import QueryCoverPosition, SetCoverPosition, StopCover
+from .instructions.cover import (
+    CoverQueryPositionAndAngle,
+    CoverSetPositionAndAngle,
+    CoverStop,
+)
 from .instructions.dimmer import Dim
 from .instructions.fan import SetFanSpeed
 from .instructions.switch import (
@@ -29,10 +33,10 @@ __all__ = [
     "PushButtonObserver",
     "QueryActuatorMeasurement",
     "QueryActuatorStatus",
-    "QueryCoverPosition",
+    "CoverQueryPositionAndAngle",
+    "CoverSetPositionAndAngle",
+    "CoverStop",
     "ScalarObserver",
-    "SetCoverPosition",
     "SetFanSpeed",
     "SetSwitchOutput",
-    "StopCover",
 ]

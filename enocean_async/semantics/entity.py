@@ -35,9 +35,11 @@ _METADATA_OBSERVABLES = frozenset(
 )
 _COVER_INSTRUCTABLES = frozenset(
     {
-        Instructable.SET_COVER_POSITION,
-        Instructable.STOP_COVER,
-        Instructable.QUERY_COVER_POSITION,
+        Instructable.COVER_SET_POSITION,
+        Instructable.COVER_STOP,
+        Instructable.COVER_OPEN,
+        Instructable.COVER_CLOSE,
+        Instructable.COVER_QUERY_POSITION,
     }
 )
 

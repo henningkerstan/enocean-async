@@ -11,12 +11,15 @@ class Instructable(StrEnum):
     send direction.
     """
 
-    # Cover / blind control (D2-05-00)
-    SET_COVER_POSITION = "set_cover_position"
-    STOP_COVER = "stop_cover"
-    QUERY_COVER_POSITION = "query_cover_position"
+    # Cover control (D2-05-00, A5-38-08 CMD 0x07)
+    COVER_SET_POSITION = "cover_set_position"
+    COVER_STOP = "cover_stop"
+    COVER_QUERY_POSITION = "cover_query_position"
+    COVER_OPEN = "cover_open"
+    COVER_CLOSE = "cover_close"
 
-    # Central command / dimming (A5-38-08)
+    # Central command — lighting (A5-38-08 CMD 0x01, 0x02)
+    SWITCH = "switch"
     DIM = "dim"
 
     # Fan control (D2-20-02)
