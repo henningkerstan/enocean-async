@@ -34,6 +34,8 @@
 
 ### Bug fixes
 - `BaseAddress` upper bound corrected from `FF:FF:FF:80` to `FF:FF:FF:FE` (the broadcast address `FF:FF:FF:FF` is excluded; valid base address sender slots extend to `FF:FF:FF:FE`)
+- D2-01 channel entity_ids changed from observable-name strings (`"switch_state"`, `"output_value"`, …) to `"ch1_switch_state"`, `"ch2_switch_state"`, … (channel-prefixed, 1-indexed, one entity per observable)
+- `gateway.remove_device()` now calls `observer.stop()` on all observers before deregistering; `CoverObserver.stop()` cancels the watchdog timer handle and `ButtonObserver.stop()` cancels hold/release timers, preventing asyncio task leaks
 
 ### Internal / maintenance
 - Sender address pool: lowest free BaseID+1…+127 slot allocated at teach-in time for sender-addressed devices; derived on-demand from device registry
@@ -42,6 +44,9 @@
 - Docs moved to `docs/` folder; all README cross-links updated to absolute GitHub URLs
 - `Entity` and `EntityType` moved to `semantics/entity.py` (merged from separate `entity_type.py`)
 - `ObserverFactory` moved to `semantics/observer_factory.py`; `SemanticResolver` and `InstructionEncoder` type aliases moved to `semantics/types.py`; `DeviceSpec` moved to `semantics/device_spec.py`; all re-exported from `eep/profile.py` for backward compatibility
+- D2-01 `EEPSpecification` now carries static `entities` derived from per-variant `channels`, `dimming`, `metering`, and `pilot_wire` flags; one `Entity` per observable per channel (`"ch1_switch_state"`, `"ch1_error_level"`, …); `ScalarObserver` gains `entity_id_prefix` / `entity_id_offset` / `entity_id_suffix` parameters to support the `"ch{n}_{observable}"` naming scheme
+- `Observer.stop()` no-op added to base class; `gateway.remove_device()` calls it on all registered observers; `ButtonObserver.stop()` cancels pending hold/release timer handles
+- `CoverObserver` watchdog refactored from `asyncio.Task` + `await asyncio.sleep()` to `loop.call_later()` / `asyncio.TimerHandle`; eliminates the `try/except CancelledError` guard
 
 
 ## [0.6.0] — 2026-03-08

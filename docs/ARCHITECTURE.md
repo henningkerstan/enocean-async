@@ -74,15 +74,15 @@ Entity(
     actions=frozenset({SET_COVER_POSITION, STOP_COVER, QUERY_COVER_POSITION}),
 )
 
-# D2-01-00: one relay channel (each D2-01 variant declares its exact channel count)
-Entity(
-    id="0",
-    observables=frozenset({SWITCH_STATE, ERROR_LEVEL, POWER, ENERGY}),
-    actions=frozenset({SET_SWITCH_OUTPUT, QUERY_ACTUATOR_STATUS, QUERY_ACTUATOR_MEASUREMENT}),
-)
+# D2-01-07: one relay channel with metering — one entity per observable
+Entity(id="ch1_switch_state", observables=frozenset({SWITCH_STATE}),
+       actions=frozenset({SET_SWITCH_OUTPUT, QUERY_ACTUATOR_STATUS, QUERY_ACTUATOR_MEASUREMENT}))
+Entity(id="ch1_error_level",  observables=frozenset({ERROR_LEVEL}))
+Entity(id="ch1_energy",       observables=frozenset({ENERGY}))
+Entity(id="ch1_power",        observables=frozenset({POWER}))
 ```
 
-The principle for grouping observables into entities: multiple observables belong to the same entity when they describe the **same physical thing** and are not independently meaningful (cover POSITION, ANGLE, COVER_STATE are all facets of one cover motor). Observables belong to separate entities when they are independently meaningful and have separate real-world identities (temperature and humidity are separate sensors on the same chip, but distinct physical quantities).
+The principle for grouping observables into entities: multiple observables belong to the same entity when they describe the **same physical thing** and must be handled as one unit by the consumer (cover POSITION, ANGLE, COVER_STATE are all facets of one cover motor — a HA `CoverEntity` needs all three at once). Observables belong to separate entities when they are independently meaningful with separate real-world identities (temperature and humidity are separate physical quantities).
 
 A fully unique physical thing in the system is the pair `(device_address, entity_id)`.
 
@@ -164,8 +164,9 @@ Observation(entity="cover", values={POSITION: 75, COVER_STATE: "open", ANGLE: 0}
 # Push button — single observable entity, timer-sourced hold event
 Observation(entity="a0", values={BUTTON_EVENT: "held"}, source=ObservationSource.TIMER)
 
-# D2-01 actuator status — partial update
-Observation(entity="0", values={SWITCH_STATE: "on", ERROR_LEVEL: 0})
+# D2-01 actuator status — one entity per observable, one observation each
+Observation(entity="ch1_switch_state", values={SWITCH_STATE: True})
+Observation(entity="ch1_error_level",  values={ERROR_LEVEL: 0})
 ```
 
 ---
@@ -361,15 +362,15 @@ Key semantic types:
 - `entity.py` — `Entity` (physical entity declaration) and `EntityType` (sensor / actuator / combined classification)
 - `observer_factory.py` — `ObserverFactory` (wraps an observer constructor for `EEPSpecification.observers`)
 - `types.py` — `SemanticResolver` and `InstructionEncoder` type aliases
-- `device_descriptor.py` — `DeviceSpec` (setup-time snapshot of a device's EEP and entities)
+- `device_spec.py` — `DeviceSpec` (setup-time snapshot of a device's EEP and entities)
 
 #### Observers
 
 Each `Observer` subclass interprets a decoded `EEPMessage` for one specific entity and emits `Observation` objects.
 
 - **`ScalarObserver`** (`observers/scalar.py`): Generic, parameterised by `observable` and `entity_id`. Reads `message.entities[observable]` and emits an `Observation`. Covers all plain scalar observables (temperature, illumination, motion, voltage, window state, …).
-- **`CoverObserver`** (`observers/cover.py`): Stateful: takes the received position and angle values, infers `cover_state` from successive position deltas, and runs an asyncio watchdog to emit `stopped` after 1.5 s of radio silence. Emits one `Observation` with `entity_id="cover"` and `values={POSITION: …, ANGLE: …, COVER_STATE: …}`.
-- **`ButtonObserver` / `F6_02_01_02_ButtonObserver`** (`observers/button.py`): Stateful: decodes rocker switch bit patterns into button events using a hold timer and a release-timeout timer. Each button emits an `Observation` with its own `entity_id` (`"a0"`, `"b0"`, …). Event semantics: `pressed` fires immediately on press; `clicked` fires on release if the press was short; `held` fires when the hold threshold elapses while still pressed; `released` fires only after a hold — it is not emitted for short presses. This makes the event pairs semantically distinct: `pressed`/`clicked` bracket a tap, (`pressed`/)`held`/`released` bracket a hold.
+- **`CoverObserver`** (`observers/cover.py`): Stateful: takes the received position and angle values, infers `cover_state` from successive position deltas, and schedules a `loop.call_later()` timer handle to emit `stopped` after 1.5 s of radio silence. `stop()` cancels the timer. Emits one `Observation` with `entity_id="cover"` and `values={POSITION: …, ANGLE: …, COVER_STATE: …}`.
+- **`ButtonObserver` / `F6_02_01_02_ButtonObserver`** (`observers/button.py`): Stateful: decodes rocker switch bit patterns into button events using `loop.call_later()` hold and release-timeout timer handles. `stop()` cancels all pending handles. Each button emits an `Observation` with its own `entity_id` (`"a0"`, `"b0"`, …). Event semantics: `pressed` fires immediately on press; `clicked` fires on release if the press was short; `held` fires when the hold threshold elapses while still pressed; `released` fires only after a hold — it is not emitted for short presses. This makes the event pairs semantically distinct: `pressed`/`clicked` bracket a tap, (`pressed`/)`held`/`released` bracket a hold.
 - **`MetaDataObserver`** (`observers/metadata.py`): Emits RSSI, last-seen timestamp, and telegram count as separate `Observation` objects. Always prepended to a device's observer list by the gateway.
 
 #### Instructions
