@@ -177,6 +177,15 @@ class ButtonObserver(Observer):
         if button_id in self._button_was_held:
             del self._button_was_held[button_id]
 
+    def stop(self) -> None:
+        """Cancel all pending hold and release timers."""
+        for handle in self._hold_timers.values():
+            handle.cancel()
+        self._hold_timers.clear()
+        for handle in self._release_timers.values():
+            handle.cancel()
+        self._release_timers.clear()
+
     def _decode_impl(self, message: EEPMessage) -> None:
         """Decode button messages into semantic state changes with timing."""
         raise NotImplementedError("Subclasses must implement the _decode_impl method.")

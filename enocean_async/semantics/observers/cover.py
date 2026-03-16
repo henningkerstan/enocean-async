@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-import logging
 from time import time
 from typing import TYPE_CHECKING
 
@@ -28,8 +27,10 @@ class CoverObserver(Observer):
     _current_cover_state: str | None = field(default=None, init=False, repr=False)
     """Track the current cover state to avoid redundant state change emissions."""
 
-    _watchdog_task: asyncio.Task | None = field(default=None, init=False, repr=False)
-    """Watchdog task to detect when cover movement has stopped."""
+    _watchdog_handle: asyncio.TimerHandle | None = field(
+        default=None, init=False, repr=False
+    )
+    """Watchdog timer handle to detect when cover movement has stopped."""
 
     def _decode_impl(self, message: EEPMessage) -> None:
         if not message.decoded:
@@ -62,12 +63,9 @@ class CoverObserver(Observer):
                     self._restart_watchdog()
 
                 if cover_state == "stopped":
-                    # If we receive a stopped state from the message, cancel the watchdog
-                    if (
-                        self._watchdog_task is not None
-                        and not self._watchdog_task.done()
-                    ):
-                        self._watchdog_task.cancel()
+                    if self._watchdog_handle is not None:
+                        self._watchdog_handle.cancel()
+                        self._watchdog_handle = None
             self._previous_position = pos_value
 
         if ang_value is not None:
@@ -85,33 +83,32 @@ class CoverObserver(Observer):
             )
 
     def _restart_watchdog(self) -> None:
-        """Cancel existing watchdog and start a new one."""
-        if self._watchdog_task is not None and not self._watchdog_task.done():
-            self._watchdog_task.cancel()
-        self._watchdog_task = asyncio.create_task(self._watchdog_timer())
+        """Cancel existing watchdog and schedule a new one."""
+        if self._watchdog_handle is not None:
+            self._watchdog_handle.cancel()
+        self._watchdog_handle = asyncio.get_running_loop().call_later(
+            COVER_WATCHDOG_TIMEOUT, self._on_watchdog_timeout
+        )
 
-    async def _watchdog_timer(self) -> None:
-        """Watchdog timer that emits stopped state after timeout."""
-        try:
-            await asyncio.sleep(COVER_WATCHDOG_TIMEOUT)
-            # Timeout elapsed, emit stopped state
-            self._emit(
-                Observation(
-                    device=self.device_address,
-                    entity="cover",
-                    values={Observable.COVER_STATE: "stopped"},
-                    timestamp=time(),
-                    source=ObservationSource.TIMER,
-                )
+    def _on_watchdog_timeout(self) -> None:
+        """Called when the watchdog fires; emits stopped state."""
+        self._watchdog_handle = None
+        self._current_cover_state = "stopped"
+        self._emit(
+            Observation(
+                device=self.device_address,
+                entity="cover",
+                values={Observable.COVER_STATE: "stopped"},
+                timestamp=time(),
+                source=ObservationSource.TIMER,
             )
-            self._current_cover_state = "stopped"
-        except asyncio.CancelledError:
-            pass  # Timer was cancelled due to new message
+        )
 
     def stop(self) -> None:
-        """Stop the watchdog task."""
-        if self._watchdog_task is not None and not self._watchdog_task.done():
-            self._watchdog_task.cancel()
+        """Cancel the watchdog timer."""
+        if self._watchdog_handle is not None:
+            self._watchdog_handle.cancel()
+            self._watchdog_handle = None
 
     def _derive_cover_state(self, current_pos: int) -> str | None:
         """Derive cover state from current position and previous position."""
