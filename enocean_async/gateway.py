@@ -152,8 +152,8 @@ class Gateway:
     def add_device_taught_in_callback(self, cb: DeviceTaughtInCallback) -> None:
         """Add a callback fired after a device is successfully taught in and auto-registered.
 
-        The callback receives (address: EURID, eep: EEP). It fires for UTE and
-        4BS-with-profile teach-ins that carry a complete EEP.
+        The callback receives a ``TaughtInDevice`` (fields: ``address``, ``eep``).
+        It fires for UTE and 4BS-with-profile teach-ins that carry a complete EEP.
         """
         self.__device_taught_in_callbacks.append(cb)
 
@@ -585,6 +585,8 @@ class Gateway:
     def remove_device(self, address: EURID) -> None:
         """Deregister a device by its sender address (EURID). This removes the device from the registry of known devices, so that incoming messages from this address will no longer be recognized as coming from a known device and will not be decoded as EEP messages."""
         if address in self.__devices:
+            for observer in self.__devices[address].capabilities:
+                observer.stop()
             del self.__devices[address]
             self._logger.info(f"Removed device with address {address}")
         else:

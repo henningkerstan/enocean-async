@@ -35,6 +35,13 @@ class Observer(ABC):
         """Implementation of decode logic. Override in subclasses."""
         raise NotImplementedError("Subclasses must implement the _decode_impl method.")
 
+    def stop(self) -> None:
+        """Release any resources held by this observer (e.g. asyncio tasks).
+
+        Called by the gateway when the owning device is removed.  The default
+        implementation is a no-op; stateful observers (e.g. CoverObserver) override it.
+        """
+
     def _emit(self, observation: Observation) -> None:
         """Emit an observation via callback, scheduled on the running event loop."""
         if self.on_observation:

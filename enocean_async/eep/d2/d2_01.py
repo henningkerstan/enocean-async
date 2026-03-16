@@ -22,7 +22,7 @@ from ...semantics.observable import Observable
 from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
 from ..message import EEPMessageType, RawEEPMessage, ValueWithContext
-from ..profile import EEPDataField, EEPSpecification, EEPTelegram
+from ..profile import EEPDataField, EEPSpecification, EEPTelegram, Entity
 
 # ---------------------------------------------------------------------------
 # Command registry — single source of truth for CMD / ECID IDs and names
@@ -692,41 +692,101 @@ _DIMMER_RESOLVERS = {
 }
 
 
-def _factories(dimming: bool) -> list:
-    # CMD 0x4 and 0x7 both carry an I/O channel field; 0x1E means "not applicable"
-    # (single-channel device or all-channels query) — map that sentinel to channel=None.
-    base = [
-        scalar_factory(
-            Observable.SWITCH_STATE,
-            entity_id_field="I/O",
-            entity_id_not_applicable=0x1E,
+# ---------------------------------------------------------------------------
+# Static entity / observer helpers
+# ---------------------------------------------------------------------------
+
+_BASE_CH_ACT = frozenset(
+    {Instructable.SET_SWITCH_OUTPUT, Instructable.QUERY_ACTUATOR_STATUS}
+)
+_METERING_ACT = frozenset({Instructable.QUERY_ACTUATOR_MEASUREMENT})
+
+
+def _channel_entities(n: int, *, dimming: bool, metering: bool) -> list[Entity]:
+    """Return all entities for channel *n* (1-indexed), one per observable."""
+    ch_actions = _BASE_CH_ACT | (_METERING_ACT if metering else frozenset())
+    result = [
+        Entity(
+            id=f"ch{n}_switch_state",
+            observables=frozenset({Observable.SWITCH_STATE}),
+            actions=ch_actions,
         ),
-        scalar_factory(
-            Observable.ERROR_LEVEL, entity_id_field="I/O", entity_id_not_applicable=0x1E
-        ),
-        scalar_factory(Observable.PILOT_WIRE_MODE),
-        scalar_factory(
-            Observable.ENERGY, entity_id_field="I/O", entity_id_not_applicable=0x1E
-        ),
-        scalar_factory(
-            Observable.POWER, entity_id_field="I/O", entity_id_not_applicable=0x1E
+        Entity(
+            id=f"ch{n}_error_level", observables=frozenset({Observable.ERROR_LEVEL})
         ),
     ]
     if dimming:
-        base.append(
-            scalar_factory(
-                Observable.OUTPUT_VALUE,
-                entity_id_field="I/O",
-                entity_id_not_applicable=0x1E,
+        result.append(
+            Entity(
+                id=f"ch{n}_output_value",
+                observables=frozenset({Observable.OUTPUT_VALUE}),
             )
         )
+    if metering:
+        result.append(
+            Entity(id=f"ch{n}_energy", observables=frozenset({Observable.ENERGY}))
+        )
+        result.append(
+            Entity(id=f"ch{n}_power", observables=frozenset({Observable.POWER}))
+        )
+    return result
+
+
+def _entities(
+    channels: int, *, dimming: bool, metering: bool, pilot_wire: bool
+) -> list[Entity]:
+    result = []
+    for i in range(channels):
+        result.extend(_channel_entities(i + 1, dimming=dimming, metering=metering))
+    if pilot_wire:
+        result.append(
+            Entity(
+                id="pilot_wire_mode",
+                observables=frozenset({Observable.PILOT_WIRE_MODE}),
+            )
+        )
+    return result
+
+
+def _ch_factory(observable: Observable):
+    """Channel-scoped scalar factory: maps I/O raw=0 → 'ch1_obs', raw=1 → 'ch2_obs', etc.
+    Falls back to 'ch1_obs' when I/O=0x1E (not applicable / single-channel device)."""
+    suffix = f"_{observable.value}"
+    return scalar_factory(
+        observable,
+        entity_id=f"ch1{suffix}",
+        entity_id_field="I/O",
+        entity_id_not_applicable=0x1E,
+        entity_id_prefix="ch",
+        entity_id_offset=1,
+        entity_id_suffix=suffix,
+    )
+
+
+def _factories(*, dimming: bool, metering: bool, pilot_wire: bool) -> list:
+    # CMD 0x4 carries an I/O channel field; 0x1E = "not applicable" (single-channel).
+    base = [_ch_factory(Observable.SWITCH_STATE), _ch_factory(Observable.ERROR_LEVEL)]
+    if dimming:
+        base.append(_ch_factory(Observable.OUTPUT_VALUE))
+    if metering:
+        base.extend([_ch_factory(Observable.ENERGY), _ch_factory(Observable.POWER)])
+    if pilot_wire:
+        base.append(scalar_factory(Observable.PILOT_WIRE_MODE))
     return base
 
 
 # ---------------------------------------------------------------------------
 # EEPSpecification factory + all type variants
 # ---------------------------------------------------------------------------
-def _spec(type_id: int, name: str, *, dimming: bool = False) -> EEPSpecification:
+def _spec(
+    type_id: int,
+    name: str,
+    *,
+    channels: int = 1,
+    dimming: bool = False,
+    metering: bool = False,
+    pilot_wire: bool = False,
+) -> EEPSpecification:
     """All variants share the same telegram format and action encoders."""
     return EEPSpecification(
         eep=EEP(f"D2-01-{type_id:02X}"),
@@ -738,17 +798,26 @@ def _spec(type_id: int, name: str, *, dimming: bool = False) -> EEPSpecification
         telegrams=EEP_D2_01_TELEGRAMS,
         encoders=_COMMAND_ENCODERS,
         semantic_resolvers=_DIMMER_RESOLVERS if dimming else _BASE_RESOLVERS,
-        observers=_factories(dimming),
+        observers=_factories(dimming=dimming, metering=metering, pilot_wire=pilot_wire),
+        entities=_entities(
+            channels, dimming=dimming, metering=metering, pilot_wire=pilot_wire
+        ),
     )
 
 
 EEP_D2_01_00 = _spec(0x00, "Type 0x00 – 1 channel, switching + dimming", dimming=True)
 EEP_D2_01_01 = _spec(0x01, "Type 0x01 – 1 channel, switching")
 EEP_D2_01_02 = _spec(
-    0x02, "Type 0x02 – 1 channel, switching + dimming + metering", dimming=True
+    0x02,
+    "Type 0x02 – 1 channel, switching + dimming + metering",
+    dimming=True,
+    metering=True,
 )
 EEP_D2_01_03 = _spec(
-    0x03, "Type 0x03 – 1 channel, switching + dimming + metering", dimming=True
+    0x03,
+    "Type 0x03 – 1 channel, switching + dimming + metering",
+    dimming=True,
+    metering=True,
 )
 EEP_D2_01_04 = _spec(
     0x04, "Type 0x04 – 1 channel, switching + dimming (configurable)", dimming=True
@@ -757,33 +826,51 @@ EEP_D2_01_05 = _spec(
     0x05,
     "Type 0x05 – 1 channel, switching + dimming (configurable) + metering",
     dimming=True,
+    metering=True,
 )
 EEP_D2_01_06 = _spec(0x06, "Type 0x06 – 1 channel, switching (no local control)")
 EEP_D2_01_07 = _spec(
-    0x07, "Type 0x07 – 1 channel, switching (no local control) + metering"
+    0x07,
+    "Type 0x07 – 1 channel, switching (no local control) + metering",
+    metering=True,
 )
 EEP_D2_01_08 = _spec(
     0x08, "Type 0x08 – 1 channel, switching + dimming (local control)", dimming=True
 )
 EEP_D2_01_09 = _spec(
-    0x09, "Type 0x09 – 1 channel, switching + dimming + pilot wire", dimming=True
+    0x09,
+    "Type 0x09 – 1 channel, switching + dimming + pilot wire",
+    dimming=True,
+    pilot_wire=True,
 )
 EEP_D2_01_0A = _spec(0x0A, "Type 0x0A – 1 channel, switching (full feature set)")
 EEP_D2_01_0B = _spec(
-    0x0B, "Type 0x0B – 1 channel, switching + metering (full feature set)"
+    0x0B,
+    "Type 0x0B – 1 channel, switching + metering (full feature set)",
+    metering=True,
 )
 EEP_D2_01_0C = _spec(
-    0x0C, "Type 0x0C – 1 channel, heating module with pilot wire + metering"
+    0x0C,
+    "Type 0x0C – 1 channel, heating module with pilot wire + metering",
+    metering=True,
+    pilot_wire=True,
 )
 EEP_D2_01_0D = _spec(0x0D, "Type 0x0D – micro smart plug, 1 channel, no metering")
-EEP_D2_01_0E = _spec(0x0E, "Type 0x0E – micro smart plug, 1 channel, with metering")
+EEP_D2_01_0E = _spec(
+    0x0E, "Type 0x0E – micro smart plug, 1 channel, with metering", metering=True
+)
 EEP_D2_01_0F = _spec(0x0F, "Type 0x0F – slot-in module, 1 channel, no metering")
-EEP_D2_01_10 = _spec(0x10, "Type 0x10 – 2 channels, switching")
-EEP_D2_01_11 = _spec(0x11, "Type 0x11 – 2 channels, switching")
-EEP_D2_01_12 = _spec(0x12, "Type 0x12 – slot-in module, 2 channels, no metering")
-EEP_D2_01_13 = _spec(0x13, "Type 0x13 – 4 channels, switching")
-EEP_D2_01_14 = _spec(0x14, "Type 0x14 – 8 channels, switching")
-EEP_D2_01_15 = _spec(0x15, "Type 0x15 – 4 channels, switching")
+EEP_D2_01_10 = _spec(0x10, "Type 0x10 – 2 channels, switching", channels=2)
+EEP_D2_01_11 = _spec(0x11, "Type 0x11 – 2 channels, switching", channels=2)
+EEP_D2_01_12 = _spec(
+    0x12, "Type 0x12 – slot-in module, 2 channels, no metering", channels=2
+)
+EEP_D2_01_13 = _spec(0x13, "Type 0x13 – 4 channels, switching", channels=4)
+EEP_D2_01_14 = _spec(0x14, "Type 0x14 – 8 channels, switching", channels=8)
+EEP_D2_01_15 = _spec(0x15, "Type 0x15 – 4 channels, switching", channels=4)
 EEP_D2_01_16 = _spec(
-    0x16, "Type 0x16 – 2 channels, dimming with configurable limits", dimming=True
+    0x16,
+    "Type 0x16 – 2 channels, dimming with configurable limits",
+    channels=2,
+    dimming=True,
 )

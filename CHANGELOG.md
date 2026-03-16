@@ -10,7 +10,11 @@
 - `start_learning()` now raises `RuntimeError` immediately if the gateway's base ID is not yet available (previously the error surfaced later at first teach-in)
 - `Gateway.add_device()` now raises `ValueError` if the device address is already registered (previously silently overwrote)
 - `Address` API simplified — removed `to_number()` (use `int(addr)`), `to_string()` (use `str(addr)`), `to_bytelist()` (use `.bytelist`), `to_json()`, `from_number()`, `from_string()` (pass value directly to constructor), `broadcast()`, and `validate_string()`
-- `Gateway.entities()` renamed to `Gateway.device_descriptors` (now a `@property`)
+- `Gateway.entities()` renamed to `Gateway.device_specs` (now a `@property`)
+- `DeviceDescriptor` renamed to `DeviceSpec`; module `semantics/device_descriptor.py` → `semantics/device_spec.py`; `Gateway.device_descriptor(address)` → `Gateway.device_spec(address)`; `Gateway.device_descriptors` → `Gateway.device_specs`
+- `Observable.PUSH_BUTTON` renamed to `Observable.BUTTON_EVENT` (string value `"button_event"`)
+- `EntityType.PUSH_BUTTON` renamed to `EntityType.BUTTON` (string value `"button"`)
+- `PushButtonObserver` renamed to `ButtonObserver`; `F6_02_01_02PushButtonObserver` → `F6_02_01_02_ButtonObserver`; `f6_push_button_factory()` → `f6_button_factory()`; module `semantics/observers/push_button.py` → `semantics/observers/button.py`
 
 ### New features
 - Full UTE teach-in: EEP validation, auto-registration, bidirectional response, sender pool allocation
@@ -19,8 +23,9 @@
 - 4BS teach-in bidirectional response: gateway always echoes the EEP back with `SENDER_ID_STORED` / `EEP_SUPPORTED` result bits; `learn_status=RESPONSE` telegrams are discarded to avoid processing loopback responses
 - 4BS re-teach-in: same-EEP re-teach-in is acknowledged and ignored; EEP-change re-teach-in updates the registered EEP and responds `ACCEPTED`
 - 1BS teach-in: learning mode guard; `NewDeviceCallback` fires; no auto-registration (no EEP in telegram)
-- `DeviceTaughtInCallback = Callable[[EURID, EEP], None]` — fires after successful teach-in and auto-registration
+- `DeviceTaughtInCallback = Callable[[TaughtInDevice], None]` — fires after successful teach-in and auto-registration
 - `Gateway.add_device_taught_in_callback()` to register teach-in callbacks
+- `TaughtInDevice` dataclass (fields: `address: EURID`, `eep: EEP`) exported from `enocean_async`
 - `EEPSpecification.uses_addressed_sending: bool` flag to distinguish destination-addressed (VLD) from sender-addressed (4BS actuator) devices; `A5-38-08` and `A5-20-01` set to `False`
 - `start_learning()` log message now shows the effective sender address(es) — addressed devices (BaseID+0) and the next available sender-addressed slot
 - `Address` constructor now accepts `bytes`, `bytearray`, or `list[int]` (4-element big-endian) in addition to `int` and `str`
@@ -36,7 +41,7 @@
 - 4BS teach-in classes (`FourBSTeachInTelegram`, `FourBSLearnType`, `FourBSLearnStatus`, `FourBSTeachInResult`, `FourBSEEPResult`) moved to `protocol/erp1/fourbs.py`
 - Docs moved to `docs/` folder; all README cross-links updated to absolute GitHub URLs
 - `Entity` and `EntityType` moved to `semantics/entity.py` (merged from separate `entity_type.py`)
-- `ObserverFactory` moved to `semantics/observer_factory.py`; `SemanticResolver` and `InstructionEncoder` type aliases moved to `semantics/types.py`; `DeviceDescriptor` moved to `semantics/device_descriptor.py`; all re-exported from `eep/profile.py` for backward compatibility
+- `ObserverFactory` moved to `semantics/observer_factory.py`; `SemanticResolver` and `InstructionEncoder` type aliases moved to `semantics/types.py`; `DeviceSpec` moved to `semantics/device_spec.py`; all re-exported from `eep/profile.py` for backward compatibility
 
 
 ## [0.6.0] — 2026-03-08

@@ -138,7 +138,7 @@ class EEPSpecification:
     and filters commands by sender. The gateway allocates a dedicated BaseID+n slot per device."""
 
     def device_spec(self) -> "DeviceSpec":
-        """Return a setup-time descriptor of what this device type exposes and accepts.
+        """Return a setup-time spec of what this device type exposes and accepts.
 
         Combines ``self.entities`` with the three metadata entities (rssi, last_seen,
         telegram_count) that the gateway always prepends to every device.

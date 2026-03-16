@@ -115,7 +115,7 @@ async def main(port: str) -> None:
         gateway.add_device(EURID("00:00:00:02"), EEP("F6-02-02"))
     except:
         print(f"{CROSSMARK} Failed to add device with duplicate address 00:00:00:02")
-        
+
     gateway.add_device(EURID("00:00:00:03"), EEP("F6-02-05"))
     gateway.add_device(EURID("00:00:00:04"), EEP("F6-02-05"))
 
