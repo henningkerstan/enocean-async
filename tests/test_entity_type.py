@@ -11,7 +11,7 @@ Entity.entity_type:
 - Instructable.SET_FAN_SPEED → FAN
 - Instructable.SET_SWITCH_OUTPUT → SWITCH
 - Cover instructables → COVER
-- Observable.PUSH_BUTTON → PUSH_BUTTON
+- Observable.BUTTON_EVENT → BUTTON
 - Metadata observables only → METADATA
 - Any BINARY-kind observable, no actions → BINARY
 - Scalar/enum observables, no actions → SENSOR
@@ -87,8 +87,8 @@ class TestObservableKind:
     def test_window_state_is_enum(self):
         assert Observable.WINDOW_STATE.kind == ValueKind.ENUM
 
-    def test_push_button_is_enum(self):
-        assert Observable.PUSH_BUTTON.kind == ValueKind.ENUM
+    def test_button_event_is_enum(self):
+        assert Observable.BUTTON_EVENT.kind == ValueKind.ENUM
 
     def test_pilot_wire_mode_is_enum(self):
         assert Observable.PILOT_WIRE_MODE.kind == ValueKind.ENUM
@@ -158,9 +158,9 @@ class TestEntityTypeActuators:
 class TestEntityTypeObservables:
     """Observable identity and kind drive classification when no actions present."""
 
-    def test_push_button_gives_push_button(self):
-        e = Entity(id="a0", observables=frozenset({Observable.PUSH_BUTTON}))
-        assert e.entity_type == EntityType.PUSH_BUTTON
+    def test_button_event_gives_button(self):
+        e = Entity(id="a0", observables=frozenset({Observable.BUTTON_EVENT}))
+        assert e.entity_type == EntityType.BUTTON
 
     def test_rssi_gives_metadata(self):
         e = Entity(id="rssi", observables=frozenset({Observable.RSSI}))

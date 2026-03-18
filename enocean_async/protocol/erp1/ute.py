@@ -93,11 +93,7 @@ class UTEMessage:
         manufacturer_id_msb = telegram.data_byte(3) & 0b00000111
         manufacturer_id = (manufacturer_id_msb << 8) | manufacturer_id_lsb
 
-        manufacturer: Manufacturer
-        try:
-            manufacturer = Manufacturer(manufacturer_id)
-        except ValueError:
-            manufacturer = Manufacturer.RESERVED
+        manufacturer = Manufacturer.from_id(manufacturer_id) or Manufacturer.RESERVED
 
         eep = EEP([telegram.data_byte(0), telegram.data_byte(1), telegram.data_byte(2)])
 
@@ -157,10 +153,10 @@ class UTEMessage:
         telegram.set_bitstring_raw_value(8, 8, self.number_of_channels_to_be_taught_in)
 
         # Byte 2: manufacturer ID LSB
-        telegram.set_bitstring_raw_value(16, 8, self.manufacturer.value & 0xFF)
+        telegram.set_bitstring_raw_value(16, 8, self.manufacturer.id & 0xFF)
 
         # Byte 3: manufacturer ID MSB (lower 3 bits only)
-        telegram.set_bitstring_raw_value(24, 8, (self.manufacturer.value >> 8) & 0x07)
+        telegram.set_bitstring_raw_value(24, 8, (self.manufacturer.id >> 8) & 0x07)
 
         # Bytes 4-6: EEP (type, func, rorg)
         telegram.set_bitstring_raw_value(32, 8, self.eep.type)

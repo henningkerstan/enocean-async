@@ -6,19 +6,19 @@ The generated file is named `SUPPORTED_EEPS.md` and contains a table with the EE
 
 from enocean_async.eep import EEP_SPECIFICATIONS
 from enocean_async.semantics.observable import Observable
+from enocean_async.semantics.observers.button import (
+    ButtonObserver,
+    F6_02_01_02_ButtonObserver,
+)
 from enocean_async.semantics.observers.cover import CoverObserver
 from enocean_async.semantics.observers.metadata import MetaDataObserver
-from enocean_async.semantics.observers.push_button import (
-    F6_02_01_02PushButtonObserver,
-    PushButtonObserver,
-)
 from enocean_async.semantics.observers.scalar import ScalarObserver
 
 # Mapping of observer classes to their emitted Observations (observable → possible values)
 _BUTTON_EVENTS = ["pressed", "clicked", "held", "released"]
 
 OBSERVER_OBSERVATIONS = {
-    F6_02_01_02PushButtonObserver: {
+    F6_02_01_02_ButtonObserver: {
         "entities": {
             "a0": _BUTTON_EVENTS,
             "a1": _BUTTON_EVENTS,
@@ -30,7 +30,7 @@ OBSERVER_OBSERVATIONS = {
             "a1b0": _BUTTON_EVENTS,
         },
     },
-    PushButtonObserver: {
+    ButtonObserver: {
         "entities": {
             "{button_id}": _BUTTON_EVENTS,
         },

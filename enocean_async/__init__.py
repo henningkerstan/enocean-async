@@ -8,6 +8,7 @@ __date__ = "2026-03-13"
 from .address import EURID, BaseAddress, BroadcastAddress, SenderAddress
 from .device import Device
 from .eep import EEP_SPECIFICATIONS
+from .eep.device_type import DEVICE_TYPES, DeviceType
 from .eep.id import EEP
 from .eep.manufacturer import Manufacturer
 from .gateway import DeviceTaughtInCallback, Gateway
@@ -45,6 +46,8 @@ __all__ = [
     # Device / EEP
     "Device",
     "DeviceSpec",
+    "DeviceType",
+    "DEVICE_TYPES",
     "Entity",
     "EEP",
     "EEP_SPECIFICATIONS",
