@@ -9,6 +9,7 @@ import serial_asyncio_fast as serial_asyncio
 from .address import EURID, BaseAddress, SenderAddress
 from .device import Device
 from .eep import EEP_SPECIFICATIONS
+from .eep.device_type import DeviceType
 from .eep.handler import EEPHandler
 from .eep.id import EEP
 from .eep.message import EEPMessage
@@ -513,11 +514,11 @@ class Gateway:
     def add_device(
         self,
         address: EURID,
-        eep: EEP,
+        device_type: DeviceType,
         sender: SenderAddress | None = None,
         name: str | None = None,
     ) -> None:
-        """Register a device with its sender address (EURID or Base ID) and its EEP.
+        """Register a device with its DeviceType (EEP + optional manufacturer/model).
 
         This allows the gateway to recognize incoming messages from this device and decode them according to the registered EEP (if a handler for that EEP is found).
         """
@@ -526,6 +527,8 @@ class Gateway:
                 f"Tried to add device with address {address}, but it is already registered."
             )
             raise ValueError(f"Device {address} is already registered.")
+
+        eep = device_type.eep
 
         if sender is None:
             sender = self.__base_id
@@ -540,7 +543,10 @@ class Gateway:
                 )
 
         device = Device(
-            address=address, eep=eep, name=name or str(address), sender=sender
+            address=address,
+            device_type=device_type,
+            name=name or str(address),
+            sender=sender,
         )
         self.__devices[address] = device
         self._logger.info(
@@ -1138,7 +1144,11 @@ class Gateway:
                 )
             )
         if existing is None:
-            self.add_device(address=device_address, eep=eep, sender=sender)
+            self.add_device(
+                address=device_address,
+                device_type=DeviceType.for_eep(eep),
+                sender=sender,
+            )
         if not response_expected:
             self._logger.info(
                 f"UTE teach-in from {device_address}: successfully registered with EEP {eep}."
@@ -1273,7 +1283,7 @@ class Gateway:
         spec = EEP_SPECIFICATIONS[eep]
 
         if existing is not None:
-            existing.eep = eep
+            existing.device_type = DeviceType.for_eep(eep)
             if eep not in self.__eep_handlers:
                 self.__eep_handlers[eep] = EEPHandler(spec)
                 self._logger.info(
@@ -1299,7 +1309,9 @@ class Gateway:
             if not spec.uses_addressed_sending
             else self.__sender_id_for_learning or self.__base_id
         )
-        self.add_device(address=erp1.sender, eep=eep, sender=sender)
+        self.add_device(
+            address=erp1.sender, device_type=DeviceType.for_eep(eep), sender=sender
+        )
         self._logger.info(
             f"4BS teach-in from {erp1.sender}: successfully registered with EEP {eep}"
             + (f" using sender slot {sender}" if sender is not None else "")

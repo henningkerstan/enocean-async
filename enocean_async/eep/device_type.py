@@ -35,6 +35,18 @@ class DeviceType:
     eep: EEP
     description: str = ""
 
+    @classmethod
+    def for_eep(cls, eep: EEP) -> "DeviceType":
+        """Return the generic DeviceType for the given EEP.
+
+        Raises :exc:`ValueError` if the EEP has no entry in the catalog
+        (i.e. it is not listed in :data:`EEP_SPECIFICATIONS`).
+        """
+        dt = _GENERIC_BY_EEP.get(eep)
+        if dt is None:
+            raise ValueError(f"EEP {eep} is not supported; no DeviceType available.")
+        return dt
+
     @property
     def identifier(self) -> str:
         """Stable string identifier for this device type.
@@ -115,3 +127,8 @@ def _build_device_types() -> list[DeviceType]:
 
 
 DEVICE_TYPES: list[DeviceType] = _build_device_types()
+
+# Fast lookup used by DeviceType.for_eep()
+_GENERIC_BY_EEP: dict[EEP, DeviceType] = {
+    dt.eep: dt for dt in DEVICE_TYPES if dt.manufacturer is None
+}

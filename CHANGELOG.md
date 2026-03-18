@@ -8,15 +8,23 @@
   - List form for protocol-level use: `EEP([0xA5, 0x02, 0x05])`
 - `start_learning()` parameter renamed: `timeout_seconds` → `timeout`; default changed from 60 to 30
 - `start_learning()` now raises `RuntimeError` immediately if the gateway's base ID is not yet available (previously the error surfaced later at first teach-in)
+- `Gateway.add_device()` signature changed: `eep: EEP` replaced by `device_type: DeviceType`; use `DeviceType.for_eep(EEP("F6-02-01"))` to obtain a generic DeviceType from an EEP string
 - `Gateway.add_device()` now raises `ValueError` if the device address is already registered (previously silently overwrote)
+- `Device.eep` is now a read-only property backed by `Device.device_type`; `Device.device_type: DeviceType` is the new primary field
 - `Address` API simplified — removed `to_number()` (use `int(addr)`), `to_string()` (use `str(addr)`), `to_bytelist()` (use `.bytelist`), `to_json()`, `from_number()`, `from_string()` (pass value directly to constructor), `broadcast()`, and `validate_string()`
 - `Gateway.entities()` renamed to `Gateway.device_specs` (now a `@property`)
 - `DeviceDescriptor` renamed to `DeviceSpec`; module `semantics/device_descriptor.py` → `semantics/device_spec.py`; `Gateway.device_descriptor(address)` → `Gateway.device_spec(address)`; `Gateway.device_descriptors` → `Gateway.device_specs`
 - `Observable.PUSH_BUTTON` renamed to `Observable.BUTTON_EVENT` (string value `"button_event"`)
 - `EntityType.PUSH_BUTTON` renamed to `EntityType.BUTTON` (string value `"button"`)
 - `PushButtonObserver` renamed to `ButtonObserver`; `F6_02_01_02PushButtonObserver` → `F6_02_01_02_ButtonObserver`; `f6_push_button_factory()` → `f6_button_factory()`; module `semantics/observers/push_button.py` → `semantics/observers/button.py`
+- `Manufacturer` enum redesigned: previously a `StrEnum` (member value = display name); now a plain `Enum` with `(id: int | None, display_name: str)` tuple values. Access the 11-bit Alliance code via `.id` (or `None` for non-Alliance members); display name via `.display_name` or `str(m)`; reverse lookup via `Manufacturer.from_id(id)`. Enum member names stripped of legal-entity suffixes (`ENOCEAN_GMBH` → `ENOCEAN`, `PERMUNDO_GMBH` → `PERMUNDO`, `HOPPE_HOLDING_AG` → `HOPPE`, etc.) and generic descriptors shortened (`EUROTRONIC_TECHNOLOGY_GMBH` → `EUROTRONIC`, `AWAG_ELEKTROTECHNIK_AG` → `AWAG`, `DEUTA_CONTROLS_GMBH` → `DEUTA`, etc.); also fixes two typos (`HUBBEL_LIGHTNING` → `HUBBELL`, `AUTANI_LCC` → `AUTANI`). `ManufacturerID` (separate IntEnum) is removed — its functionality is merged into `Manufacturer.id`.
 
 ### New features
+- **`DeviceType` catalog** (`eep/device_type.py`): associates a manufacturer and model name with an EEP. The catalog (`DEVICE_TYPES`) contains generic entries (auto-derived from `EEP_SPECIFICATIONS`, one per supported EEP) and manufacturer-specific entries (known physical products). Key API:
+  - `DeviceType(manufacturer, model, eep, description)` — frozen dataclass
+  - `DeviceType.for_eep(eep) -> DeviceType` — class-method factory; raises `ValueError` for unsupported EEPs
+  - `DeviceType.identifier` — stable `{NAMESPACE}/{CODE}` string (e.g. `"EEP/A5-02-01"`, `"ELTAKO/FAH65S"`, `"ELTAKO/A5-06-01"` for an Eltako-specific EEP variant)
+  - `DEVICE_TYPES: list[DeviceType]` — full catalog, exported from top-level package
 - Full UTE teach-in: EEP validation, auto-registration, bidirectional response, sender pool allocation
 - Full UTE teach-out: `TEACH_IN_DELETION` and toggle `TEACH_IN_OR_DELETION_OF_TEACH_IN` handling; requires `allow_teach_out=True` in `start_learning()`
 - 4BS teach-in: learning mode guard + auto-registration (with profile); profileless telegrams are logged and ignored

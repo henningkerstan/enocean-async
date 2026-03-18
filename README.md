@@ -39,8 +39,20 @@ await gateway.send_command(destination=device_eurid, command=SetSwitchOutput(sta
 
 ### Device management
 ```python
-gateway.add_device(address=EURID("01:23:45:67"), eep=EEP.from_string("D2-05-00"), name="Living room blind")
+from enocean_async import DeviceType, EEP, EURID
+
+# Register by EEP — DeviceType.for_eep() looks up the generic catalog entry
+gateway.add_device(address=EURID("01:23:45:67"),
+                   device_type=DeviceType.for_eep(EEP("D2-05-00")),
+                   name="Living room blind")
+
+# Or register a known manufacturer-specific product from the catalog
+from enocean_async import DEVICE_TYPES
+nodon_shutter = next(dt for dt in DEVICE_TYPES if dt.identifier == "NODON/SIN-2-RS-01")
+gateway.add_device(address=EURID("01:23:45:67"), device_type=nodon_shutter)
 ```
+
+`DeviceType.for_eep(eep)` raises `ValueError` for unsupported EEPs. `DEVICE_TYPES` contains generic entries (one per supported EEP, `manufacturer=None`) and manufacturer-specific entries (known physical products). Each `DeviceType` has a stable `identifier` string in `NAMESPACE/CODE` format (e.g. `"EEP/D2-05-00"`, `"NODON/SIN-2-RS-01"`).
 
 `EURID`, `BaseAddress`, and `Address` all accept an `int`, a colon-separated hex string (`"01:23:45:67"`), or a 4-byte sequence (`bytes`, `bytearray`, `list[int]`). Use `int(addr)` and `str(addr)` for numeric/string conversion.
 

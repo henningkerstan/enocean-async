@@ -60,7 +60,9 @@ class FourBSTeachInTelegram:
             func = erp1.bitstring_raw_value(0, 6)
             type_ = erp1.bitstring_raw_value(6, 7)
             manufacturer_id = erp1.bitstring_raw_value(13, 11)
-            manufacturer = Manufacturer(manufacturer_id)
+            manufacturer = (
+                Manufacturer.from_id(manufacturer_id) or Manufacturer.RESERVED
+            )
             eep = EEP([0xA5, func, type_], manufacturer)
 
         return cls(
@@ -111,7 +113,7 @@ class FourBSTeachInTelegram:
         # DB3..DB1: echo FUNC / TYPE / Manufacturer ID (same layout as query)
         telegram.set_bitstring_raw_value(0, 6, self.eep.func)
         telegram.set_bitstring_raw_value(6, 7, self.eep.type)
-        telegram.set_bitstring_raw_value(13, 11, self.eep.manufacturer.value)
+        telegram.set_bitstring_raw_value(13, 11, self.eep.manufacturer.id)
 
         # DB0 (bits 24-31):
         telegram.set_bitstring_raw_value(24, 1, self.learn_type.value)

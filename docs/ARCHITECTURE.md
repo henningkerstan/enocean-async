@@ -377,13 +377,43 @@ Each `Observer` subclass interprets a decoded `EEPMessage` for one specific enti
 
 Typed `Instruction` subclasses live in `semantics/instructions/`. Each subclass declares a `ClassVar[Instructable]` named `action` and typed fields for its parameters.
 
-### 4. Device Layer
+### 4. Device Type Catalog
+
+**File:** `eep/device_type.py`
+
+`DeviceType` maps a manufacturer and model name to an EEP. It is the public-facing unit for device selection in UI integrations (e.g. Home Assistant) — users pick a device by name rather than entering an EEP code directly.
+
+```python
+@dataclass(frozen=True)
+class DeviceType:
+    manufacturer: Manufacturer | None  # None = generic (any manufacturer)
+    model: str
+    eep: EEP
+    description: str = ""
+
+    @classmethod
+    def for_eep(cls, eep: EEP) -> "DeviceType": ...   # raises ValueError if unsupported
+
+    @property
+    def identifier(self) -> str: ...  # stable NAMESPACE/CODE string
+```
+
+**`DEVICE_TYPES`** is the full catalog: generic entries (auto-derived from `EEP_SPECIFICATIONS`, `manufacturer=None`) followed by manufacturer-specific entries (known physical products). The two are always in sync — every supported EEP has exactly one generic entry.
+
+**Identifiers** use a `{NAMESPACE}/{CODE}` format in uppercase:
+- `EEP/A5-02-01` — generic entry for a plain EEP
+- `ELTAKO/A5-06-01` — generic entry for an Eltako-qualified EEP variant
+- `ELTAKO/FAH65S` — manufacturer-specific product entry
+
+`DeviceType.for_eep(eep)` is the class-method factory for obtaining the generic DeviceType for a given EEP. It raises `ValueError` if the EEP is not in the catalog (i.e. not in `EEP_SPECIFICATIONS`). At teach-in time the gateway uses this to associate the taught-in EEP with a generic `DeviceType`; integrations can then offer the user the full list of specific products with the same EEP as alternatives.
+
+### 5. Device Layer
 
 **File:** `device.py`
 
-`Device` is a runtime object (created by `add_device()`) holding the device's address, EEP ID, name, and instantiated `Observer` list. Every incoming `EEPMessage` is forwarded to all observers.
+`Device` is a runtime object (created by `add_device()`) holding the device's address, `DeviceType` (EEP + optional manufacturer/model), name, and instantiated `Observer` list. Every incoming `EEPMessage` is forwarded to all observers. `Device.eep` is a convenience property returning `device_type.eep`.
 
-### 5. Gateway Layer
+### 6. Gateway Layer
 
 **File:** `gateway.py`
 
@@ -451,6 +481,7 @@ Some EEP profiles spread one observable across multiple fields (A5-06: two illum
 4. Populate `observers` with the appropriate factory callables (e.g. `scalar_factory`, `cover_factory`, `f6_button_factory`).
 5. Set `uses_addressed_sending=False` if the device is sender-addressed (learns the gateway's BaseID+n at teach-in). Default is `True` (VLD / destination-addressed).
 6. Optionally populate `encoders` if the device accepts instructions. Add the corresponding `Instruction` subclass in `semantics/instructions/<profile>.py`.
-7. Register in `eep/__init__.py`'s `EEP_SPECIFICATIONS`.
+7. Register in `eep/__init__.py`'s `EEP_SPECIFICATIONS`. A generic `DeviceType` entry is auto-derived from this automatically.
+8. Optionally add known physical products for this EEP to `_MANUFACTURER_TYPES` in `eep/device_type.py`.
 
 No changes to `gateway.py`, `device.py`, or any observer class are required.
