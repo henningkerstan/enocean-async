@@ -88,7 +88,7 @@ See [TEACHIN.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/
 - `DeviceTaughtInCallback` with EURID + EEP on successful teach-in
 - Auto-reconnect on connection loss
 - EURID, Base ID, firmware version retrieval; Base ID change
-- Parsing of all EEPs listed in [SUPPORTED_EEPS.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/SUPPORTED_EEPS.md)
+- Parsing of all EEPs listed in [SUPPORTED_DEVICES.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/SUPPORTED_DEVICES.md)
 - Sending instructions for: D2-05-00 (covers), D2-20-02 (fan), A5-38-08 (dim gateway), D2-01 (switches/dimmers)
 
 
@@ -99,7 +99,7 @@ See [TEACHIN.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/
 
 
 ## Implemented EEPs
-See [SUPPORTED_EEPS.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/SUPPORTED_EEPS.md).
+See [SUPPORTED_DEVICES.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/SUPPORTED_DEVICES.md).
 
 
 ## Architecture

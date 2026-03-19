@@ -50,8 +50,6 @@ class Observable(str, Enum):
     OUTPUT_VALUE = ("output_value", "%", _S)
     ERROR_LEVEL = ("error_level", None, _B)
     PILOT_WIRE_MODE = ("pilot_wire_mode", None, _E)
-    ENERGY = ("energy", "Wh", _S)
-    POWER = ("power", "W", _S)
 
     # Button / occupancy / contact
     BUTTON_EVENT = ("button_event", None, _E)
@@ -66,6 +64,16 @@ class Observable(str, Enum):
 
     # HVAC actuator
     VALVE_POSITION = ("valve_position", "%", _S)
+
+    # Metering
+    ENERGY = ("energy", "Wh", _S)
+    POWER = ("power", "W", _S)
+    GAS_VOLUME = ("gas_volume", "m³", _S)
+    GAS_FLOW = ("gas_flow", "l/s", _S)
+    WATER_VOLUME = ("water_volume", "m³", _S)
+    WATER_FLOW = ("water_flow", "l/s", _S)
+    COUNTER = ("counter", None, _S)
+    COUNTER_RATE = ("counter_rate", None, _S)
 
     # Metadata
     RSSI = ("rssi", "dBm", _S)
