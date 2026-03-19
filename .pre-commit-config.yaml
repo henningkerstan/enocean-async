@@ -8,7 +8,16 @@ repos:
       - id: ruff-format
         files: ^((enocean_async)/.+)?[^/]+\.(py|pyi)$
 
-  # TODO: Enable this once initial release is done 
+  - repo: local
+    hooks:
+      - id: generate-supported-devices
+        name: Generate SUPPORTED_DEVICES.md
+        entry: python scripts/generate_list_of_devices.py
+        language: system
+        pass_filenames: false
+        files: ^enocean_async/eep/
+
+  # TODO: Enable this once initial release is done
   # - repo: https://github.com/pre-commit/pre-commit-hooks
   #   rev: v6.0.0  
   #   hooks:
