@@ -104,12 +104,19 @@ class Observable(str, Enum):
     TEMPERATURE   = ("temperature",   "°C")
     HUMIDITY      = ("humidity",      "%")
     ILLUMINATION  = ("illumination",  "lx")
-    POWER         = ("power",         "W")
-    ENERGY        = ("energy",        "Wh")
     SWITCH_STATE  = ("switch_state",  None)
-    BUTTON_EVENT   = ("button_event",  None)
+    BUTTON_EVENT  = ("button_event",  None)
     POSITION      = ("position",      "%")
     COVER_STATE   = ("cover_state",   None)
+    # Metering
+    ENERGY        = ("energy",        "Wh")
+    POWER         = ("power",         "W")
+    GAS_VOLUME    = ("gas_volume",    "m³")
+    GAS_FLOW      = ("gas_flow",      "l/s")
+    WATER_VOLUME  = ("water_volume",  "m³")
+    WATER_FLOW    = ("water_flow",    "l/s")
+    COUNTER       = ("counter",       None)
+    COUNTER_RATE  = ("counter_rate",  None)
     ...
 ```
 

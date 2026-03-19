@@ -24,7 +24,7 @@ gateway.add_erp1_received_callback(lambda erp1: ...)
 gateway.add_esp3_received_callback(lambda pkt: ...)
 ```
 
-`Observable` members are stable string constants (`Observable.TEMPERATURE`, `Observable.ILLUMINATION`, `Observable.SWITCH_STATE`, `Observable.POSITION`, `Observable.COVER_STATE`, …). Each member carries its native unit as `Observable.TEMPERATURE.unit == "°C"`.
+`Observable` members are stable string constants (`Observable.TEMPERATURE`, `Observable.ILLUMINATION`, `Observable.SWITCH_STATE`, `Observable.POSITION`, `Observable.COVER_STATE`, `Observable.ENERGY`, `Observable.POWER`, `Observable.GAS_VOLUME`, `Observable.GAS_FLOW`, `Observable.WATER_VOLUME`, `Observable.WATER_FLOW`, …). Each member carries its native unit as `Observable.TEMPERATURE.unit == "°C"`.
 
 ### Send pipeline — typed instructions
 Instructions are sent to devices using typed `Instruction` subclasses:
@@ -58,8 +58,10 @@ gateway.add_device(address=EURID("01:23:45:67"), device_type=nodon_shutter)
 
 ### Learning / teach-in
 ```python
-def on_taught_in(address: EURID, eep: EEP) -> None:
-    print(f"New device: {address} ({eep})")
+from enocean_async import TaughtInDevice
+
+def on_taught_in(device: TaughtInDevice) -> None:
+    print(f"New device: {device.address} ({device.eep})")
 
 gateway.add_device_taught_in_callback(on_taught_in)
 await gateway.start_learning(timeout=30)
