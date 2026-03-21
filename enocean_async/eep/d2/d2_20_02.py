@@ -2,9 +2,25 @@
 
 from ...semantics.instructable import Instructable
 from ...semantics.instructions.fan import SetFanSpeed
+from ...semantics.observable import Observable
+from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
-from ..message import EEPMessageType, RawEEPMessage
-from ..profile import EEPDataField, EEPSpecification, EEPTelegram
+from ..message import EEPMessageType, RawEEPMessage, ValueWithContext
+from ..profile import EEPDataField, EEPSpecification, EEPTelegram, Entity
+
+
+def _fan_speed_resolver(
+    raw: dict[str, int], scaled: dict[str, ValueWithContext]
+) -> ValueWithContext | None:
+    """Return a numeric fan-speed value (0–100 %) from the fan status telegram.
+
+    Special raw values 253 (Auto), 254 (Default), 255 (No change), and the
+    reserved range 101–252 are ignored (return None → no Observation emitted).
+    """
+    fs = raw.get("FS")
+    if fs is None or fs > 100:
+        return None
+    return ValueWithContext(name="Fan speed", value=fs, unit=None)
 
 
 def _encode_set_fan_speed(action: SetFanSpeed) -> RawEEPMessage:
@@ -150,4 +166,13 @@ EEP_D2_20_02 = EEPSpecification(
     encoders={
         Instructable.SET_FAN_SPEED: _encode_set_fan_speed,
     },
+    semantic_resolvers={Observable.FAN_SPEED: _fan_speed_resolver},
+    observers=[scalar_factory(Observable.FAN_SPEED, entity_id="fan")],
+    entities=[
+        Entity(
+            id="fan",
+            observables=frozenset({Observable.FAN_SPEED}),
+            actions=frozenset({Instructable.SET_FAN_SPEED}),
+        )
+    ],
 )

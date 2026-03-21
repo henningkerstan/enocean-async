@@ -130,7 +130,7 @@ These entries cover any device implementing the given EEP.
 | D2-01-15 | Electronic switches and dimmers with local control – Type 0x15 – 4 channels, switching | `ch1_switch_state`, `ch1_error_level`, `ch2_switch_state`, `ch2_error_level`, `ch3_switch_state`, `ch3_error_level`, `ch4_switch_state`, `ch4_error_level` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | D2-01-16 | Electronic switches and dimmers with local control – Type 0x16 – 2 channels, dimming with configurable limits | `ch1_switch_state`, `ch1_error_level`, `ch1_output_value`, `ch2_switch_state`, `ch2_error_level`, `ch2_output_value` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | D2-05-00 | Blinds control for position and angle, type 0x00 | `cover` (angle, cover_state, position) | `cover_set_position`, `cover_stop`, `cover_open`, `cover_close`, `cover_query_position` |
-| D2-20-02 | Fan control, type 0x02 | — | `set_fan_speed` |
+| D2-20-02 | Fan control, type 0x02 | `fan` | `set_fan_speed` |
 | F6-02-01 | Light and blind control - application style 1 | `a0`, `a1`, `b0`, `b1`, `ab0`, `ab1`, `a0b1`, `a1b0` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | F6-02-02 | Light and blind control - application style 2 | `a0`, `a1`, `b0`, `b1`, `ab0`, `ab1`, `a0b1`, `a1b0` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | F6-10-00 | Window handle | `window_state` | — |
