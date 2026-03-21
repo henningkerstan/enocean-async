@@ -46,7 +46,7 @@ Entities are declared statically in the EEP specification, since the EEP fully d
 class Entity:
     id: str
     observables: frozenset[Observable]
-    actions: frozenset[Instructable] = field(default_factory=frozenset)
+    actions: frozenset[Instructable] = frozenset()
 ```
 
 Examples as declared in EEP files:
@@ -88,39 +88,39 @@ A fully unique physical thing in the system is the pair `(device_address, entity
 
 ### Observables
 
-An **observable** is a quantity that an entity reports. It has two intrinsic properties:
+An **observable** is a quantity that an entity reports. It has four intrinsic properties:
 
-- A **unique id** — what it is observing (e.g. `"temperature"`, `"switch_state"`, `"button_event"`).
+- A **unique name** — what it is observing (e.g. `"temperature"`, `"switch_state"`, `"button_event"`). This is also the string value of the enum member.
 - A **native unit** — the one canonical physical unit for that quantity (`None` for dimensionless or categorical values).
+- A **kind** (`ValueKind.SCALAR`, `BINARY`, or `ENUM`) — the nature of the value.
+- **`possible_values: list[str] | None`** — for `ENUM`-kinded observables, the exhaustive list of string values the observable can take; `None` for SCALAR/BINARY observables.
 
 ```python
 class Observable(str, Enum):
-    def __new__(cls, id: str, unit: str | None = None):
-        obj = str.__new__(cls, id)
-        obj._value_ = id
+    def __new__(cls, name: str, unit: str | None = None,
+                kind: ValueKind = SCALAR, possible_values: list[str] | None = None):
+        obj = str.__new__(cls, name)
+        obj._value_ = name
         obj.unit = unit
+        obj.kind = kind
+        obj.possible_values = possible_values
         return obj
 
-    TEMPERATURE   = ("temperature",   "°C")
-    HUMIDITY      = ("humidity",      "%")
-    ILLUMINATION  = ("illumination",  "lx")
-    SWITCH_STATE  = ("switch_state",  None)
-    BUTTON_EVENT  = ("button_event",  None)
-    POSITION      = ("position",      "%")
-    COVER_STATE   = ("cover_state",   None)
+    TEMPERATURE   = ("temperature",   "°C",  SCALAR)
+    HUMIDITY      = ("humidity",      "%",   SCALAR)
+    ILLUMINATION  = ("illumination",  "lx",  SCALAR)
+    SWITCH_STATE  = ("switch_state",  None,  BINARY)
+    BUTTON_EVENT  = ("button_event",  None,  ENUM,   ["pressed", "clicked", "held", "released"])
+    POSITION      = ("position",      "%",   SCALAR)
+    COVER_STATE   = ("cover_state",   None,  ENUM,   ["open", "opening", "closed", "closing", "stopped"])
+    WINDOW_STATE  = ("window_state",  None,  ENUM,   ["open", "tilted", "closed"])
     # Metering
-    ENERGY        = ("energy",        "Wh")
-    POWER         = ("power",         "W")
-    GAS_VOLUME    = ("gas_volume",    "m³")
-    GAS_FLOW      = ("gas_flow",      "l/s")
-    WATER_VOLUME  = ("water_volume",  "m³")
-    WATER_FLOW    = ("water_flow",    "l/s")
-    COUNTER       = ("counter",       None)
-    COUNTER_RATE  = ("counter_rate",  None)
+    ENERGY        = ("energy",        "Wh",  SCALAR)
+    POWER         = ("power",         "W",   SCALAR)
     ...
 ```
 
-The `str, Enum` pattern makes each member both an `Observable` instance and a plain `str`, preserving dict-key and equality semantics. The unit is fixed per observable type — if two quantities differ in unit, they are different observables (e.g. `POWER = "W"` and `ENERGY = "Wh"` are separate members).
+The `str, Enum` pattern makes each member both an `Observable` instance and a plain `str`, preserving dict-key and equality semantics. The unit is fixed per observable type — if two quantities differ in unit, they are different observables (e.g. `POWER = "W"` and `ENERGY = "Wh"` are separate members). `possible_values` is the authoritative source for the allowed string values of ENUM-kinded observables — populated directly on the `Observable` member rather than on `Entity`, so that any consumer (observer, integration, documentation generator) can read them without a device context.
 
 Observable names are **semantic, not unit-encoding**. The name says *what* is being observed (`TEMPERATURE`, `POWER`), not *how* it is expressed. The unit is available as `Observable.TEMPERATURE.unit` — encoding it redundantly in the identifier (`TEMPERATURE_CELSIUS`, `POWER_WATTS`) would conflate two distinct properties and produce unnecessarily verbose names. The only reason to distinguish by unit in the name would be if the same physical concept existed in two units simultaneously — which cannot happen here since units are canonical and fixed.
 
@@ -225,13 +225,16 @@ await gateway.send_command(
 
 ## DeviceSpec
 
-`DeviceSpec` (`semantics/device_spec.py`) is the setup-time description of what a device type exposes and accepts. It is returned by `Gateway.device_spec(address)` after calling `add_device()`, before any telegrams arrive:
+`DeviceSpec` (`semantics/device_spec.py`) is the setup-time description of what a device type exposes and accepts. It is built by `gateway.device_spec(address)` after calling `add_device()`, before any telegrams arrive:
 
 ```python
 @dataclass
 class DeviceSpec:
-    eep: EEP
+    device_type: DeviceType
     entities: list[Entity]
+
+    @property
+    def eep(self) -> EEP: ...  # shortcut for device_type.eep
 ```
 
 `entities` always includes three metadata entities added by the gateway regardless of EEP:
@@ -398,21 +401,20 @@ class DeviceType:
     eep: EEP
     description: str = ""
 
-    @classmethod
-    def for_eep(cls, eep: EEP) -> "DeviceType": ...   # raises ValueError if unsupported
-
     @property
-    def identifier(self) -> str: ...  # stable NAMESPACE/CODE string
+    def id(self) -> str: ...  # stable NAMESPACE/CODE string
 ```
 
-**`DEVICE_TYPES`** is the full catalog: generic entries (auto-derived from `EEP_SPECIFICATIONS`, `manufacturer=None`) followed by manufacturer-specific entries (known physical products). The two are always in sync — every supported EEP has exactly one generic entry.
+**`DEVICE_TYPES: dict[str, DeviceType]`** is the full catalog keyed by `DeviceType.id` for O(1) lookup (e.g. `DEVICE_TYPES["NODON/SIN-2-RS-01"]`). It contains generic entries (auto-derived from `EEP_SPECIFICATIONS`, `manufacturer=None`) and manufacturer-specific entries (known physical products). The two are always in sync — every supported EEP has exactly one generic entry.
 
-**Identifiers** use a `{NAMESPACE}/{CODE}` format in uppercase:
+**`device_type_for_eep(eep: EEP) -> DeviceType`** is the free-function factory for obtaining the generic DeviceType for a given EEP. It raises `KeyError` if the EEP is not in the catalog. Both are exported from the top-level `enocean_async` package.
+
+**IDs** use a `{NAMESPACE}/{CODE}` format in uppercase:
 - `EEP/A5-02-01` — generic entry for a plain EEP
 - `ELTAKO/A5-06-01` — generic entry for an Eltako-qualified EEP variant
 - `ELTAKO/FAH65S` — manufacturer-specific product entry
 
-`DeviceType.for_eep(eep)` is the class-method factory for obtaining the generic DeviceType for a given EEP. It raises `ValueError` if the EEP is not in the catalog (i.e. not in `EEP_SPECIFICATIONS`). At teach-in time the gateway uses this to associate the taught-in EEP with a generic `DeviceType`; integrations can then offer the user the full list of specific products with the same EEP as alternatives.
+At teach-in time the gateway uses `device_type_for_eep` to associate the taught-in EEP with a generic `DeviceType`; integrations can then offer the user the full list of specific products with the same EEP as alternatives.
 
 ### 5. Device Layer
 
@@ -462,9 +464,9 @@ Each EEP statically declares its `Entity` list. Entities are physical real-world
 
 This is possible because EnOcean EEP variants are fixed: `D2-01-00` has exactly one relay channel; `F6-02-01` has exactly four rocker buttons. Instance count is per-variant, not discovered at runtime.
 
-### Observable carries its native unit
+### Observable carries intrinsic metadata
 
-`Observable` is a `str, Enum` whose members carry a `unit: str | None` property. The unit is intrinsic to what is being observed: temperature is always in `°C`, illumination always in `lx`. If two quantities differ in unit, they are distinct `Observable` members. This eliminates all scattered `(Observable, str | None)` unit pairs that previously appeared in factory declarations, `DeviceSpec`, and `Observation`.
+`Observable` is a `str, Enum` whose members carry `unit`, `kind`, and `possible_values` as intrinsic properties. The unit is fixed per observable type — temperature is always in `°C`, illumination always in `lx`. If two quantities differ in unit, they are distinct `Observable` members. `possible_values` for ENUM-kinded observables lives on `Observable` rather than on `Entity`, so any consumer can read allowed values without a device context. This eliminates all scattered `(Observable, str | None)` unit pairs and per-entity `possible_values` dicts that previously appeared in factory declarations, `DeviceSpec`, and `Entity`.
 
 ### Observation is entity-centric, not observable-centric
 

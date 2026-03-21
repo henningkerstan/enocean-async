@@ -2,21 +2,20 @@
 
 Each :class:`DeviceType` entry associates a manufacturer and model name with its
 EnOcean Equipment Profile.  Entries with ``manufacturer=None`` are generic
-EEP-level entries derived directly from :data:`EEP_SPECIFICATIONS`; they are
-included automatically so that the catalog always stays in sync with supported
-profiles.  Manufacturer-specific entries represent known physical products and
-are listed after the generic ones in lookup results.
+EEP-level entries; they are auto-derived in :mod:`enocean_async.eep` from
+:data:`EEP_SPECIFICATIONS` so the catalog always stays in sync with supported
+profiles.  Manufacturer-specific entries represent known physical products.
 
-The catalog is intended to be used by integrations (e.g. Home Assistant) to let users choose
-their device by name rather than entering an EEP code directly.
+The catalog is assembled in :mod:`enocean_async.eep` as :data:`DEVICE_TYPES`
+(a ``dict[str, DeviceType]`` keyed by :attr:`DeviceType.id`) and is exported
+from the top-level ``enocean_async`` package.  Integrations (e.g. Home
+Assistant) use it to let users choose a device by name rather than entering an
+EEP code directly.
 """
-
-from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import partial
 
-from . import EEP_SPECIFICATIONS
 from .id import EEP
 from .manufacturer import Manufacturer
 
@@ -35,20 +34,8 @@ class DeviceType:
     eep: EEP
     description: str = ""
 
-    @classmethod
-    def for_eep(cls, eep: EEP) -> "DeviceType":
-        """Return the generic DeviceType for the given EEP.
-
-        Raises :exc:`ValueError` if the EEP has no entry in the catalog
-        (i.e. it is not listed in :data:`EEP_SPECIFICATIONS`).
-        """
-        dt = _GENERIC_BY_EEP.get(eep)
-        if dt is None:
-            raise ValueError(f"EEP {eep} is not supported; no DeviceType available.")
-        return dt
-
     @property
-    def identifier(self) -> str:
+    def id(self) -> str:
         """Stable string identifier for this device type.
 
         Always ``{NAMESPACE}/{CODE}`` in uppercase:
@@ -116,19 +103,3 @@ _MANUFACTURER_TYPES: list[DeviceType] = [
         Manufacturer.TRIO_2_SYS, "Wall Switch", EEP("F6-02-01"), "Wireless wall switch"
     ),
 ]
-
-
-def _build_device_types() -> list[DeviceType]:
-    """Combine generic EEP entries (from EEP_SPECIFICATIONS) with manufacturer-specific ones."""
-    generic = [
-        DeviceType(None, spec.name, spec.eep) for spec in EEP_SPECIFICATIONS.values()
-    ]
-    return generic + _MANUFACTURER_TYPES
-
-
-DEVICE_TYPES: list[DeviceType] = _build_device_types()
-
-# Fast lookup used by DeviceType.for_eep()
-_GENERIC_BY_EEP: dict[EEP, DeviceType] = {
-    dt.eep: dt for dt in DEVICE_TYPES if dt.manufacturer is None
-}

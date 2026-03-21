@@ -12,7 +12,7 @@ repos:
     hooks:
       - id: generate-supported-devices
         name: Generate SUPPORTED_DEVICES.md
-        entry: python scripts/generate_list_of_devices.py
+        entry: .venv/bin/python scripts/generate_list_of_devices.py
         language: system
         pass_filenames: false
         files: ^enocean_async/eep/

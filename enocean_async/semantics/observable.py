@@ -12,22 +12,29 @@ _E = ValueKind.ENUM
 class Observable(str, Enum):
     """Stable names for observable quantities exposed by devices.
 
-    Each member has three intrinsic properties:
-    - Its string value (the semantic id, e.g. "temperature") — used as dict key and in comparisons.
+    Each member has four intrinsic properties:
+    - ``name`` - its string value (the semantic id, e.g. "temperature") — used as dict key and in comparisons.
     - ``unit`` — the physical unit for that quantity (``None`` for dimensionless
       or categorical values). Units are domain-conventional (IoT / building automation domain),
       not necessarily SI base units (e.g. °C rather than K, Wh rather than J).
     - ``kind`` — the nature of the value: ``SCALAR`` (continuous numeric), ``BINARY``
       (two-state), or ``ENUM`` (multi-value named set).
+    - ``possible_values`` — for ``ENUM``-kinded observables, the exhaustive list of
+      string values the observable can take; ``None`` for SCALAR/BINARY observables.
     """
 
     def __new__(
-        cls, value: str, unit: str | None = None, kind: ValueKind = ValueKind.SCALAR
+        cls,
+        name: str,
+        unit: str | None = None,
+        kind: ValueKind = ValueKind.SCALAR,
+        possible_values: list[str] | None = None,
     ):
-        obj = str.__new__(cls, value)
-        obj._value_ = value
+        obj = str.__new__(cls, name)
+        obj._value_ = name
         obj.unit = unit
         obj.kind = kind
+        obj.possible_values = possible_values
         return obj
 
     # Sensor values
@@ -40,19 +47,34 @@ class Observable(str, Enum):
     # Cover / blind control
     POSITION = ("position", "%", _S)
     ANGLE = ("angle", "%", _S)
-    COVER_STATE = ("cover_state", None, _E)
+    COVER_STATE = (
+        "cover_state",
+        None,
+        _E,
+        ["open", "opening", "closed", "closing", "stopped"],
+    )
 
     # Window handle
-    WINDOW_STATE = ("window_state", None, _E)
+    WINDOW_STATE = ("window_state", None, _E, ["open", "tilted", "closed"])
 
     # Switch / dimmer actuator
     SWITCH_STATE = ("switch_state", None, _B)
     OUTPUT_VALUE = ("output_value", "%", _S)
     ERROR_LEVEL = ("error_level", None, _B)
-    PILOT_WIRE_MODE = ("pilot_wire_mode", None, _E)
+    PILOT_WIRE_MODE = (
+        "pilot_wire_mode",
+        None,
+        _E,
+        ["Off", "Comfort", "Eco", "Anti-freeze", "Comfort-1", "Comfort-2"],
+    )
 
     # Button / occupancy / contact
-    BUTTON_EVENT = ("button_event", None, _E)
+    BUTTON_EVENT = (
+        "button_event",
+        None,
+        _E,
+        ["pressed", "clicked", "held", "released"],
+    )
     CONTACT_STATE = ("contact_state", None, _B)
     DAY_NIGHT = ("day_night", None, _B)
     OCCUPANCY_BUTTON = ("occupancy_button", None, _B)

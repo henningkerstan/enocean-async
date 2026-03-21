@@ -111,6 +111,7 @@ from .d2 import (
     EEP_D2_05_00,
     EEP_D2_20_02,
 )
+from .device_type import _MANUFACTURER_TYPES, DeviceType
 from .f6 import EEP_F6_02_01, EEP_F6_02_02, EEP_F6_10_00, EEP_F6_10_00_ELTAKO
 from .id import EEP
 from .manufacturer import Manufacturer
@@ -230,9 +231,30 @@ EEP_SPECIFICATIONS: dict[EEP, EEPSpecification] = {
 This allows for efficient lookup of the corresponding EEPSpecification for a given EEP when processing incoming telegrams. 
 """
 
+DEVICE_TYPES: dict[str, DeviceType] = {
+    dt.id: dt
+    for dt in (
+        [DeviceType(None, spec.name, spec.eep) for spec in EEP_SPECIFICATIONS.values()]
+        + _MANUFACTURER_TYPES
+    )
+}
+"""Full catalog of supported devices keyed by :attr:`DeviceType.id` for O(1) lookup by stable string ID."""
+
+
+def device_type_for_eep(eep: EEP) -> DeviceType:
+    """Return the generic DeviceType for the given EEP.
+
+    Raises :exc:`KeyError` if the EEP is not in :data:`EEP_SPECIFICATIONS`.
+    """
+    return DEVICE_TYPES[f"EEP/{eep}"]
+
+
 __all__ = [
+    "DEVICE_TYPES",
+    "DeviceType",
     "EEP_SPECIFICATIONS",
     "EEP",
     "EEPSpecification",
     "Manufacturer",
+    "device_type_for_eep",
 ]

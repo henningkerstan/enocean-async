@@ -1,6 +1,6 @@
 """Entity model: physical sub-units of a device and their functional type classification."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
 
 from .instructable import Instructable
@@ -51,7 +51,7 @@ class Entity:
 
     id: str
     observables: frozenset[Observable]
-    actions: frozenset[Instructable] = field(default_factory=frozenset)
+    actions: frozenset[Instructable] = frozenset()
 
     @property
     def entity_type(self) -> EntityType:

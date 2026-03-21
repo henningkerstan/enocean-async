@@ -11,7 +11,7 @@ from enocean_async import (
     Observation,
     ObservationSource,
 )
-from enocean_async.eep.device_type import DeviceType
+from enocean_async.eep import device_type_for_eep
 
 
 class ColorFormatter(logging.Formatter):
@@ -110,22 +110,22 @@ async def main(port: str) -> None:
     print(f"Device version: {version_info.device_version}")
 
     # add some devices - adopt to your own devices and EEPs
-    gateway.add_device(EURID("00:00:00:01"), DeviceType.for_eep(EEP("F6-02-01")))
-    gateway.add_device(EURID("00:00:00:02"), DeviceType.for_eep(EEP("F6-02-01")))
+    gateway.add_device(EURID("00:00:00:01"), device_type_for_eep(EEP("F6-02-01")))
+    gateway.add_device(EURID("00:00:00:02"), device_type_for_eep(EEP("F6-02-01")))
     try:
-        gateway.add_device(EURID("00:00:00:02"), DeviceType.for_eep(EEP("F6-02-02")))
+        gateway.add_device(EURID("00:00:00:02"), device_type_for_eep(EEP("F6-02-02")))
     except:
         print(f"{CROSSMARK} Failed to add device with duplicate address 00:00:00:02")
 
-    gateway.add_device(EURID("00:00:00:03"), DeviceType.for_eep(EEP("F6-02-05")))
-    gateway.add_device(EURID("00:00:00:04"), DeviceType.for_eep(EEP("F6-02-05")))
+    gateway.add_device(EURID("00:00:00:03"), device_type_for_eep(EEP("F6-02-05")))
+    gateway.add_device(EURID("00:00:00:04"), device_type_for_eep(EEP("F6-02-05")))
 
     try:
         from devices import DEVICE_EEP_MAP
 
         print("Registering devices from device EEP map...")
         for device_id, eep_id, sender in DEVICE_EEP_MAP:
-            gateway.add_device(device_id, DeviceType.for_eep(eep_id), sender)
+            gateway.add_device(device_id, device_type_for_eep(eep_id), sender)
     except ImportError:
         print("No 'devices.py' file found, skipping device registration.")
 

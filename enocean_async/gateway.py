@@ -8,7 +8,7 @@ import serial_asyncio_fast as serial_asyncio
 
 from .address import EURID, BaseAddress, SenderAddress
 from .device import Device
-from .eep import EEP_SPECIFICATIONS
+from .eep import EEP_SPECIFICATIONS, device_type_for_eep
 from .eep.device_type import DeviceType
 from .eep.handler import EEPHandler
 from .eep.id import EEP
@@ -32,11 +32,19 @@ from .protocol.esp3.protocol import EnOceanSerialProtocol3
 from .protocol.esp3.response import ResponseCode, ResponseTelegram
 from .protocol.version import VersionIdentifier, VersionInfo
 from .semantics.device_spec import DeviceSpec
+from .semantics.entity import Entity
 from .semantics.instruction import Instruction
+from .semantics.observable import Observable
 from .semantics.observation import Observation, ObservationCallback
 from .semantics.observers.metadata import MetaDataObserver
 
 type RSSI = int
+
+_METADATA_ENTITIES = [
+    Entity(id="rssi", observables=frozenset({Observable.RSSI})),
+    Entity(id="last_seen", observables=frozenset({Observable.LAST_SEEN})),
+    Entity(id="telegram_count", observables=frozenset({Observable.TELEGRAM_COUNT})),
+]
 
 
 @dataclass
@@ -613,7 +621,10 @@ class Gateway:
         spec = EEP_SPECIFICATIONS.get(device.eep)
         if spec is None:
             return None
-        return spec.device_spec()
+        return DeviceSpec(
+            device_type=device.device_type,
+            entities=spec.entities + _METADATA_ENTITIES,
+        )
 
     @property
     def device_specs(self) -> dict[EURID, DeviceSpec]:
@@ -1146,7 +1157,7 @@ class Gateway:
         if existing is None:
             self.add_device(
                 address=device_address,
-                device_type=DeviceType.for_eep(eep),
+                device_type=device_type_for_eep(eep),
                 sender=sender,
             )
         if not response_expected:
@@ -1283,7 +1294,7 @@ class Gateway:
         spec = EEP_SPECIFICATIONS[eep]
 
         if existing is not None:
-            existing.device_type = DeviceType.for_eep(eep)
+            existing.device_type = device_type_for_eep(eep)
             if eep not in self.__eep_handlers:
                 self.__eep_handlers[eep] = EEPHandler(spec)
                 self._logger.info(
@@ -1310,7 +1321,7 @@ class Gateway:
             else self.__sender_id_for_learning or self.__base_id
         )
         self.add_device(
-            address=erp1.sender, device_type=DeviceType.for_eep(eep), sender=sender
+            address=erp1.sender, device_type=device_type_for_eep(eep), sender=sender
         )
         self._logger.info(
             f"4BS teach-in from {erp1.sender}: successfully registered with EEP {eep}"
