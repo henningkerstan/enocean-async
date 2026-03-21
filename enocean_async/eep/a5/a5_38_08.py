@@ -1,5 +1,6 @@
 """A5-38-08: Central command - gateway."""
 
+from ...semantics.entity import Entity
 from ...semantics.instructable import Instructable
 from ...semantics.instructions.cover import (
     CoverClose,
@@ -110,6 +111,12 @@ def _encode_set_cover_position(action: CoverSetPositionAndAngle) -> RawEEPMessag
     msg.raw["PAF"] = 1
     return msg
 
+
+_DIMMER_ENTITY = Entity(
+    id="light",
+    observables=frozenset({Observable.OUTPUT_VALUE}),
+    actions=frozenset({Instructable.DIM, Instructable.SWITCH}),
+)
 
 # Shared LRN bit field (4BS data telegram indicator)
 _LRNB = EEPDataField(
@@ -435,6 +442,7 @@ EEP_A5_38_08 = EEPSpecification(
             ],
         ),
     },
+    entities=[_DIMMER_ENTITY],
     semantic_resolvers={
         Observable.OUTPUT_VALUE: _resolve_edim,
     },
