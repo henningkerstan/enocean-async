@@ -10,6 +10,7 @@ from ...semantics.instructions.cover import (
 )
 from ...semantics.instructions.dimmer import Dim, Switch
 from ...semantics.observable import Observable
+from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
 from ..message import EEPMessageType, RawEEPMessage, ValueWithContext
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram
@@ -443,6 +444,7 @@ EEP_A5_38_08 = EEPSpecification(
         ),
     },
     entities=[_DIMMER_ENTITY],
+    observers=[scalar_factory(Observable.OUTPUT_VALUE, entity_id="light")],
     semantic_resolvers={
         Observable.OUTPUT_VALUE: _resolve_edim,
     },
