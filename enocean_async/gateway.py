@@ -35,7 +35,7 @@ from .semantics.device_spec import DeviceSpec
 from .semantics.entity import Entity, EntityCategory
 from .semantics.instruction import Instruction
 from .semantics.observable import Observable
-from .semantics.observation import Observation, ObservationCallback
+from .semantics.observation import Observation, ObservationCallback, ObservationSource
 from .semantics.observers.metadata import MetaDataObserver
 
 type RSSI = int
@@ -54,6 +54,23 @@ _METADATA_ENTITIES = [
     Entity(
         id="telegram_count",
         observables=frozenset({Observable.TELEGRAM_COUNT}),
+        category=EntityCategory.DIAGNOSTIC,
+    ),
+]
+
+_GATEWAY_ENTITIES: list[Entity] = [
+    Entity(
+        id="connection_status",
+        observables=frozenset({Observable.CONNECTION_STATUS}),
+    ),
+    Entity(
+        id="telegrams_received",
+        observables=frozenset({Observable.TELEGRAMS_RECEIVED}),
+        category=EntityCategory.DIAGNOSTIC,
+    ),
+    Entity(
+        id="telegrams_sent",
+        observables=frozenset({Observable.TELEGRAMS_SENT}),
         category=EntityCategory.DIAGNOSTIC,
     ),
 ]
@@ -147,6 +164,10 @@ class Gateway:
 
         # logging
         self._logger = logging.getLogger(__name__)
+
+        # gateway device counters (ERP1 only; not reset on reconnect)
+        self.__erp1_received: int = 0
+        self.__erp1_sent: int = 0
 
         # auto-reconnect
         self.__reconnect_task: asyncio.Task | None = None
@@ -242,6 +263,12 @@ class Gateway:
 
             self._logger.info(
                 f"Successfully connected to EnOcean module on {self.__port} at baudrate {self.__baudrate}"
+            )
+            await (
+                self.base_id
+            )  # ensure __base_id is populated so gateway observations can be emitted
+            self.__emit_gateway_observation(
+                "connection_status", Observable.CONNECTION_STATUS, "connected"
             )
         except Exception as e:
             self._logger.error(
@@ -487,6 +514,10 @@ class Gateway:
             message.destination = destination
 
         erp1 = self.__eep_handlers[eep_id].encode(message)
+        self.__erp1_sent += 1
+        self.__emit_gateway_observation(
+            "telegrams_sent", Observable.TELEGRAMS_SENT, self.__erp1_sent
+        )
         return await self.send_esp3_packet(erp1.to_esp3())
 
     def connection_made(self) -> None:
@@ -500,9 +531,18 @@ class Gateway:
             self._logger.error(
                 "Connection to EnOcean module lost and auto-reconnect is disabled. You must manually call start() to reconnect."
             )
+            self.__emit_gateway_observation(
+                "connection_status", Observable.CONNECTION_STATUS, "disconnected"
+            )
             return
         self._logger.warning(
             "Connection to EnOcean module lost, attempting to reconnect ..."
+        )
+        self.__emit_gateway_observation(
+            "connection_status", Observable.CONNECTION_STATUS, "disconnected"
+        )
+        self.__emit_gateway_observation(
+            "connection_status", Observable.CONNECTION_STATUS, "reconnecting"
         )
         if self.__reconnect_task is not None:
             self.__reconnect_task.cancel()
@@ -609,6 +649,28 @@ class Gateway:
     def __on_observation(self, observation: Observation) -> None:
         """Internal callback forwarding observer Observations to registered callbacks."""
         self.__emit(self.__observation_callbacks, observation)
+
+    def __emit_gateway_observation(
+        self, entity: str, observable: Observable, value: object
+    ) -> None:
+        """Emit a gateway-device observation if the base ID is known."""
+        if self.__base_id is None:
+            return
+        self.__emit(
+            self.__observation_callbacks,
+            Observation(
+                device=self.__base_id,
+                entity=entity,
+                values={observable: value},
+                timestamp=time.time(),
+                source=ObservationSource.GATEWAY,
+            ),
+        )
+
+    @property
+    def gateway_entities(self) -> list[Entity]:
+        """Entities exposed by the gateway device itself."""
+        return _GATEWAY_ENTITIES
 
     def remove_device(self, address: EURID) -> None:
         """Deregister a device by its sender address (EURID). This removes the device from the registry of known devices, so that incoming messages from this address will no longer be recognized as coming from a known device and will not be decoded as EEP messages."""
@@ -877,6 +939,10 @@ class Gateway:
 
     def __process_erp1_telegram(self, erp1: ERP1Telegram):
         """Process a received ERP1 telegram. This includes emitting it to registered callbacks and further processing based on RORG and learning bit."""
+        self.__erp1_received += 1
+        self.__emit_gateway_observation(
+            "telegrams_received", Observable.TELEGRAMS_RECEIVED, self.__erp1_received
+        )
         # emit the raw telegram
         self.__emit_with_sender_filter(self.__erp1_receive_callbacks, erp1.sender, erp1)
         self._logger.debug(f"ESP3 packet successfully decoded to ERP1 telegram: {erp1}")

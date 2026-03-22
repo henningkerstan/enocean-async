@@ -87,6 +87,7 @@ _MANUFACTURER_TYPES: list[DeviceType] = [
     _NodOn("SIN-2-1-01", EEP("D2-01-0F"), "Single channel relay switch"),
     _NodOn("SIN-2-2-01", EEP("D2-01-12"), "Dual channel relay switch"),
     _NodOn("SIN-2-RS-01", EEP("D2-05-00"), "Roller shutter controller"),
+    _NodOn("STP-2-1-05", EEP("A5-02-05"), "Temperature sensor 0.0 - 40.0 °C"),
     # Omnio
     DeviceType(
         Manufacturer.OMNIO, "WS-CH-102", EEP("F6-02-01"), "Wireless wall switch"

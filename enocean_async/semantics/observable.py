@@ -101,3 +101,13 @@ class Observable(str, Enum):
     RSSI = ("rssi", "dBm", _S)
     LAST_SEEN = ("last_seen", None, _S)
     TELEGRAM_COUNT = ("telegram_count", None, _S)
+
+    # Gateway
+    TELEGRAMS_RECEIVED = ("telegrams_received", None, _S)
+    TELEGRAMS_SENT = ("telegrams_sent", None, _S)
+    CONNECTION_STATUS = (
+        "connection_status",
+        None,
+        _E,
+        ["connected", "disconnected", "reconnecting"],
+    )

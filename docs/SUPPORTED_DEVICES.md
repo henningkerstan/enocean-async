@@ -18,6 +18,7 @@ These entries represent known physical products.
 | NodOn | SIN-2-1-01 | D2-01-0F | Single channel relay switch | `ch1_switch_state`, `ch1_error_level`, `query_status` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | NodOn | SIN-2-2-01 | D2-01-12 | Dual channel relay switch | `ch1_switch_state`, `ch1_error_level`, `ch2_switch_state`, `ch2_error_level`, `query_status` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | NodOn | SIN-2-RS-01 | D2-05-00 | Roller shutter controller | `cover` (angle, cover_state, position), `query_position`, `repositioning_mode` | `cover_set_position_and_angle`, `cover_stop`, `cover_open`, `cover_close`, `cover_query_position_and_angle` |
+| NodOn | STP-2-1-05 | A5-02-05 | Temperature sensor 0.0 - 40.0 °C | `temperature` | — |
 | Omnio | WS-CH-102 | F6-02-01 | Wireless wall switch | `a0`, `a1`, `b0`, `b1`, `ab0`, `ab1`, `a0b1`, `a1b0` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | Permundo GmbH | PSC234 | D2-01-09 | Wireless switch with power monitor | `ch1_switch_state`, `ch1_error_level`, `ch1_output_value`, `pilot_wire_mode`, `query_status` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | Trio 2 Sys | Wall Switch | F6-02-01 | Wireless wall switch | `a0`, `a1`, `b0`, `b1`, `ab0`, `ab1`, `a0b1`, `a1b0` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
