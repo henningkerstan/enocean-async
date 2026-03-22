@@ -12,7 +12,7 @@ Incoming radio telegrams are decoded into typed `Observation` objects. Callbacks
 ```python
 # Stage 4 — semantic: one Observation per entity per device
 gateway.add_observation_callback(lambda obs: print(obs))
-# Observation(device_id=…, entity_id='temperature', values={Observable.TEMPERATURE: 21.3}, …)
+# Observation(device=…, entity='temperature', values={Observable.TEMPERATURE: 21.3}, …)
 
 # Stage 3 — decoded EEP message (field values + semantic entities)
 gateway.add_eep_message_received_callback(lambda msg: ..., sender_filter=eurid)
@@ -80,6 +80,7 @@ See [TEACHIN.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/
 - Retrieve EURID, Base ID and firmware version info
 - Change the Base ID
 - Auto-reconnect: when the serial connection is lost, the gateway retries for up to 1 hour
+- **Gateway device**: the gateway itself is observable via `gateway.gateway_entities`. Connection status (`"connected"` / `"disconnected"` / `"reconnecting"`) and ERP1 telegram counters (received / sent, never reset on reconnect) are emitted as `Observation` objects through the same `add_observation_callback` pipeline. Newly registered callbacks immediately receive the current connection status.
 
 
 ## What works
@@ -90,8 +91,9 @@ See [TEACHIN.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/
 - `DeviceTaughtInCallback` with EURID + EEP on successful teach-in
 - Auto-reconnect on connection loss
 - EURID, Base ID, firmware version retrieval; Base ID change
+- Gateway device: connection status + telegram counters as observations (see [Gateway utilities](#gateway-utilities))
 - Parsing of all EEPs listed in [SUPPORTED_DEVICES.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/SUPPORTED_DEVICES.md)
-- Sending instructions for: D2-05-00 (covers), D2-20-02 (fan), A5-38-08 (dim gateway), D2-01 (switches/dimmers)
+- Sending instructions for: D2-05-00 (covers), D2-20-02 (fan), A5-38-08 (dim gateway + cover status receive), D2-01 (switches/dimmers)
 
 
 ## What is missing / not yet implemented
@@ -132,7 +134,7 @@ EEPMessage
     └── MetaDataObserver → emits rssi, last_seen, telegram_count
     │ _emit()
     ▼
-Observation(device_id, entity_id, values, timestamp, source)
+Observation(device, entity, values, timestamp, source)
     │ add_observation_callback
     ▼
 Application
