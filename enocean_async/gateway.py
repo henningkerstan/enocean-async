@@ -174,6 +174,9 @@ class Gateway:
         self.__reconnect_task: asyncio.Task | None = None
         self.__stopped: bool = False
 
+        # background tasks (teach-in response sends); tracked for clean cancellation on stop()
+        self.__background_tasks: set[asyncio.Task] = set()
+
         self.auto_reconnect: bool = True
         """If True (default), automatically attempt to reconnect when the connection is lost. Set to False to disable reconnection entirely."""
 
@@ -305,6 +308,9 @@ class Gateway:
         if self.__reconnect_task is not None:
             self.__reconnect_task.cancel()
             self.__reconnect_task = None
+        for task in self.__background_tasks:
+            task.cancel()
+        self.__background_tasks.clear()
         if self.__transport is not None:
             self.__transport.close()
             self.__transport = None
@@ -936,6 +942,12 @@ class Gateway:
 
         self.__process_erp1_telegram(erp1)
 
+    def __create_tracked_task(self, coro) -> None:
+        """Schedule a coroutine as a background task, tracking it for cancellation on stop()."""
+        task = asyncio.get_running_loop().create_task(coro)
+        self.__background_tasks.add(task)
+        task.add_done_callback(self.__background_tasks.discard)
+
     def __emit(self, callbacks: list[Callable], *args):
         """Emit arguments to all registered callbacks of the given type."""
         loop = asyncio.get_running_loop()
@@ -1226,7 +1238,7 @@ class Gateway:
                 f"UTE teach-in from {device_address}: EEP {ute.eep} not supported."
             )
             if response_expected:
-                asyncio.create_task(
+                self.__create_tracked_task(
                     self.__send_ute_response(
                         UTEMessage.response_for_query(
                             ute,
@@ -1251,7 +1263,7 @@ class Gateway:
             sender = self.__next_available_sender()
 
         if response_expected:
-            asyncio.create_task(
+            self.__create_tracked_task(
                 self.__send_ute_response(
                     UTEMessage.response_for_query(
                         ute,
@@ -1283,7 +1295,7 @@ class Gateway:
                 f"UTE teach-out from {device_address}: teach-out not allowed in this learning session; rejecting."
             )
             if response_expected:
-                asyncio.create_task(
+                self.__create_tracked_task(
                     self.__send_ute_response(
                         UTEMessage.response_for_query(
                             ute,
@@ -1299,7 +1311,7 @@ class Gateway:
                 f"UTE teach-out from {device_address}: device not registered; rejecting."
             )
             if response_expected:
-                asyncio.create_task(
+                self.__create_tracked_task(
                     self.__send_ute_response(
                         UTEMessage.response_for_query(
                             ute,
@@ -1315,7 +1327,7 @@ class Gateway:
             f"UTE teach-out from {device_address}: device successfully removed."
         )
         if response_expected:
-            asyncio.create_task(
+            self.__create_tracked_task(
                 self.__send_ute_response(
                     UTEMessage.response_for_query(
                         ute,
@@ -1410,7 +1422,7 @@ class Gateway:
                 f"4BS re-teach-in from {erp1.sender}: updated EEP of existing device registration to {eep}."
             )
 
-            asyncio.create_task(
+            self.__create_tracked_task(
                 self.__send_4bs_teach_in_response(
                     FourBSTeachInTelegram.response_for_query(
                         teach_in_telegram,
@@ -1435,7 +1447,7 @@ class Gateway:
             + "."
         )
 
-        asyncio.create_task(
+        self.__create_tracked_task(
             self.__send_4bs_teach_in_response(
                 FourBSTeachInTelegram.response_for_query(
                     teach_in_telegram, FourBSTeachInResult.SENDER_ID_STORED, sender
