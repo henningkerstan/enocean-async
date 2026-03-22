@@ -289,8 +289,9 @@ class Gateway:
                 f"Successfully connected to EnOcean module on {self.__port} at baudrate {self.__baudrate}"
             )
             await (
-                self.base_id
+                self.fetch_base_id()
             )  # ensure __base_id is populated so gateway observations can be emitted
+            await self.fetch_version_info()  # ensure __version_info is populated so gateway observations can be emitted
             self.__emit_gateway_observation(
                 "connection_status", Observable.CONNECTION_STATUS, "connected"
             )
@@ -318,21 +319,22 @@ class Gateway:
                 f"Serial connection to EnOcean module on {self.__port} closed"
             )
 
-    async def is_valid_sender(self, sender: SenderAddress) -> bool:
+    def is_valid_sender(self, sender: SenderAddress) -> bool:
         """Return ``True`` if *sender* is a valid sender for this gateway.
 
         Valid senders are the gateway's EURID and any ``BaseAddress`` in the
-        range ``base_id … base_id+127``.
+        range ``base_id … base_id+127``. Returns ``False`` if the gateway's
+        base ID or EURID is not yet cached (before ``start()``).
         """
-        if sender == await self.eurid:
+        if sender == self.eurid:
             return True
-        if isinstance(sender, BaseAddress):
-            offset = int(sender) - int(await self.base_id)
+        if isinstance(sender, BaseAddress) and self.base_id is not None:
+            offset = int(sender) - int(self.base_id)
             return 0 <= offset <= 127
         return False
 
     @property
-    async def sender_slots(self) -> dict[SenderAddress, list[EURID]]:
+    def sender_slots(self) -> dict[SenderAddress, list[EURID]]:
         """Return every valid sender address mapped to the list of devices using it.
 
         Keys are the gateway EURID and BaseID+0…+127.
@@ -344,10 +346,13 @@ class Gateway:
         Pass the chosen ``BaseAddress`` as ``sender_id`` to `start_learning`
         to override automatic allocation (the gateway EURID is a technically valid
         but poor choice as a learning sender).
+
+        Returns an empty dict if the gateway's base ID or EURID is not yet cached
+        (before ``start()``).
         """
-        base_id = await self.base_id
-        eurid = await self.eurid
-        base_number = int(base_id)
+        if self.base_id is None or self.eurid is None:
+            return {}
+        base_number = int(self.base_id)
 
         # Group registered devices by their assigned sender address
         occupied: dict[SenderAddress, list[EURID]] = {}
@@ -355,7 +360,7 @@ class Gateway:
             if device.sender is not None:
                 occupied.setdefault(device.sender, []).append(device.address)
 
-        senders: list[SenderAddress] = [eurid, base_id] + [
+        senders: list[SenderAddress] = [self.eurid, self.base_id] + [
             BaseAddress(base_number + i) for i in range(1, 128)
         ]
         return {s: occupied.get(s, []) for s in senders}
@@ -379,7 +384,7 @@ class Gateway:
             sender_id: Sender address used in UTE responses. Defaults to the gateway's base ID.
         """
 
-        base_id = await self.base_id
+        base_id = self.base_id
         if base_id is None:
             raise RuntimeError(
                 "Cannot start learning mode: gateway's base ID is not set. Ensure the gateway is properly connected and configured."
@@ -388,7 +393,7 @@ class Gateway:
         self.__is_learning = True
         self.__allow_teach_out = allow_teach_out
 
-        if sender_id is not None and not await self.is_valid_sender(sender_id):
+        if sender_id is not None and not self.is_valid_sender(sender_id):
             raise ValueError(
                 f"Invalid sender_id {sender_id} for learning mode. Must be a valid sender address for this gateway."
             )
@@ -522,7 +527,7 @@ class Gateway:
             if device.sender:
                 sender = device.sender
             else:
-                sender = await self.base_id
+                sender = self.base_id
                 if sender is not None:
                     # Backfill: device was registered before base ID was available
                     device.sender = sender
@@ -750,15 +755,18 @@ class Gateway:
     # Gateway properties and methods
     # ------------------------------------------------------------------
     @property
-    async def base_id(self) -> BaseAddress | None:
-        """Get the base ID of the connected EnOcean module."""
+    def base_id(self) -> BaseAddress | None:
+        """The cached base ID of the connected EnOcean module, or ``None`` before ``start()``."""
+        return self.__base_id
+
+    async def fetch_base_id(self) -> BaseAddress | None:
+        """Fetch and cache the base ID from the module. Returns the cached value immediately if already known."""
         if self.__base_id is not None:
             return self.__base_id
 
         if self.__transport is None:
             raise ConnectionError("Not connected to EnOcean module")
 
-        # Send GET ID base id request
         cmd = CommonCommandTelegram.CO_RD_IDBASE()
         result: SendResult = await self.send_esp3_packet(cmd.to_esp3_packet())
         response = result.response
@@ -793,8 +801,8 @@ class Gateway:
             raise ConnectionError("Not connected to EnOcean module")
 
         base_id_before_change = (
-            await self.base_id
-        )  # store previous base ID for error message in case the change failed
+            await self.fetch_base_id()
+        )  # populate cache if not yet done
 
         if new_base_id == base_id_before_change:
             raise ValueError("New base ID is the same as the current base ID")
@@ -829,7 +837,7 @@ class Gateway:
         self.__base_id_remaining_write_cycles = (
             None  # reset cached remaining write cycles as well
         )
-        reported_base_id = await self.base_id
+        reported_base_id = await self.fetch_base_id()
         if reported_base_id == new_base_id:
             return reported_base_id
         elif reported_base_id == base_id_before_change:
@@ -842,15 +850,18 @@ class Gateway:
             )
 
     @property
-    async def version_info(self) -> VersionInfo | None:
-        """Get the version information of the connected EnOcean module."""
+    def version_info(self) -> VersionInfo | None:
+        """The cached version information of the connected EnOcean module, or ``None`` before ``start()``."""
+        return self.__version_info
+
+    async def fetch_version_info(self) -> VersionInfo | None:
+        """Fetch and cache version info from the module. Returns the cached value immediately if already known."""
         if self.__version_info is not None:
             return self.__version_info
 
         if self.__transport is None:
             raise ConnectionError("Not connected to EnOcean module")
 
-        # Send GET VERSION request
         cmd = CommonCommandTelegram.CO_RD_VERSION()
         send_result = await self.send_esp3_packet(cmd.to_esp3_packet())
         response = send_result.response
@@ -885,20 +896,14 @@ class Gateway:
         return self.__version_info
 
     @property
-    async def base_id_remaining_write_cycles(self) -> int | None:
-        """Get the remaining write cycles for the base ID of the connected EnOcean module."""
-        if self.__base_id_remaining_write_cycles is not None:
-            return self.__base_id_remaining_write_cycles
-
-        await (
-            self.base_id
-        )  # base_id() will fetch the remaining write cycles as optional data
+    def base_id_remaining_write_cycles(self) -> int | None:
+        """The cached remaining base ID write cycles, or ``None`` before ``fetch_base_id()`` / ``start()``."""
         return self.__base_id_remaining_write_cycles
 
     @property
-    async def eurid(self) -> EURID | None:
-        """Get the EURID of the connected EnOcean module."""
-        return (await self.version_info).eurid
+    def eurid(self) -> EURID | None:
+        """The cached EURID of the connected EnOcean module, or ``None`` before ``start()``."""
+        return self.__version_info.eurid if self.__version_info else None
 
     # ------------------------------------------------------------------
     # Internal packet processing

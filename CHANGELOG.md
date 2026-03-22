@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.9.0] — 2026-03-22
+
+### Breaking changes
+- `gateway.base_id`, `gateway.eurid`, `gateway.version_info`, `gateway.base_id_remaining_write_cycles` are now plain sync properties returning the cached value (or `None` before `start()`). Remove all `await` from call sites; the values are guaranteed non-`None` after `start()` returns.
+- `gateway.is_valid_sender()` is now a sync method (`def`, not `async def`).
+- `gateway.sender_slots` is now a plain sync property (no `await` needed); returns `{}` before `start()`.
+
+### New features
+- `gateway.fetch_base_id()` and `gateway.fetch_version_info()` — new async methods to explicitly request and cache gateway info from the module; called automatically by `start()`
+
 ## [0.8.0] — 2026-03-22
 
 ### Breaking changes
