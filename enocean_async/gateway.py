@@ -168,6 +168,7 @@ class Gateway:
         # gateway device counters (ERP1 only; not reset on reconnect)
         self.__erp1_received: int = 0
         self.__erp1_sent: int = 0
+        self.__connection_status: str = "disconnected"
 
         # auto-reconnect
         self.__reconnect_task: asyncio.Task | None = None
@@ -234,8 +235,28 @@ class Gateway:
         self.__response_callbacks.append(cb)
 
     def add_observation_callback(self, cb: ObservationCallback) -> None:
-        """Add a callback that is called for every Observation emitted by a device observer."""
+        """Add a callback that is called for every Observation emitted by a device observer.
+
+        The current gateway connection status is replayed immediately to the new subscriber
+        (if the base ID is already known), so callers do not need to register before
+        ``start()`` to receive the initial state.
+        """
         self.__observation_callbacks.append(cb)
+        if self.__version_info is not None:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.call_soon(
+                    cb,
+                    Observation(
+                        device=self.eurid,
+                        entity="connection_status",
+                        values={Observable.CONNECTION_STATUS: self.__connection_status},
+                        timestamp=time.time(),
+                        source=ObservationSource.GATEWAY,
+                    ),
+                )
+            except RuntimeError:
+                pass  # no running event loop; next status change will deliver the state
 
     # ------------------------------------------------------------------
     # start and stop
@@ -656,6 +677,11 @@ class Gateway:
         """Emit a gateway-device observation if the base ID is known."""
         if self.__base_id is None:
             return
+        if observable is Observable.CONNECTION_STATUS:
+            self.__connection_status = str(value)
+            source = ObservationSource.GATEWAY
+        else:
+            source = ObservationSource.TELEGRAM
         self.__emit(
             self.__observation_callbacks,
             Observation(
@@ -663,7 +689,7 @@ class Gateway:
                 entity=entity,
                 values={observable: value},
                 timestamp=time.time(),
-                source=ObservationSource.GATEWAY,
+                source=source,
             ),
         )
 

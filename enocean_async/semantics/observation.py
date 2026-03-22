@@ -20,6 +20,9 @@ class ObservationSource(IntEnum):
     TIMER = 1
     """Observation was produced by an internal timer (no telegram received)."""
 
+    GATEWAY = 2
+    """Observation was produced by the gateway itself (connection status, counters)."""
+
 
 @dataclass
 class Observation:
