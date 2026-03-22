@@ -40,11 +40,11 @@ async def main(port: str):
     print("Starting gateway...")
     await gateway.start()
     print("EnOcean module is ready!")
-    print(f"EURID: {await gateway.eurid}")
+    print(f"EURID: {gateway.eurid}")
     print(
-        f"Base ID: {await gateway.base_id} (remaining write cycles: {await gateway.base_id_remaining_write_cycles})"
+        f"Base ID: {gateway.base_id} (remaining write cycles: {gateway.base_id_remaining_write_cycles})"
     )
-    version_info = await gateway.version_info
+    version_info = gateway.version_info
 
     print(f"App description: {version_info.app_description}")
     print(f"App version: {version_info.app_version.version_string}")
@@ -65,7 +65,7 @@ async def main(port: str):
         confirmation = input().strip().lower()
         if confirmation == "y":
             print(
-                f"Are you really sure? After this change, you will only be able to change this module's base ID {await gateway.base_id_remaining_write_cycles - 1} more times. Type 'yes' to confirm: ",
+                f"Are you really sure? After this change, you will only be able to change this module's base ID {gateway.base_id_remaining_write_cycles - 1} more times. Type 'yes' to confirm: ",
                 end="",
             )
             final_confirmation = input().strip().lower()

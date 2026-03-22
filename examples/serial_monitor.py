@@ -94,15 +94,15 @@ async def main(port: str) -> None:
     print("EnOcean module is ready!")
 
     # print module info
-    print(f"EURID: {await gateway.eurid}")
+    print(f"EURID: {gateway.eurid}")
     print(
-        f"Base ID: {await gateway.base_id} (remaining write cycles: {await gateway.base_id_remaining_write_cycles})"
+        f"Base ID: {gateway.base_id} (remaining write cycles: {gateway.base_id_remaining_write_cycles})"
     )
     print(
-        f"Valid sender addresses: {await gateway.eurid} and {await gateway.base_id}-{BaseAddress(int(await gateway.base_id) + 127)}"
+        f"Valid sender addresses: {gateway.eurid} and {gateway.base_id}-{BaseAddress(int(gateway.base_id) + 127)}"
     )
 
-    version_info = await gateway.version_info
+    version_info = gateway.version_info
 
     print(f"App description: {version_info.app_description}")
     print(f"App version: {version_info.app_version.version_string}")
