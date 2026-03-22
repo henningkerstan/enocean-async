@@ -285,7 +285,9 @@ EEP_D2_05_00 = EEPSpecification(
         ),
         Entity(
             id="repositioning_mode",
-            option_spec=EnumOptions(options=("direct", "up_first", "down_first")),
+            option_spec=EnumOptions(
+                options=("direct", "up_first", "down_first"), default="direct"
+            ),
             category=EntityCategory.CONFIG,
         ),
     ],

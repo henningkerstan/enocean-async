@@ -10,6 +10,7 @@ from ...semantics.instructions.cover import (
 )
 from ...semantics.instructions.dimmer import Dim, Switch
 from ...semantics.observable import Observable
+from ...semantics.observers.cover import cover_factory
 from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
 from ..message import EEPMessageType, RawEEPMessage, ValueWithContext
@@ -120,6 +121,35 @@ def _encode_set_cover_position(action: CoverSetPositionAndAngle) -> RawEEPMessag
     return msg
 
 
+def _resolve_cover_position(raw: dict, _scaled: dict) -> ValueWithContext | None:
+    """Extract position from incoming CMD=7 status (FUNC=0, PAF=1).
+
+    P1 carries current position directly as 0–100 %.
+    """
+    if raw.get("FUNC") != 0 or raw.get("PAF") != 1:
+        return None
+    p1 = raw.get("P1")
+    if p1 is None:
+        return None
+    return ValueWithContext(
+        name="Position", value=float(max(0, min(100, p1))), unit="%"
+    )
+
+
+def _resolve_cover_angle(raw: dict, _scaled: dict) -> ValueWithContext | None:
+    """Extract angle from incoming CMD=7 status (FUNC=0, PAF=1).
+
+    P2 bits[6:0] encode 0–45 representing 0–90°; scaled to 0–100 %.
+    """
+    if raw.get("FUNC") != 0 or raw.get("PAF") != 1:
+        return None
+    p2 = raw.get("P2")
+    if p2 is None:
+        return None
+    angle_pct = round((p2 & 0x7F) * 100.0 / 45.0, 1)
+    return ValueWithContext(name="Angle", value=angle_pct, unit="%")
+
+
 _DIMMER_ENTITY = Entity(
     id="light",
     observables=frozenset({Observable.OUTPUT_VALUE}),
@@ -128,26 +158,47 @@ _DIMMER_ENTITY = Entity(
 
 _DIM_MODE_SELECT = Entity(
     id="dimming_mode",
-    option_spec=EnumOptions(options=("relative", "absolute")),
+    option_spec=EnumOptions(options=("relative", "absolute"), default="relative"),
     category=EntityCategory.CONFIG,
 )
 
 _MIN_BRIGHTNESS = Entity(
     id="min_brightness",
-    option_spec=NumberRange(min_value=0.0, max_value=100.0, step=1.0, unit="%"),
+    option_spec=NumberRange(
+        min_value=0.0, max_value=100.0, step=1.0, unit="%", default=0.0
+    ),
     category=EntityCategory.CONFIG,
 )
 
 _MAX_BRIGHTNESS = Entity(
     id="max_brightness",
-    option_spec=NumberRange(min_value=0.0, max_value=100.0, step=1.0, unit="%"),
+    option_spec=NumberRange(
+        min_value=0.0, max_value=100.0, step=1.0, unit="%", default=100.0
+    ),
     category=EntityCategory.CONFIG,
 )
 
 _RAMP_TIME = Entity(
     id="ramp_time",
-    option_spec=NumberRange(min_value=0.0, max_value=255.0, step=1.0, unit="s"),
+    option_spec=NumberRange(
+        min_value=0.0, max_value=255.0, step=1.0, unit="s", default=0.0
+    ),
     category=EntityCategory.CONFIG,
+)
+
+_COVER_ENTITY = Entity(
+    id="cover",
+    observables=frozenset(
+        {Observable.POSITION, Observable.ANGLE, Observable.COVER_STATE}
+    ),
+    actions=frozenset(
+        {
+            Instructable.COVER_STOP,
+            Instructable.COVER_OPEN,
+            Instructable.COVER_CLOSE,
+            Instructable.COVER_SET_POSITION_AND_ANGLE,
+        }
+    ),
 )
 
 # Shared LRN bit field (4BS data telegram indicator)
@@ -420,6 +471,7 @@ EEP_A5_38_08 = EEPSpecification(
                     size=8,
                     range_min=0,
                     range_max=255,
+                    observable=Observable.POSITION,
                 ),
                 EEPDataField(
                     id="P2",
@@ -428,6 +480,7 @@ EEP_A5_38_08 = EEPSpecification(
                     size=8,
                     range_min=0,
                     range_max=255,
+                    observable=Observable.ANGLE,
                 ),
                 EEPDataField(
                     id="FUNC",
@@ -476,14 +529,20 @@ EEP_A5_38_08 = EEPSpecification(
     },
     entities=[
         _DIMMER_ENTITY,
+        _COVER_ENTITY,
         _DIM_MODE_SELECT,
         _MIN_BRIGHTNESS,
         _MAX_BRIGHTNESS,
         _RAMP_TIME,
     ],
-    observers=[scalar_factory(Observable.OUTPUT_VALUE, entity_id="light")],
+    observers=[
+        scalar_factory(Observable.OUTPUT_VALUE, entity_id="light"),
+        cover_factory(message_type_id=7),
+    ],
     semantic_resolvers={
         Observable.OUTPUT_VALUE: _resolve_edim,
+        Observable.POSITION: _resolve_cover_position,
+        Observable.ANGLE: _resolve_cover_angle,
     },
     encoders={
         Instructable.SWITCH: _encode_switch,

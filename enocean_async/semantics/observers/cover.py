@@ -21,6 +21,10 @@ COVER_WATCHDOG_TIMEOUT = 1.5
 class CoverObserver(Observer):
     """Observer that emits position and angle updates for blinds/cover devices."""
 
+    message_type_id: int = 4
+    """Message type ID to listen to (4 for D2-05-00 'Reply position and angle',
+    7 for A5-38-08 CMD=7 incoming status)."""
+
     _previous_position: int | None = field(default=None, init=False, repr=False)
     """Track previous position to derive cover state from movement."""
 
@@ -36,7 +40,10 @@ class CoverObserver(Observer):
         if not message.decoded:
             return
 
-        if message.message_type is None or message.message_type.id != 4:
+        if (
+            message.message_type is None
+            or message.message_type.id != self.message_type_id
+        ):
             return
 
         current_time = time()
@@ -131,8 +138,15 @@ class CoverObserver(Observer):
             return "stopped"  # No change in position, state remains the same
 
 
-def cover_factory() -> ObserverFactory:
-    """Return an ``ObserverFactory`` that creates a ``CoverObserver``."""
+def cover_factory(message_type_id: int = 4) -> ObserverFactory:
+    """Return an ``ObserverFactory`` that creates a ``CoverObserver``.
+
+    Args:
+        message_type_id: Message type to listen to.  Use ``4`` for D2-05-00
+            (``Reply position and angle``) and ``7`` for A5-38-08 CMD=7 status.
+    """
     return ObserverFactory(
-        factory=lambda addr, cb: CoverObserver(device_address=addr, on_observation=cb),
+        factory=lambda addr, cb: CoverObserver(
+            device_address=addr, on_observation=cb, message_type_id=message_type_id
+        ),
     )

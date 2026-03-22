@@ -53,6 +53,7 @@ class EnumOptions:
     """
 
     options: tuple[str, ...]
+    default: str | None = None
 
 
 @dataclass(frozen=True)
@@ -68,6 +69,7 @@ class NumberRange:
     max_value: float
     step: float = 1.0
     unit: str | None = None
+    default: float | None = None
 
 
 _METADATA_OBSERVABLES = frozenset(
