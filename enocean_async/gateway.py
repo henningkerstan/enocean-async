@@ -248,7 +248,7 @@ class Gateway:
                 loop.call_soon(
                     cb,
                     Observation(
-                        device=self.eurid,
+                        device=self.__version_info.eurid,
                         entity="connection_status",
                         values={Observable.CONNECTION_STATUS: self.__connection_status},
                         timestamp=time.time(),
