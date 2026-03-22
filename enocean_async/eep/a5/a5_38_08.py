@@ -144,6 +144,12 @@ _MAX_BRIGHTNESS = Entity(
     category=EntityCategory.CONFIG,
 )
 
+_RAMP_TIME = Entity(
+    id="ramp_time",
+    option_spec=NumberRange(min_value=0.0, max_value=255.0, step=1.0, unit="s"),
+    category=EntityCategory.CONFIG,
+)
+
 # Shared LRN bit field (4BS data telegram indicator)
 _LRNB = EEPDataField(
     id="LRNB",
@@ -468,7 +474,13 @@ EEP_A5_38_08 = EEPSpecification(
             ],
         ),
     },
-    entities=[_DIMMER_ENTITY, _DIM_MODE_SELECT, _MIN_BRIGHTNESS, _MAX_BRIGHTNESS],
+    entities=[
+        _DIMMER_ENTITY,
+        _DIM_MODE_SELECT,
+        _MIN_BRIGHTNESS,
+        _MAX_BRIGHTNESS,
+        _RAMP_TIME,
+    ],
     observers=[scalar_factory(Observable.OUTPUT_VALUE, entity_id="light")],
     semantic_resolvers={
         Observable.OUTPUT_VALUE: _resolve_edim,

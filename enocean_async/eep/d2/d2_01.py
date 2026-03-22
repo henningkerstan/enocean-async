@@ -696,15 +696,12 @@ _DIMMER_RESOLVERS = {
 # Static entity / observer helpers
 # ---------------------------------------------------------------------------
 
-_BASE_CH_ACT = frozenset(
-    {Instructable.SET_SWITCH_OUTPUT, Instructable.QUERY_ACTUATOR_STATUS}
-)
-_METERING_ACT = frozenset({Instructable.QUERY_ACTUATOR_MEASUREMENT})
+_BASE_CH_ACT = frozenset({Instructable.SET_SWITCH_OUTPUT})
 
 
 def _channel_entities(n: int, *, dimming: bool, metering: bool) -> list[Entity]:
     """Return all entities for channel *n* (1-indexed), one per observable."""
-    ch_actions = _BASE_CH_ACT | (_METERING_ACT if metering else frozenset())
+    ch_actions = _BASE_CH_ACT
     result = [
         Entity(
             id=f"ch{n}_switch_state",
@@ -743,6 +740,19 @@ def _entities(
             Entity(
                 id="pilot_wire_mode",
                 observables=frozenset({Observable.PILOT_WIRE_MODE}),
+            )
+        )
+    result.append(
+        Entity(
+            id="query_status",
+            actions=frozenset({Instructable.QUERY_ACTUATOR_STATUS}),
+        )
+    )
+    if metering:
+        result.append(
+            Entity(
+                id="query_measurement",
+                actions=frozenset({Instructable.QUERY_ACTUATOR_MEASUREMENT}),
             )
         )
     return result

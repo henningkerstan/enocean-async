@@ -1,5 +1,6 @@
 """D2-05-00: Blinds control for position and angle, type 0x00."""
 
+from ...semantics.entity import EntityCategory, EnumOptions
 from ...semantics.instructable import Instructable
 from ...semantics.instructions.cover import (
     CoverClose,
@@ -277,6 +278,15 @@ EEP_D2_05_00 = EEPSpecification(
                     Instructable.COVER_QUERY_POSITION_AND_ANGLE,
                 }
             ),
+        ),
+        Entity(
+            id="query_position",
+            actions=frozenset({Instructable.COVER_QUERY_POSITION_AND_ANGLE}),
+        ),
+        Entity(
+            id="repositioning_mode",
+            option_spec=EnumOptions(options=("direct", "up_first", "down_first")),
+            category=EntityCategory.CONFIG,
         ),
     ],
 )
