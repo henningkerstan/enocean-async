@@ -36,6 +36,10 @@ class Dim(Instruction):
     dim_value: float
     """Dimming value as a percentage: 0 = off, 100 = full brightness."""
 
+    use_relative: bool = True
+    """If True (default), encode as EDIMR=1 (relative, raw 0–100 maps directly).
+    If False, encode as EDIMR=0 (absolute, raw 0–255 maps to 0–100 %)."""
+
     ramp_time: int = 0
     """RMP field: ramping time in seconds (0 = immediately)."""
 

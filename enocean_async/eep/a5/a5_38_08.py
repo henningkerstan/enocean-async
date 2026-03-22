@@ -1,6 +1,6 @@
 """A5-38-08: Central command - gateway."""
 
-from ...semantics.entity import Entity
+from ...semantics.entity import Entity, EntityCategory
 from ...semantics.instructable import Instructable
 from ...semantics.instructions.cover import (
     CoverClose,
@@ -49,10 +49,16 @@ def _encode_dim(action: Dim) -> RawEEPMessage:
         sender=None,
         message_type=EEPMessageType(id=2, description="Dimming"),
     )
-    # dim_value is 0–100 %. Sent as relative (EDIMR=1): raw 0–100 maps directly.
-    msg.raw["EDIM"] = max(0, min(100, round(action.dim_value)))
+    # dim_value is 0–100 %.
+    # Relative (EDIMR=1): raw 0–100 maps directly.
+    # Absolute (EDIMR=0): raw 0–255 maps to 0–100 %.
+    if action.use_relative:
+        msg.raw["EDIM"] = max(0, min(100, round(action.dim_value)))
+        msg.raw["EDIMR"] = 1
+    else:
+        msg.raw["EDIM"] = max(0, min(255, round(action.dim_value / 100.0 * 255)))
+        msg.raw["EDIMR"] = 0
     msg.raw["RMP"] = action.ramp_time
-    msg.raw["EDIMR"] = 1  # relative
     msg.raw["STR"] = int(action.store)
     msg.raw["SW"] = int(action.switch_on)
     msg.raw["LRNB"] = 1  # data telegram (not teach-in)
@@ -118,6 +124,30 @@ _DIMMER_ENTITY = Entity(
     id="light",
     observables=frozenset({Observable.OUTPUT_VALUE}),
     actions=frozenset({Instructable.DIM, Instructable.SWITCH}),
+)
+
+_DIM_MODE_SELECT = Entity(
+    id="dimming_mode",
+    options=("relative", "absolute"),
+    category=EntityCategory.CONFIG,
+)
+
+_MIN_BRIGHTNESS = Entity(
+    id="min_brightness",
+    min_value=0.0,
+    max_value=100.0,
+    step=1.0,
+    unit="%",
+    category=EntityCategory.CONFIG,
+)
+
+_MAX_BRIGHTNESS = Entity(
+    id="max_brightness",
+    min_value=0.0,
+    max_value=100.0,
+    step=1.0,
+    unit="%",
+    category=EntityCategory.CONFIG,
 )
 
 # Shared LRN bit field (4BS data telegram indicator)
@@ -444,7 +474,7 @@ EEP_A5_38_08 = EEPSpecification(
             ],
         ),
     },
-    entities=[_DIMMER_ENTITY],
+    entities=[_DIMMER_ENTITY, _DIM_MODE_SELECT, _MIN_BRIGHTNESS, _MAX_BRIGHTNESS],
     observers=[scalar_factory(Observable.OUTPUT_VALUE, entity_id="light")],
     semantic_resolvers={
         Observable.OUTPUT_VALUE: _resolve_edim,
@@ -455,7 +485,7 @@ EEP_A5_38_08 = EEPSpecification(
         Instructable.COVER_STOP: _encode_cover_stop,
         Instructable.COVER_OPEN: _encode_cover_open,
         Instructable.COVER_CLOSE: _encode_cover_close,
-        Instructable.COVER_SET_POSITION: _encode_set_cover_position,
+        Instructable.COVER_SET_POSITION_AND_ANGLE: _encode_set_cover_position,
     },
     uses_addressed_sending=False,
 )

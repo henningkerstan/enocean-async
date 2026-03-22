@@ -12,9 +12,9 @@ class Instructable(StrEnum):
     """
 
     # Cover control (D2-05-00, A5-38-08 CMD 0x07)
-    COVER_SET_POSITION = "cover_set_position"
+    COVER_SET_POSITION_AND_ANGLE = "cover_set_position_and_angle"
     COVER_STOP = "cover_stop"
-    COVER_QUERY_POSITION = "cover_query_position"
+    COVER_QUERY_POSITION_AND_ANGLE = "cover_query_position_and_angle"
     COVER_OPEN = "cover_open"
     COVER_CLOSE = "cover_close"
 

@@ -9,15 +9,15 @@ These entries represent known physical products.
 |---|---|---|---|---|---|
 | Eltako | FABH65S | A5-08-01.ELTAKO | Wireless outdoor occupancy and brightness sensor | `supply_voltage`, `illumination`, `motion` | — |
 | Eltako | FAH65S | A5-06-01.ELTAKO | Wireless outdoor brightness sensor | `illumination` | — |
-| Eltako | FLD61 | A5-38-08 | PWM LED dimmer 12–36 V DC, up to 4 A | `light` | `switch`, `dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position` |
+| Eltako | FLD61 | A5-38-08 | PWM LED dimmer 12–36 V DC, up to 4 A | `light`, `dimming_mode`, `min_brightness`, `max_brightness` | `switch`, `dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle` |
 | Eltako | FT55 | F6-02-01 | Battery-less wireless wall switch | `a0`, `a1`, `b0`, `b1`, `ab0`, `ab1`, `a0b1`, `a1b0` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
-| Eltako | FUD61NPN | A5-38-08 | Wireless universal dimmer 230V | `light` | `switch`, `dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position` |
+| Eltako | FUD61NPN | A5-38-08 | Wireless universal dimmer 230V | `light`, `dimming_mode`, `min_brightness`, `max_brightness` | `switch`, `dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle` |
 | Hoppe Holding AG | SecuSignal | F6-10-00 | Wireless window handle | `window_state` | — |
 | Jung | ENO | F6-02-01 | Wireless wall switch | `a0`, `a1`, `b0`, `b1`, `ab0`, `ab1`, `a0b1`, `a1b0` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | NodOn | PIR-2-1-01 | A5-07-03 | Motion sensor | `supply_voltage`, `illumination`, `motion` | — |
 | NodOn | SIN-2-1-01 | D2-01-0F | Single channel relay switch | `ch1_switch_state`, `ch1_error_level` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | NodOn | SIN-2-2-01 | D2-01-12 | Dual channel relay switch | `ch1_switch_state`, `ch1_error_level`, `ch2_switch_state`, `ch2_error_level` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
-| NodOn | SIN-2-RS-01 | D2-05-00 | Roller shutter controller | `cover` (angle, cover_state, position) | `cover_set_position`, `cover_stop`, `cover_open`, `cover_close`, `cover_query_position` |
+| NodOn | SIN-2-RS-01 | D2-05-00 | Roller shutter controller | `cover` (angle, cover_state, position) | `cover_set_position_and_angle`, `cover_stop`, `cover_open`, `cover_close`, `cover_query_position_and_angle` |
 | Omnio | WS-CH-102 | F6-02-01 | Wireless wall switch | `a0`, `a1`, `b0`, `b1`, `ab0`, `ab1`, `a0b1`, `a1b0` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | Permundo GmbH | PSC234 | D2-01-09 | Wireless switch with power monitor | `ch1_switch_state`, `ch1_error_level`, `ch1_output_value`, `pilot_wire_mode` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | Trio 2 Sys | Wall Switch | F6-02-01 | Wireless wall switch | `a0`, `a1`, `b0`, `b1`, `ab0`, `ab1`, `a0b1`, `a1b0` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
@@ -105,7 +105,7 @@ These entries cover any device implementing the given EEP.
 | A5-12-02 | Automated meter reading (AMR), gas | `gas_volume`, `gas_flow` | — |
 | A5-12-03 | Automated meter reading (AMR), water | `water_volume`, `water_flow` | — |
 | A5-20-01 | HVAC component – battery powered actuator (BI-DIR) | `valve_position`, `temperature` | — |
-| A5-38-08 | Central command - gateway | `light` | `switch`, `dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position` |
+| A5-38-08 | Central command - gateway | `light`, `dimming_mode`, `min_brightness`, `max_brightness` | `switch`, `dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle` |
 | D2-01-00 | Electronic switches and dimmers with local control – Type 0x00 – 1 channel, switching + dimming | `ch1_switch_state`, `ch1_error_level`, `ch1_output_value` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | D2-01-01 | Electronic switches and dimmers with local control – Type 0x01 – 1 channel, switching | `ch1_switch_state`, `ch1_error_level` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | D2-01-02 | Electronic switches and dimmers with local control – Type 0x02 – 1 channel, switching + dimming + metering | `ch1_switch_state`, `ch1_error_level`, `ch1_output_value`, `ch1_energy`, `ch1_power` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
@@ -129,7 +129,7 @@ These entries cover any device implementing the given EEP.
 | D2-01-14 | Electronic switches and dimmers with local control – Type 0x14 – 8 channels, switching | `ch1_switch_state`, `ch1_error_level`, `ch2_switch_state`, `ch2_error_level`, `ch3_switch_state`, `ch3_error_level`, `ch4_switch_state`, `ch4_error_level`, `ch5_switch_state`, `ch5_error_level`, `ch6_switch_state`, `ch6_error_level`, `ch7_switch_state`, `ch7_error_level`, `ch8_switch_state`, `ch8_error_level` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | D2-01-15 | Electronic switches and dimmers with local control – Type 0x15 – 4 channels, switching | `ch1_switch_state`, `ch1_error_level`, `ch2_switch_state`, `ch2_error_level`, `ch3_switch_state`, `ch3_error_level`, `ch4_switch_state`, `ch4_error_level` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | D2-01-16 | Electronic switches and dimmers with local control – Type 0x16 – 2 channels, dimming with configurable limits | `ch1_switch_state`, `ch1_error_level`, `ch1_output_value`, `ch2_switch_state`, `ch2_error_level`, `ch2_output_value` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
-| D2-05-00 | Blinds control for position and angle, type 0x00 | `cover` (angle, cover_state, position) | `cover_set_position`, `cover_stop`, `cover_open`, `cover_close`, `cover_query_position` |
+| D2-05-00 | Blinds control for position and angle, type 0x00 | `cover` (angle, cover_state, position) | `cover_set_position_and_angle`, `cover_stop`, `cover_open`, `cover_close`, `cover_query_position_and_angle` |
 | D2-20-02 | Fan control, type 0x02 | `fan` | `set_fan_speed` |
 | F6-02-01 | Light and blind control - application style 1 | `a0`, `a1`, `b0`, `b1`, `ab0`, `ab1`, `a0b1`, `a1b0` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | F6-02-02 | Light and blind control - application style 2 | `a0`, `a1`, `b0`, `b1`, `ab0`, `ab1`, `a0b1`, `a1b0` (button_event: `pressed`, `clicked`, `held`, `released`) | — |

@@ -12,7 +12,7 @@ from .eep.id import EEP
 from .eep.manufacturer import Manufacturer
 from .gateway import DeviceTaughtInCallback, Gateway
 from .semantics.device_spec import DeviceSpec
-from .semantics.entity import Entity, EntityType
+from .semantics.entity import Entity, EntityCategory, EntityType
 from .semantics.instructable import Instructable
 from .semantics.instruction import Instruction
 from .semantics.instructions.cover import (
@@ -49,6 +49,7 @@ __all__ = [
     "DEVICE_TYPES",
     "device_type_for_eep",
     "Entity",
+    "EntityCategory",
     "EEP",
     "EEP_SPECIFICATIONS",
     "Manufacturer",

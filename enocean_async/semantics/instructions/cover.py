@@ -15,7 +15,7 @@ class CoverSetPositionAndAngle(Instruction):
     Pass ``None`` to leave the current value unchanged.
     """
 
-    action: ClassVar[Instructable] = Instructable.COVER_SET_POSITION
+    action: ClassVar[Instructable] = Instructable.COVER_SET_POSITION_AND_ANGLE
 
     position: int | None = None
     """Vertical position in percent (0–100), or None to keep the current position."""
@@ -41,7 +41,7 @@ class CoverStop(Instruction):
 class CoverQueryPositionAndAngle(Instruction):
     """Request the current position and angle from a cover actuator."""
 
-    action: ClassVar[Instructable] = Instructable.COVER_QUERY_POSITION
+    action: ClassVar[Instructable] = Instructable.COVER_QUERY_POSITION_AND_ANGLE
 
 
 @dataclass

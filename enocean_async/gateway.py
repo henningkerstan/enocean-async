@@ -32,7 +32,7 @@ from .protocol.esp3.protocol import EnOceanSerialProtocol3
 from .protocol.esp3.response import ResponseCode, ResponseTelegram
 from .protocol.version import VersionIdentifier, VersionInfo
 from .semantics.device_spec import DeviceSpec
-from .semantics.entity import Entity
+from .semantics.entity import Entity, EntityCategory
 from .semantics.instruction import Instruction
 from .semantics.observable import Observable
 from .semantics.observation import Observation, ObservationCallback
@@ -41,9 +41,21 @@ from .semantics.observers.metadata import MetaDataObserver
 type RSSI = int
 
 _METADATA_ENTITIES = [
-    Entity(id="rssi", observables=frozenset({Observable.RSSI})),
-    Entity(id="last_seen", observables=frozenset({Observable.LAST_SEEN})),
-    Entity(id="telegram_count", observables=frozenset({Observable.TELEGRAM_COUNT})),
+    Entity(
+        id="rssi",
+        observables=frozenset({Observable.RSSI}),
+        category=EntityCategory.DIAGNOSTIC,
+    ),
+    Entity(
+        id="last_seen",
+        observables=frozenset({Observable.LAST_SEEN}),
+        category=EntityCategory.DIAGNOSTIC,
+    ),
+    Entity(
+        id="telegram_count",
+        observables=frozenset({Observable.TELEGRAM_COUNT}),
+        category=EntityCategory.DIAGNOSTIC,
+    ),
 ]
 
 

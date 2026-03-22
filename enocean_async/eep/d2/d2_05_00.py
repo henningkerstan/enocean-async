@@ -35,7 +35,7 @@ _CMD_AT_OFFSET4 = EEPDataField(
 )
 
 
-def _encode_set_position(action: CoverSetPositionAndAngle) -> RawEEPMessage:
+def _encode_set_position_and_angle(action: CoverSetPositionAndAngle) -> RawEEPMessage:
     msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=1, description="Go to position and angle"),
@@ -64,19 +64,21 @@ def _encode_stop(action: CoverStop) -> RawEEPMessage:
 
 def _encode_open(action: CoverOpen) -> RawEEPMessage:
     """Open fully: encode as go-to-position 0%, keep current angle."""
-    return _encode_set_position(
+    return _encode_set_position_and_angle(
         CoverSetPositionAndAngle(position=0, angle=None, entity_id=action.entity_id)
     )
 
 
 def _encode_close(action: CoverClose) -> RawEEPMessage:
     """Close fully: encode as go-to-position 100%, keep current angle."""
-    return _encode_set_position(
+    return _encode_set_position_and_angle(
         CoverSetPositionAndAngle(position=100, angle=None, entity_id=action.entity_id)
     )
 
 
-def _encode_query_position(action: CoverQueryPositionAndAngle) -> RawEEPMessage:
+def _encode_query_position_and_angle(
+    action: CoverQueryPositionAndAngle,
+) -> RawEEPMessage:
     msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=3, description="Query position and angle"),
@@ -254,11 +256,11 @@ EEP_D2_05_00 = EEPSpecification(
     },
     observers=[cover_factory()],
     encoders={
-        Instructable.COVER_SET_POSITION: _encode_set_position,
+        Instructable.COVER_SET_POSITION_AND_ANGLE: _encode_set_position_and_angle,
         Instructable.COVER_STOP: _encode_stop,
         Instructable.COVER_OPEN: _encode_open,
         Instructable.COVER_CLOSE: _encode_close,
-        Instructable.COVER_QUERY_POSITION: _encode_query_position,
+        Instructable.COVER_QUERY_POSITION_AND_ANGLE: _encode_query_position_and_angle,
     },
     entities=[
         Entity(
@@ -268,11 +270,11 @@ EEP_D2_05_00 = EEPSpecification(
             ),
             actions=frozenset(
                 {
-                    Instructable.COVER_SET_POSITION,
+                    Instructable.COVER_SET_POSITION_AND_ANGLE,
                     Instructable.COVER_STOP,
                     Instructable.COVER_OPEN,
                     Instructable.COVER_CLOSE,
-                    Instructable.COVER_QUERY_POSITION,
+                    Instructable.COVER_QUERY_POSITION_AND_ANGLE,
                 }
             ),
         ),
