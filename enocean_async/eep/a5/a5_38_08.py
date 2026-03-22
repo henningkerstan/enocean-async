@@ -1,6 +1,6 @@
 """A5-38-08: Central command - gateway."""
 
-from ...semantics.entity import Entity, EntityCategory
+from ...semantics.entity import Entity, EntityCategory, EnumOptions, NumberRange
 from ...semantics.instructable import Instructable
 from ...semantics.instructions.cover import (
     CoverClose,
@@ -128,25 +128,19 @@ _DIMMER_ENTITY = Entity(
 
 _DIM_MODE_SELECT = Entity(
     id="dimming_mode",
-    options=("relative", "absolute"),
+    option_spec=EnumOptions(options=("relative", "absolute")),
     category=EntityCategory.CONFIG,
 )
 
 _MIN_BRIGHTNESS = Entity(
     id="min_brightness",
-    min_value=0.0,
-    max_value=100.0,
-    step=1.0,
-    unit="%",
+    option_spec=NumberRange(min_value=0.0, max_value=100.0, step=1.0, unit="%"),
     category=EntityCategory.CONFIG,
 )
 
 _MAX_BRIGHTNESS = Entity(
     id="max_brightness",
-    min_value=0.0,
-    max_value=100.0,
-    step=1.0,
-    unit="%",
+    option_spec=NumberRange(min_value=0.0, max_value=100.0, step=1.0, unit="%"),
     category=EntityCategory.CONFIG,
 )
 
