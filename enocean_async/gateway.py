@@ -675,7 +675,7 @@ class Gateway:
         self, entity: str, observable: Observable, value: object
     ) -> None:
         """Emit a gateway-device observation if the base ID is known."""
-        if self.__base_id is None:
+        if self.__version_info is None:
             return
         if observable is Observable.CONNECTION_STATUS:
             self.__connection_status = str(value)
@@ -685,7 +685,7 @@ class Gateway:
         self.__emit(
             self.__observation_callbacks,
             Observation(
-                device=self.__base_id,
+                device=self.__version_info.eurid,
                 entity=entity,
                 values={observable: value},
                 timestamp=time.time(),
