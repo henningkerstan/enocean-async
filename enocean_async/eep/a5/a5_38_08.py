@@ -40,6 +40,7 @@ def _encode_switch(action: Switch) -> RawEEPMessage:
     msg.raw["LCK"] = int(action.lock)
     msg.raw["DEL"] = int(action.delay)
     msg.raw["SW"] = int(action.switch_on)
+    msg.raw["LRNB"] = 1  # data telegram (not teach-in)
     return msg
 
 
@@ -48,13 +49,13 @@ def _encode_dim(action: Dim) -> RawEEPMessage:
         sender=None,
         message_type=EEPMessageType(id=2, description="Dimming"),
     )
-    # dim_value is 0–100 %. Always sent as absolute (EDIMR=0): raw 0–255.
-    raw_edim = max(0, min(255, round(action.dim_value / 100.0 * 255)))
-    msg.raw["EDIM"] = raw_edim
+    # dim_value is 0–100 %. Sent as relative (EDIMR=1): raw 0–100 maps directly.
+    msg.raw["EDIM"] = max(0, min(100, round(action.dim_value)))
     msg.raw["RMP"] = action.ramp_time
-    msg.raw["EDIMR"] = 0  # always absolute
+    msg.raw["EDIMR"] = 1  # relative
     msg.raw["STR"] = int(action.store)
     msg.raw["SW"] = int(action.switch_on)
+    msg.raw["LRNB"] = 1  # data telegram (not teach-in)
     return msg
 
 

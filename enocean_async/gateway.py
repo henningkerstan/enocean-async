@@ -470,7 +470,9 @@ class Gateway:
 
         message: EEPMessage = spec.encoders[command.action](command)
         message.sender = sender
-        message.destination = destination
+        # Only set a device-specific destination for addressed EEPs (e.g. VLD/D2).
+        if spec.uses_addressed_sending:
+            message.destination = destination
 
         erp1 = self.__eep_handlers[eep_id].encode(message)
         return await self.send_esp3_packet(erp1.to_esp3())

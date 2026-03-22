@@ -33,7 +33,7 @@ class Dim(Instruction):
 
     action: ClassVar[Instructable] = Instructable.DIM
 
-    dim_value: int
+    dim_value: float
     """Dimming value as a percentage: 0 = off, 100 = full brightness."""
 
     ramp_time: int = 0
