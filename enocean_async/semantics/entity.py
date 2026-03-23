@@ -34,7 +34,7 @@ class EntityType(StrEnum):
     BINARY = "binary"  # read-only two-state (motion, contact, switch status, …)
     SWITCH = "switch"  # controllable on/off relay
     COVER = "cover"  # position-controllable cover / blind
-    BUTTON = "button"  # inbound: multi-value physical button events (a0, b1, ab0, …)
+    BUTTON = "button"  # inbound: multi-value physical button events (a0, b1, …)
     DIMMER = "dimmer"  # controllable dimmer / PWM output
     FAN = "fan"  # fan speed control
     TRIGGER = "trigger"  # outbound: one-shot command / query trigger

@@ -52,16 +52,12 @@ class Entity:
 Examples as declared in EEP files:
 
 ```python
-# F6-02: four single-rocker entities + four combined-rocker entities
-# Combined presses are distinct telegram types (SA=1 flag), not timing coincidences.
-Entity(id="a0",   observables=frozenset({BUTTON_EVENT}))  # rocker A, down
-Entity(id="b0",   observables=frozenset({BUTTON_EVENT}))  # rocker B, down
-Entity(id="a1",   observables=frozenset({BUTTON_EVENT}))  # rocker A, up
-Entity(id="b1",   observables=frozenset({BUTTON_EVENT}))  # rocker B, up
-Entity(id="ab0",  observables=frozenset({BUTTON_EVENT}))  # A-down + B-down simultaneously
-Entity(id="ab1",  observables=frozenset({BUTTON_EVENT}))  # A-up   + B-up   simultaneously
-Entity(id="a0b1", observables=frozenset({BUTTON_EVENT}))  # A-down + B-up   simultaneously
-Entity(id="a1b0", observables=frozenset({BUTTON_EVENT}))  # A-up   + B-down simultaneously
+# F6-02: four single-rocker entities
+# Simultaneous two-button presses (SA=1) fire two atomic events with the same timestamp.
+Entity(id="a0", observables=frozenset({BUTTON_EVENT}))  # rocker A, down
+Entity(id="b0", observables=frozenset({BUTTON_EVENT}))  # rocker B, down
+Entity(id="a1", observables=frozenset({BUTTON_EVENT}))  # rocker A, up
+Entity(id="b1", observables=frozenset({BUTTON_EVENT}))  # rocker B, up
 
 # A5-04: two independent sensor entities (separate concerns)
 Entity(id="temperature", observables=frozenset({TEMPERATURE}))

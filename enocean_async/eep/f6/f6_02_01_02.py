@@ -66,10 +66,6 @@ _F6_02_ENTITIES = [
     Entity(id="a1", observables=frozenset({Observable.BUTTON_EVENT})),
     Entity(id="b0", observables=frozenset({Observable.BUTTON_EVENT})),
     Entity(id="b1", observables=frozenset({Observable.BUTTON_EVENT})),
-    Entity(id="ab0", observables=frozenset({Observable.BUTTON_EVENT})),
-    Entity(id="ab1", observables=frozenset({Observable.BUTTON_EVENT})),
-    Entity(id="a0b1", observables=frozenset({Observable.BUTTON_EVENT})),
-    Entity(id="a1b0", observables=frozenset({Observable.BUTTON_EVENT})),
 ]
 
 # Define all F6-02-xx variants using the shared datafields structure

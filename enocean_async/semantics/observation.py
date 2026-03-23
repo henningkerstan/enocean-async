@@ -45,7 +45,7 @@ class Observation:
 
     For single-entity devices this is the observable's string value (``observable.value``).
     For multi-channel devices (D2-01) or multi-button devices (F6-02) it encodes the
-    channel or button ID (e.g. ``"3"``, ``"ab0"``).
+    channel or button ID (e.g. ``"3"``, ``"a0"``).
     """
 
     values: dict[Observable, Any]
