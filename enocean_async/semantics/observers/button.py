@@ -87,9 +87,12 @@ class ButtonObserver(Observer):
         if button_id in self._release_timers:
             del self._release_timers[button_id]
 
-    def _button_pressed(self, button_id: str) -> None:
+    def _button_pressed(
+        self, button_id: str, current_time: float | None = None
+    ) -> None:
         """Handle a button press."""
-        current_time = time()
+        if current_time is None:
+            current_time = time()
         loop = asyncio.get_running_loop()
 
         # if button was held, emit a `released` event before emitting the new `pressed` event;
@@ -198,22 +201,6 @@ class F6_02_01_02_ButtonObserver(ButtonObserver):
     Handles R1/EB/R2/SA fields from F6-02-01 and F6-02-02 telegrams.
     """
 
-    def _combine_button_ids(self, first_id: str, second_id: str) -> str:
-        if "unknown" in (first_id, second_id):
-            return "unknown"
-        if first_id == second_id:
-            return first_id
-        pair = {first_id, second_id}
-        if pair == {"a0", "b0"}:
-            return "ab0"
-        if pair == {"a1", "b1"}:
-            return "ab1"
-        if pair == {"a0", "b1"}:
-            return "a0b1"
-        if pair == {"a1", "b0"}:
-            return "a1b0"
-        return "".join(sorted(pair))
-
     def _decode_impl(self, message: EEPMessage) -> None:
         if not {"R1", "EB", "R2", "SA"}.issubset(message.decoded):
             return
@@ -226,11 +213,9 @@ class F6_02_01_02_ButtonObserver(ButtonObserver):
         current_time = time()
 
         if eb == "pressed" and r1 is not None:
-            if sa == "2nd action valid" and r2 is not None:
-                combo_id = self._combine_button_ids(r1, r2)
-                self._button_pressed(button_id=combo_id)
-            else:
-                self._button_pressed(button_id=r1)
+            self._button_pressed(button_id=r1, current_time=current_time)
+            if sa == "2nd action valid" and r2 is not None and r2 != r1:
+                self._button_pressed(button_id=r2, current_time=current_time)
         elif eb == "released":
             for button_id in list(self._last_pressed_timestamps.keys()):
                 self._button_released(button_id=button_id, current_time=current_time)
@@ -242,9 +227,10 @@ class F6_02_01_02_ButtonObserver(ButtonObserver):
 def f6_button_factory() -> ObserverFactory:
     """Return an ``ObserverFactory`` that creates an ``F6_02_01_02_ButtonObserver``.
 
-    Emits ``Observable.BUTTON_EVENT`` state changes with the button ID (``"a0"``, ``"b1"``,
-    ``"ab0"``, …) as ``Observation.entity`` and the event type (``"clicked"``, ``"held"``,
-    ``"pressed"``, ``"released"``) as the value in ``values``.
+    Emits ``Observable.BUTTON_EVENT`` state changes with the button ID (``"a0"``, ``"b1"``, …)
+    as ``Observation.entity`` and the event type (``"clicked"``, ``"held"``, ``"pressed"``,
+    ``"released"``) as the value in ``values``. Simultaneous two-button presses fire two
+    separate atomic events with the same timestamp.
     """
     return ObserverFactory(
         factory=lambda addr, cb: F6_02_01_02_ButtonObserver(
