@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.10.0] — 2026-03-23
+
+### Breaking changes
+- **F6-02 simultaneous button presses**: combo entity IDs (`ab0`, `ab1`, `a0b1`, `a1b0`) are removed. A two-button press (SA=1) now fires two separate atomic `PRESSED` events — one for each button (`a0`/`a1`/`b0`/`b1`) — with identical timestamps. Update any callback logic that matched on combo entity IDs.
+
 ## [0.9.0] — 2026-03-22
 
 ### Breaking changes
