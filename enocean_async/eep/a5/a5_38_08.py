@@ -17,19 +17,31 @@ from ..message import EEPMessageType, RawEEPMessage, ValueWithContext
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram
 
 
-def _resolve_edim(raw: dict, _scaled: dict) -> ValueWithContext | None:
-    """Convert EDIM raw value to a percentage using EDIMR to select the scale."""
+def _resolve_edim(raw: dict, _scaled: dict, config: dict) -> ValueWithContext | None:
+    """Convert EDIM raw value to a percentage, applying inverse brightness scaling.
+
+    Forward (send): scaled_pct = min_b + (max_b - min_b) * dim_value / 100
+    Inverse (receive): dim_value = (scaled_pct - min_b) / (max_b - min_b) * 100
+
+    EDIMR=0 (absolute): raw 0–255 → scaled_pct 0–100 → dim_value via inverse scaling
+    EDIMR=1 (relative): raw 0–100 → scaled_pct 0–100 → dim_value via inverse scaling
+    """
     edim = raw.get("EDIM")
     edimr = raw.get("EDIMR")
     if edim is None or edimr is None:
         return None
-    # EDIMR=1 (relative): raw 0–100 maps directly to 0–100 %
-    # EDIMR=0 (absolute): raw 0–255 maps to 0–100 %
     if edimr == 1:
-        pct = float(edim)
+        scaled_pct = float(edim)
     else:
-        pct = edim * 100.0 / 255.0
-    return ValueWithContext(name="Dimming value", value=round(pct, 1), unit="%")
+        scaled_pct = edim * 100.0 / 255.0
+    min_b: float = config.get("min_brightness", 0.0)
+    max_b: float = config.get("max_brightness", 100.0)
+    span = max_b - min_b
+    if span == 0:
+        dim_value = 0.0
+    else:
+        dim_value = (scaled_pct - min_b) / span * 100.0
+    return ValueWithContext(name="Dimming value", value=round(dim_value, 1), unit="%")
 
 
 def _encode_switch(action: Switch) -> RawEEPMessage:
@@ -135,7 +147,9 @@ def _encode_set_cover_position(action: CoverSetPositionAndAngle) -> RawEEPMessag
     return msg
 
 
-def _resolve_cover_position(raw: dict, _scaled: dict) -> ValueWithContext | None:
+def _resolve_cover_position(
+    raw: dict, _scaled: dict, _config: dict
+) -> ValueWithContext | None:
     """Extract position from incoming CMD=7 status (FUNC=0, PAF=1).
 
     P1 carries current position directly as 0–100 %.
@@ -150,7 +164,9 @@ def _resolve_cover_position(raw: dict, _scaled: dict) -> ValueWithContext | None
     )
 
 
-def _resolve_cover_angle(raw: dict, _scaled: dict) -> ValueWithContext | None:
+def _resolve_cover_angle(
+    raw: dict, _scaled: dict, _config: dict
+) -> ValueWithContext | None:
     """Extract angle from incoming CMD=7 status (FUNC=0, PAF=1).
 
     P2 bits[6:0] encode 0–45 representing 0–90°; scaled to 0–100 %.

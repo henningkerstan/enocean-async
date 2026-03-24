@@ -11,7 +11,7 @@ class EEPHandler:
     def __init__(self, eep: EEPSpecification):
         self.__eep = eep
 
-    def decode(self, telegram: ERP1Telegram) -> EEPMessage:
+    def decode(self, telegram: ERP1Telegram, config: dict | None = None) -> EEPMessage:
         """Convert an ERP1Telegram into an EEPMessage."""
 
         msg = EEPMessage(
@@ -89,8 +89,9 @@ class EEPHandler:
                 msg.values[field.observable] = msg.decoded[field.id]
 
         # Fourth pass: semantic resolvers — combine multiple fields into a single entity value
+        cfg = config or {}
         for observable, resolver in self.__eep.semantic_resolvers.items():
-            result = resolver(msg.raw, msg.decoded)
+            result = resolver(msg.raw, msg.decoded, cfg)
             if result is not None:
                 msg.values[observable] = result
 
@@ -148,6 +149,8 @@ class EEPHandler:
 
         return erp1
 
-    def __call__(self, telegram: ERP1Telegram) -> EEPMessage:
+    def __call__(
+        self, telegram: ERP1Telegram, config: dict | None = None
+    ) -> EEPMessage:
         """Allow decoder instances to be called like functions."""
-        return self.decode(telegram)
+        return self.decode(telegram, config)

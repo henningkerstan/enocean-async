@@ -10,7 +10,7 @@ from ..profile import EEPDataField, EEPSpecification, EEPTelegram, Entity
 
 
 def _fan_speed_resolver(
-    raw: dict[str, int], scaled: dict[str, ValueWithContext]
+    raw: dict[str, int], scaled: dict[str, ValueWithContext], _config: dict
 ) -> ValueWithContext | None:
     """Return a numeric fan-speed value (0–100 %) from the fan status telegram.
 

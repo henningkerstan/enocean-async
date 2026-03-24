@@ -1059,9 +1059,11 @@ class Gateway:
         # If we cannot find a known device for either the sender or the destination, we cannot determine the EEP ID for this telegram, so we emit a parsing failed message and return.
         # If we can find a known device for either the sender or the destination, we use that device's EEP ID for further processing.
         eep_id: EEP
+        device_config: dict
         sender_device = self.__devices.get(erp1.sender)
         if sender_device is not None:
             eep_id = sender_device.eep
+            device_config = sender_device.config
         else:
             if erp1.destination is None or erp1.destination.is_broadcast():
                 msg = (
@@ -1087,6 +1089,7 @@ class Gateway:
                 "is known, using EEP ID of destination for EEP decoding."
             )
             eep_id = destination_device.eep
+            device_config = destination_device.config
 
         if eep_id not in self.__eep_handlers:
             self._logger.debug(
@@ -1099,7 +1102,7 @@ class Gateway:
             return
 
         try:
-            eep_message = self.__eep_handlers[eep_id](erp1)
+            eep_message = self.__eep_handlers[eep_id](erp1, device_config)
             self.__process_eep_message(eep_message)
         except Exception as e:
             self._logger.debug(f"Failed to decode ERP1 telegram to EEP message: {e}")

@@ -17,7 +17,7 @@ def _compute_mr_scale_max(raw_values: dict[str, int]) -> float:
 
 def _cumulative_resolver(unit: str | None):
     def resolver(
-        raw: dict[str, int], scaled: dict[str, ValueWithContext]
+        raw: dict[str, int], scaled: dict[str, ValueWithContext], _config: dict
     ) -> ValueWithContext | None:
         if raw.get("DT") != 0:
             return None
@@ -33,7 +33,7 @@ def _cumulative_resolver(unit: str | None):
 
 def _current_resolver(unit: str | None):
     def resolver(
-        raw: dict[str, int], scaled: dict[str, ValueWithContext]
+        raw: dict[str, int], scaled: dict[str, ValueWithContext], _config: dict
     ) -> ValueWithContext | None:
         if raw.get("DT") != 1:
             return None
