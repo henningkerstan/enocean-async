@@ -45,19 +45,33 @@ def _encode_switch(action: Switch) -> RawEEPMessage:
     return msg
 
 
-def _encode_dim(action: Dim) -> RawEEPMessage:
+def _encode_dim(action: Dim, options: dict) -> RawEEPMessage:
     msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=2, description="Dimming"),
     )
-    # dim_value is 0–100 %.
-    # Relative (EDIMR=1): raw 0–100 maps directly.
-    # Absolute (EDIMR=0): raw 0–255 maps to 0–100 %.
+    # dim_value, min_brightness, and max_brightness are all 0–100 %.
+    # Scale dim_value into [min_b, max_b] first; then encode to the wire range:
+    #   Relative (EDIMR=1): wire 0–100 (already in %)
+    #   Absolute (EDIMR=0): wire 0–255
+    #
+    # Examples with min_brightness=20, max_brightness=80:
+    #   dim=  0 % → scaled= 20 % → absolute EDIM=  51,  relative EDIM= 20
+    #   dim= 50 % → scaled= 50 % → absolute EDIM= 128,  relative EDIM= 50
+    #   dim=100 % → scaled= 80 % → absolute EDIM= 204,  relative EDIM= 80
+    #
+    # Examples with defaults (min=0, max=100):
+    #   dim=  0 % → scaled=  0 % → absolute EDIM=   0,  relative EDIM=  0
+    #   dim= 50 % → scaled= 50 % → absolute EDIM= 128,  relative EDIM= 50
+    #   dim=100 % → scaled=100 % → absolute EDIM= 255,  relative EDIM=100
+    min_b: float = options.get("min_brightness", 0.0)
+    max_b: float = options.get("max_brightness", 100.0)
+    scaled_pct = min_b + (max_b - min_b) * action.dim_value / 100.0
     if action.use_relative:
-        msg.raw["EDIM"] = max(0, min(100, round(action.dim_value)))
+        msg.raw["EDIM"] = max(0, min(100, round(scaled_pct)))
         msg.raw["EDIMR"] = 1
     else:
-        msg.raw["EDIM"] = max(0, min(255, round(action.dim_value / 100.0 * 255)))
+        msg.raw["EDIM"] = max(0, min(255, round(scaled_pct / 100.0 * 255)))
         msg.raw["EDIMR"] = 0
     msg.raw["RMP"] = action.ramp_time
     msg.raw["STR"] = int(action.store)
@@ -545,12 +559,13 @@ EEP_A5_38_08 = EEPSpecification(
         Observable.ANGLE: _resolve_cover_angle,
     },
     encoders={
-        Instructable.SWITCH: _encode_switch,
+        Instructable.SWITCH: lambda a, _: _encode_switch(a),
         Instructable.DIM: _encode_dim,
-        Instructable.COVER_STOP: _encode_cover_stop,
-        Instructable.COVER_OPEN: _encode_cover_open,
-        Instructable.COVER_CLOSE: _encode_cover_close,
-        Instructable.COVER_SET_POSITION_AND_ANGLE: _encode_set_cover_position,
+        Instructable.COVER_STOP: lambda a, _: _encode_cover_stop(a),
+        Instructable.COVER_OPEN: lambda a, _: _encode_cover_open(a),
+        Instructable.COVER_CLOSE: lambda a, _: _encode_cover_close(a),
+        Instructable.COVER_SET_POSITION_AND_ANGLE: lambda a,
+        _: _encode_set_cover_position(a),
     },
     uses_addressed_sending=False,
 )

@@ -626,9 +626,9 @@ def _encode_query_measurement(action: QueryActuatorMeasurement) -> RawEEPMessage
 
 
 _COMMAND_ENCODERS = {
-    Instructable.SET_SWITCH_OUTPUT: _encode_set_output,
-    Instructable.QUERY_ACTUATOR_STATUS: _encode_query_status,
-    Instructable.QUERY_ACTUATOR_MEASUREMENT: _encode_query_measurement,
+    Instructable.SET_SWITCH_OUTPUT: lambda a, _: _encode_set_output(a),
+    Instructable.QUERY_ACTUATOR_STATUS: lambda a, _: _encode_query_status(a),
+    Instructable.QUERY_ACTUATOR_MEASUREMENT: lambda a, _: _encode_query_measurement(a),
 }
 
 

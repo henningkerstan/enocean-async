@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 import logging
 import time
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import serial_asyncio_fast as serial_asyncio
 
@@ -539,7 +539,7 @@ class Gateway:
                 "Could not determine sender address; pass sender= explicitly or connect first"
             )
 
-        message: EEPMessage = spec.encoders[command.action](command)
+        message: EEPMessage = spec.encoders[command.action](command, device.options)
         message.sender = sender
         # Only set a device-specific destination for addressed EEPs (e.g. VLD/D2).
         if spec.uses_addressed_sending:
@@ -611,10 +611,15 @@ class Gateway:
         device_type: DeviceType,
         sender: SenderAddress | None = None,
         name: str | None = None,
+        options: dict[str, Any] | None = None,
     ) -> None:
         """Register a device with its DeviceType (EEP + optional manufacturer/model).
 
         This allows the gateway to recognize incoming messages from this device and decode them according to the registered EEP (if a handler for that EEP is found).
+
+        Args:
+            options: Per-device configuration values keyed by entity ID (e.g. ``{"min_brightness": 20.0}``).
+                     Missing keys are filled from the EEP spec's entity ``option_spec.default`` values.
         """
         if address in self.__devices:
             self._logger.warning(
@@ -661,6 +666,15 @@ class Gateway:
 
         eep_spec = EEP_SPECIFICATIONS[eep]
 
+        # populate device options: EEP defaults first, then caller overrides
+        device.options = {
+            e.id: e.option_spec.default
+            for e in eep_spec.entities
+            if e.option_spec is not None and e.option_spec.default is not None
+        }
+        if options:
+            device.options.update(options)
+
         # build observer list from EEP observers
         if not eep_spec.observers:
             self._logger.debug(
@@ -677,6 +691,17 @@ class Gateway:
         self._logger.debug(
             f"Initialized device {address} with {len(device.capabilities)} capabilities"
         )
+
+    def set_device_option(self, address: EURID, entity_id: str, value: Any) -> None:
+        """Update a single per-device option value (e.g. ``"min_brightness"``, ``"max_brightness"``).
+
+        Raises:
+            ValueError: If the device is not registered.
+        """
+        device = self.__devices.get(address)
+        if device is None:
+            raise ValueError(f"Unknown device {address}")
+        device.options[entity_id] = value
 
     def __on_observation(self, observation: Observation) -> None:
         """Internal callback forwarding observer Observations to registered callbacks."""

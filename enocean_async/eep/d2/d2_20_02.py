@@ -164,7 +164,7 @@ EEP_D2_20_02 = EEPSpecification(
         ),
     },
     encoders={
-        Instructable.SET_FAN_SPEED: _encode_set_fan_speed,
+        Instructable.SET_FAN_SPEED: lambda a, _: _encode_set_fan_speed(a),
     },
     semantic_resolvers={Observable.FAN_SPEED: _fan_speed_resolver},
     observers=[scalar_factory(Observable.FAN_SPEED, entity_id="fan")],

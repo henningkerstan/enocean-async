@@ -257,11 +257,13 @@ EEP_D2_05_00 = EEPSpecification(
     },
     observers=[cover_factory()],
     encoders={
-        Instructable.COVER_SET_POSITION_AND_ANGLE: _encode_set_position_and_angle,
-        Instructable.COVER_STOP: _encode_stop,
-        Instructable.COVER_OPEN: _encode_open,
-        Instructable.COVER_CLOSE: _encode_close,
-        Instructable.COVER_QUERY_POSITION_AND_ANGLE: _encode_query_position_and_angle,
+        Instructable.COVER_SET_POSITION_AND_ANGLE: lambda a,
+        _: _encode_set_position_and_angle(a),
+        Instructable.COVER_STOP: lambda a, _: _encode_stop(a),
+        Instructable.COVER_OPEN: lambda a, _: _encode_open(a),
+        Instructable.COVER_CLOSE: lambda a, _: _encode_close(a),
+        Instructable.COVER_QUERY_POSITION_AND_ANGLE: lambda a,
+        _: _encode_query_position_and_angle(a),
     },
     entities=[
         Entity(
