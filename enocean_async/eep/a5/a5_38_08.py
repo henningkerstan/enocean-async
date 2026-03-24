@@ -98,7 +98,7 @@ def _encode_dim(action: Dim, config: dict) -> RawEEPMessage:
     )
     msg.raw["RMP"] = max(0, min(255, ramp))
     store = (
-        action.store if action.store is not None else bool(config.get("store", False))
+        action.store if action.store is not None else config.get("store", "no") == "yes"
     )
     msg.raw["STR"] = int(store)
     msg.raw["SW"] = int(action.switch_on)
@@ -232,7 +232,7 @@ _RAMP_TIME = Entity(
 
 _STORE = Entity(
     id="store",
-    config_spec=BoolOption(default=False),
+    config_spec=BoolOption(),
     category=EntityCategory.CONFIG,
 )
 

@@ -54,6 +54,21 @@ gateway.add_device(address=EURID("01:23:45:67"), device_type=nodon_shutter)
 
 `device_type_for_eep(eep)` raises `KeyError` for unsupported EEPs. `DEVICE_TYPES` is a `dict[str, DeviceType]` keyed by `DeviceType.id`, containing generic entries (one per supported EEP, `manufacturer=None`) and manufacturer-specific entries (known physical products). Each `DeviceType` has a stable `id` string in `NAMESPACE/CODE` format (e.g. `"EEP/D2-05-00"`, `"NODON/SIN-2-RS-01"`).
 
+#### Per-device configuration
+
+Devices support per-device runtime config values (brightness limits, ramp time, etc.). Defaults are populated automatically from the EEP spec at `add_device()` time and can be overridden at registration or updated later:
+
+```python
+# Override at registration time (other keys keep EEP defaults)
+gateway.add_device(address=eurid, device_type=...,
+                   config={"min_brightness": 20.0, "max_brightness": 80.0})
+
+# Update at runtime
+gateway.set_device_config(eurid, "ramp_time", 5)
+```
+
+Config values are automatically applied in the send path (encoders) and the receive path (semantic resolvers). See [DEVICE_OPTIONS.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/DEVICE_OPTIONS.md) for details.
+
 `EURID`, `BaseAddress`, and `Address` all accept an `int`, a colon-separated hex string (`"01:23:45:67"`), or a 4-byte sequence (`bytes`, `bytearray`, `list[int]`). Use `int(addr)` and `str(addr)` for numeric/string conversion.
 
 ### Learning / teach-in
@@ -147,7 +162,7 @@ Application
     │ gateway.send_command(destination, command=SetCoverPosition(position=75))
     ▼
 Instruction subclass  (typed dataclass with ClassVar[Instructable] action)
-    │ spec.encoders[command.action](command)
+    │ spec.encoders[command.action](command, device.config)
     ▼
 EEPMessage
   .message_type  ← selects which telegram type to encode

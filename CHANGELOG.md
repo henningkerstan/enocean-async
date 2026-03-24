@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.11.0] — 2026-03-24
+
+### Breaking changes
+- **`Device.options` → `Device.config`**: the per-device runtime config dict is now `device.config`; update all read / write call sites.
+- **`Entity.option_spec` → `Entity.config_spec`**: the EEP-level config spec field is renamed; update any code that accesses this attribute directly.
+- **`EntityType.OPTION_ENUM` → `EntityType.CONFIG_ENUM`** (value `"config_enum"`) and **`EntityType.OPTION_NUMBER` → `EntityType.CONFIG_NUMBER`** (value `"config_number"`): update any code matching on these enum members or their string values.
+- **`Gateway.set_device_option()` → `Gateway.set_device_config()`**: rename call sites.
+- **`Gateway.add_device(options=...)` → `Gateway.add_device(config=...)`**: rename keyword argument.
+- **`SemanticResolver` signature extended**: `(raw, scaled) → value` becomes `(raw, scaled, config) → value`; all custom resolver functions must accept a third `config: dict` positional argument (use `_config` if unused).
+- **`Dim.ramp_time`** default changed from `0` to `None` (sentinel for "use device config"). Explicit `0` still means "ramp immediately"; `None` (the new default) defers to device config `"ramp_time"` (falls back to `0`). Code that relied on the old `0` default continues to work via config fallback, but typed call sites that previously passed `ramp_time=0` explicitly are unaffected.
+- **`Dim.store`** default changed from `False` to `None` (sentinel for "use device config"). Explicit `False`/`True` still works; `None` (the new default) defers to device config `"store"` (falls back to `False`).
+
+### New features
+- **`BoolOption(default=False) → EnumOptions`** — convenience factory exported from `enocean_async`; shorthand for `EnumOptions(options=("no", "yes"), default="yes" if default else "no")`.
+- **A5-38-08 `store` config entity**: `Entity(id="store", config_spec=BoolOption(), category=CONFIG)` added to the EEP spec; `"store"` is now auto-populated in `Device.config` at `add_device()` time (default `"no"`). The `_encode_dim` encoder maps `"yes"` → `STR=1`, `"no"` → `STR=0`.
+- **Inverse brightness scaling in observe path**: A5-38-08 `_resolve_edim` now applies the inverse of the `min_brightness` / `max_brightness` scaling used when sending, so `Observable.OUTPUT_VALUE` is always reported in the caller's 0–100 % range regardless of brightness limits.
+- **`EEPHandler.decode(telegram, config=None)`**: the optional `config: dict | None` argument is forwarded to all semantic resolvers; the gateway automatically passes the sender device's `Device.config`.
+
+### Internal / maintenance
+- All built-in semantic resolvers updated to the three-argument `(raw, scaled, config)` signature.
+
+
 ## [0.10.0] — 2026-03-23
 
 ### Breaking changes
