@@ -16,9 +16,9 @@ class Device:
     name: str
     sender: SenderAddress | None = None
     capabilities: list[Observer] = field(default_factory=list)
-    options: dict[str, Any] = field(default_factory=dict)
+    config: dict[str, Any] = field(default_factory=dict)
     """Per-device configuration values keyed by entity ID (e.g. ``"min_brightness": 20.0``).
-    Populated from EEP spec defaults at registration time; updated via ``gateway.set_device_option()``."""
+    Populated from EEP spec defaults at registration time; updated via ``gateway.set_device_config()``."""
 
     @property
     def eep(self) -> EEP:

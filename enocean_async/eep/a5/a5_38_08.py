@@ -172,13 +172,13 @@ _DIMMER_ENTITY = Entity(
 
 _DIM_MODE_SELECT = Entity(
     id="dimming_mode",
-    option_spec=EnumOptions(options=("relative", "absolute"), default="relative"),
+    config_spec=EnumOptions(options=("relative", "absolute"), default="relative"),
     category=EntityCategory.CONFIG,
 )
 
 _MIN_BRIGHTNESS = Entity(
     id="min_brightness",
-    option_spec=NumberRange(
+    config_spec=NumberRange(
         min_value=0.0, max_value=100.0, step=1.0, unit="%", default=0.0
     ),
     category=EntityCategory.CONFIG,
@@ -186,7 +186,7 @@ _MIN_BRIGHTNESS = Entity(
 
 _MAX_BRIGHTNESS = Entity(
     id="max_brightness",
-    option_spec=NumberRange(
+    config_spec=NumberRange(
         min_value=0.0, max_value=100.0, step=1.0, unit="%", default=100.0
     ),
     category=EntityCategory.CONFIG,
@@ -194,7 +194,7 @@ _MAX_BRIGHTNESS = Entity(
 
 _RAMP_TIME = Entity(
     id="ramp_time",
-    option_spec=NumberRange(
+    config_spec=NumberRange(
         min_value=0.0, max_value=255.0, step=1.0, unit="s", default=0.0
     ),
     category=EntityCategory.CONFIG,

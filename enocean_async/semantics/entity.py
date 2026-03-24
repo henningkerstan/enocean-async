@@ -26,7 +26,7 @@ class EntityType(StrEnum):
 
     Describes what kind of real-world thing the entity represents, using
     library-semantic names. Computed from an entity's ``observables``, ``actions``,
-    and ``option_spec`` via ``Entity.entity_type``. No separate declaration needed
+    and ``config_spec`` via ``Entity.entity_type``. No separate declaration needed
     in EEP files.
     """
 
@@ -38,14 +38,14 @@ class EntityType(StrEnum):
     DIMMER = "dimmer"  # controllable dimmer / PWM output
     FAN = "fan"  # fan speed control
     TRIGGER = "trigger"  # outbound: one-shot command / query trigger
-    OPTION_ENUM = "option_enum"  # integration-local enum config — ``option_spec`` is ``EnumOptions``
-    OPTION_NUMBER = "option_number"  # integration-local numeric config — ``option_spec`` is ``NumberRange``
+    CONFIG_ENUM = "config_enum"  # integration-local enum config — ``config_spec`` is ``EnumOptions``
+    CONFIG_NUMBER = "config_number"  # integration-local numeric config — ``config_spec`` is ``NumberRange``
     METADATA = "metadata"  # infrastructure: rssi, last_seen, telegram_count
 
 
 @dataclass(frozen=True)
 class EnumOptions:
-    """Valid string choices for an ``OPTION_ENUM`` entity.
+    """Valid string choices for a ``CONFIG_ENUM`` entity.
 
     Example::
 
@@ -58,7 +58,7 @@ class EnumOptions:
 
 @dataclass(frozen=True)
 class NumberRange:
-    """Numeric range specification for an ``OPTION_NUMBER`` entity.
+    """Numeric range specification for a ``CONFIG_NUMBER`` entity.
 
     Example::
 
@@ -94,10 +94,10 @@ class Entity:
     within the device, a set of ``observables`` it reports, and a set of ``actions`` it accepts.
     A unique physical thing in the system is the pair ``(eurid, entity_id)``.
 
-    **Config / auxiliary entities** use ``option_spec``:
+    **Config / auxiliary entities** use ``config_spec``:
 
-    * ``EnumOptions(options=(...))`` — produces ``EntityType.OPTION_ENUM``
-    * ``NumberRange(min, max, step, unit)`` — produces ``EntityType.OPTION_NUMBER``
+    * ``EnumOptions(options=(...))`` — produces ``EntityType.CONFIG_ENUM``
+    * ``NumberRange(min, max, step, unit)`` — produces ``EntityType.CONFIG_NUMBER``
 
     Set ``category`` to ``EntityCategory.CONFIG`` or ``EntityCategory.DIAGNOSTIC`` as appropriate.
     """
@@ -105,19 +105,19 @@ class Entity:
     id: str
     observables: frozenset[Observable] = field(default_factory=frozenset)
     actions: frozenset[Instructable] = field(default_factory=frozenset)
-    option_spec: EnumOptions | NumberRange | None = None
+    config_spec: EnumOptions | NumberRange | None = None
     category: EntityCategory = EntityCategory.DEFAULT
 
     @property
     def entity_type(self) -> EntityType:
-        """Classify this entity's functional type from its observables, actions, and option_spec.
+        """Classify this entity's functional type from its observables, actions, and config_spec.
 
         Classification priority (first match wins):
 
         1. Actuator types driven by specific Instructables (DIMMER, FAN, SWITCH, COVER).
         2. Physical button event (identified by ``Observable.BUTTON_EVENT``).
-        3. ``OPTION_ENUM`` — ``option_spec`` is an ``EnumOptions`` instance.
-        4. ``OPTION_NUMBER`` — ``option_spec`` is a ``NumberRange`` instance.
+        3. ``CONFIG_ENUM`` — ``config_spec`` is an ``EnumOptions`` instance.
+        4. ``CONFIG_NUMBER`` — ``config_spec`` is a ``NumberRange`` instance.
         5. ``TRIGGER`` — entity has outbound actions but no observables.
         6. Metadata sensors (rssi, last_seen, telegram_count).
         7. Binary sensor (any BINARY-kind observable).
@@ -134,10 +134,10 @@ class Entity:
             return EntityType.COVER
         if Observable.BUTTON_EVENT in obs:
             return EntityType.BUTTON
-        if isinstance(self.option_spec, EnumOptions):
-            return EntityType.OPTION_ENUM
-        if isinstance(self.option_spec, NumberRange):
-            return EntityType.OPTION_NUMBER
+        if isinstance(self.config_spec, EnumOptions):
+            return EntityType.CONFIG_ENUM
+        if isinstance(self.config_spec, NumberRange):
+            return EntityType.CONFIG_NUMBER
         if act and not obs:
             return EntityType.TRIGGER
         if obs <= _METADATA_OBSERVABLES:
