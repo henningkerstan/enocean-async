@@ -40,11 +40,13 @@ class Dim(Instruction):
     """If True (default), encode as EDIMR=1 (relative, raw 0–100 maps directly).
     If False, encode as EDIMR=0 (absolute, raw 0–255 maps to 0–100 %)."""
 
-    ramp_time: int = 0
-    """RMP field: ramping time in seconds (0 = immediately)."""
+    ramp_time: int | None = None
+    """RMP field: ramping time in seconds (0 = immediately).
+    None (default) → use device config ``"ramp_time"`` (defaults to 0 if not set)."""
 
-    store: bool = False
-    """STR field: False = do not store final value, True = store."""
+    store: bool | None = None
+    """STR field: True = store final value in device memory, False = do not store.
+    None (default) → use device config ``"store"`` (defaults to False if not set)."""
 
     switch_on: bool = True
     """SW field: False = switch off, True = switch on."""

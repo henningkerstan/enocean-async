@@ -40,6 +40,7 @@ class EntityType(StrEnum):
     TRIGGER = "trigger"  # outbound: one-shot command / query trigger
     CONFIG_ENUM = "config_enum"  # integration-local enum config — ``config_spec`` is ``EnumOptions``
     CONFIG_NUMBER = "config_number"  # integration-local numeric config — ``config_spec`` is ``NumberRange``
+    CONFIG_BOOL = "config_bool"  # integration-local boolean config — ``config_spec`` is ``BoolOption``
     METADATA = "metadata"  # infrastructure: rssi, last_seen, telegram_count
 
 
@@ -72,6 +73,18 @@ class NumberRange:
     default: float | None = None
 
 
+@dataclass(frozen=True)
+class BoolOption:
+    """Boolean config option for a ``CONFIG_BOOL`` entity.
+
+    Example::
+
+        BoolOption(default=False)
+    """
+
+    default: bool = False
+
+
 _METADATA_OBSERVABLES = frozenset(
     {Observable.RSSI, Observable.LAST_SEEN, Observable.TELEGRAM_COUNT}
 )
@@ -98,6 +111,7 @@ class Entity:
 
     * ``EnumOptions(options=(...))`` — produces ``EntityType.CONFIG_ENUM``
     * ``NumberRange(min, max, step, unit)`` — produces ``EntityType.CONFIG_NUMBER``
+    * ``BoolOption(default=False)`` — produces ``EntityType.CONFIG_BOOL``
 
     Set ``category`` to ``EntityCategory.CONFIG`` or ``EntityCategory.DIAGNOSTIC`` as appropriate.
     """
@@ -105,7 +119,7 @@ class Entity:
     id: str
     observables: frozenset[Observable] = field(default_factory=frozenset)
     actions: frozenset[Instructable] = field(default_factory=frozenset)
-    config_spec: EnumOptions | NumberRange | None = None
+    config_spec: EnumOptions | NumberRange | BoolOption | None = None
     category: EntityCategory = EntityCategory.DEFAULT
 
     @property
@@ -118,10 +132,11 @@ class Entity:
         2. Physical button event (identified by ``Observable.BUTTON_EVENT``).
         3. ``CONFIG_ENUM`` — ``config_spec`` is an ``EnumOptions`` instance.
         4. ``CONFIG_NUMBER`` — ``config_spec`` is a ``NumberRange`` instance.
-        5. ``TRIGGER`` — entity has outbound actions but no observables.
-        6. Metadata sensors (rssi, last_seen, telegram_count).
-        7. Binary sensor (any BINARY-kind observable).
-        8. ``SENSOR`` — default.
+        5. ``CONFIG_BOOL`` — ``config_spec`` is a ``BoolOption`` instance.
+        6. ``TRIGGER`` — entity has outbound actions but no observables.
+        7. Metadata sensors (rssi, last_seen, telegram_count).
+        8. Binary sensor (any BINARY-kind observable).
+        9. ``SENSOR`` — default.
         """
         obs, act = self.observables, self.actions
         if Instructable.DIM in act:
@@ -138,6 +153,8 @@ class Entity:
             return EntityType.CONFIG_ENUM
         if isinstance(self.config_spec, NumberRange):
             return EntityType.CONFIG_NUMBER
+        if isinstance(self.config_spec, BoolOption):
+            return EntityType.CONFIG_BOOL
         if act and not obs:
             return EntityType.TRIGGER
         if obs <= _METADATA_OBSERVABLES:

@@ -1,6 +1,12 @@
 """A5-38-08: Central command - gateway."""
 
-from ...semantics.entity import Entity, EntityCategory, EnumOptions, NumberRange
+from ...semantics.entity import (
+    BoolOption,
+    Entity,
+    EntityCategory,
+    EnumOptions,
+    NumberRange,
+)
 from ...semantics.instructable import Instructable
 from ...semantics.instructions.cover import (
     CoverClose,
@@ -57,7 +63,7 @@ def _encode_switch(action: Switch) -> RawEEPMessage:
     return msg
 
 
-def _encode_dim(action: Dim, options: dict) -> RawEEPMessage:
+def _encode_dim(action: Dim, config: dict) -> RawEEPMessage:
     msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=2, description="Dimming"),
@@ -76,8 +82,8 @@ def _encode_dim(action: Dim, options: dict) -> RawEEPMessage:
     #   dim=  0 % → scaled=  0 % → absolute EDIM=   0,  relative EDIM=  0
     #   dim= 50 % → scaled= 50 % → absolute EDIM= 128,  relative EDIM= 50
     #   dim=100 % → scaled=100 % → absolute EDIM= 255,  relative EDIM=100
-    min_b: float = options.get("min_brightness", 0.0)
-    max_b: float = options.get("max_brightness", 100.0)
+    min_b: float = config.get("min_brightness", 0.0)
+    max_b: float = config.get("max_brightness", 100.0)
     scaled_pct = min_b + (max_b - min_b) * action.dim_value / 100.0
     if action.use_relative:
         msg.raw["EDIM"] = max(0, min(100, round(scaled_pct)))
@@ -85,8 +91,16 @@ def _encode_dim(action: Dim, options: dict) -> RawEEPMessage:
     else:
         msg.raw["EDIM"] = max(0, min(255, round(scaled_pct / 100.0 * 255)))
         msg.raw["EDIMR"] = 0
-    msg.raw["RMP"] = action.ramp_time
-    msg.raw["STR"] = int(action.store)
+    ramp = (
+        action.ramp_time
+        if action.ramp_time is not None
+        else int(config.get("ramp_time", 0))
+    )
+    msg.raw["RMP"] = max(0, min(255, ramp))
+    store = (
+        action.store if action.store is not None else bool(config.get("store", False))
+    )
+    msg.raw["STR"] = int(store)
     msg.raw["SW"] = int(action.switch_on)
     msg.raw["LRNB"] = 1  # data telegram (not teach-in)
     return msg
@@ -213,6 +227,12 @@ _RAMP_TIME = Entity(
     config_spec=NumberRange(
         min_value=0.0, max_value=255.0, step=1.0, unit="s", default=0.0
     ),
+    category=EntityCategory.CONFIG,
+)
+
+_STORE = Entity(
+    id="store",
+    config_spec=BoolOption(default=False),
     category=EntityCategory.CONFIG,
 )
 
@@ -564,6 +584,7 @@ EEP_A5_38_08 = EEPSpecification(
         _MIN_BRIGHTNESS,
         _MAX_BRIGHTNESS,
         _RAMP_TIME,
+        _STORE,
     ],
     observers=[
         scalar_factory(Observable.OUTPUT_VALUE, entity_id="light"),
@@ -580,8 +601,9 @@ EEP_A5_38_08 = EEPSpecification(
         Instructable.COVER_STOP: lambda a, _: _encode_cover_stop(a),
         Instructable.COVER_OPEN: lambda a, _: _encode_cover_open(a),
         Instructable.COVER_CLOSE: lambda a, _: _encode_cover_close(a),
-        Instructable.COVER_SET_POSITION_AND_ANGLE: lambda a,
-        _: _encode_set_cover_position(a),
+        Instructable.COVER_SET_POSITION_AND_ANGLE: lambda a, _: (
+            _encode_set_cover_position(a)
+        ),
     },
     uses_addressed_sending=False,
 )

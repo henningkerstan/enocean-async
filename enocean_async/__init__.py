@@ -13,6 +13,7 @@ from .eep.manufacturer import Manufacturer
 from .gateway import DeviceTaughtInCallback, Gateway
 from .semantics.device_spec import DeviceSpec
 from .semantics.entity import (
+    BoolOption,
     Entity,
     EntityCategory,
     EntityType,
@@ -57,6 +58,7 @@ __all__ = [
     "Entity",
     "EntityCategory",
     "EntityType",
+    "BoolOption",
     "EnumOptions",
     "NumberRange",
     "EEP",
