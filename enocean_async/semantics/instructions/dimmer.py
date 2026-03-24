@@ -36,9 +36,11 @@ class Dim(Instruction):
     dim_value: float
     """Dimming value as a percentage: 0 = off, 100 = full brightness."""
 
-    use_relative: bool = True
-    """If True (default), encode as EDIMR=1 (relative, raw 0–100 maps directly).
-    If False, encode as EDIMR=0 (absolute, raw 0–255 maps to 0–100 %)."""
+    use_relative: bool | None = None
+    """If True, encode as EDIMR=1 (relative, raw 0–100 maps directly).
+    If False, encode as EDIMR=0 (absolute, raw 0–255 maps to 0–100 %).
+    None (default) → use device config ``"dimming_mode"``: ``"relative"`` → True, ``"absolute"`` → False
+    (defaults to ``"relative"`` if not set)."""
 
     ramp_time: int | None = None
     """RMP field: ramping time in seconds (0 = immediately).

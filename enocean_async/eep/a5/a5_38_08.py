@@ -85,7 +85,12 @@ def _encode_dim(action: Dim, config: dict) -> RawEEPMessage:
     min_b: float = config.get("min_brightness", 0.0)
     max_b: float = config.get("max_brightness", 100.0)
     scaled_pct = min_b + (max_b - min_b) * action.dim_value / 100.0
-    if action.use_relative:
+    use_relative = (
+        action.use_relative
+        if action.use_relative is not None
+        else config.get("dimming_mode", "relative") == "relative"
+    )
+    if use_relative:
         msg.raw["EDIM"] = max(0, min(100, round(scaled_pct)))
         msg.raw["EDIMR"] = 1
     else:

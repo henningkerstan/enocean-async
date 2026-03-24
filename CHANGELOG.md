@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.12.0] — unreleased
+
+### Breaking changes
+- **`Dim.use_relative`** default changed from `True` to `None` (sentinel for "use device config"). Explicit `True`/`False` still works; `None` (the new default) defers to device config `"dimming_mode"` (`"relative"` → EDIMR=1, `"absolute"` → EDIMR=0; falls back to `"relative"`).
+
+### New features
+- **A5-38-08 `dimming_mode` config entity** now active: `_DIM_MODE_SELECT` (`EnumOptions(options=("relative", "absolute"), default="relative")`) is consulted by `_encode_dim` when `Dim.use_relative` is `None`.
+
+
 ## [0.11.0] — 2026-03-24
 
 ### Breaking changes
