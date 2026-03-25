@@ -24,10 +24,10 @@ class EnOceanSerialProtocol3(asyncio.Protocol):
         self.__buffer = bytearray()
         self.__gateway: "Gateway" = gateway
 
-    def connection_made(self, transport: serial_asyncio.SerialTransport):
+    def connection_made(self, transport: serial_asyncio.SerialTransport) -> None:
         self.__gateway.connection_made()
 
-    def data_received(self, data: bytes):
+    def data_received(self, data: bytes) -> None:
         """Process the internal buffer to extract complete ESP3 packets and emit them."""
         self.__buffer.extend(data)
 
@@ -82,8 +82,8 @@ class EnOceanSerialProtocol3(asyncio.Protocol):
             # Remove processed bytes
             del self.__buffer[:total_len]
 
-    def connection_lost(self, exception: Exception | None):
+    def connection_lost(self, exception: Exception | None) -> None:
         self.__gateway.connection_lost(exception)
 
-    def eof_received(self, exception: Exception | None):
+    def eof_received(self, exception: Exception | None) -> bool | None:
         pass

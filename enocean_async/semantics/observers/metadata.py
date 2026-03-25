@@ -5,12 +5,13 @@ from __future__ import annotations
 from time import time
 from typing import TYPE_CHECKING
 
+from ...address import Address
 from .observer import Observer
 
 if TYPE_CHECKING:
     from ...eep.message import EEPMessage
 from ..observable import Observable
-from ..observation import Observation, ObservationSource
+from ..observation import Observation, ObservationCallback, ObservationSource
 
 
 class MetaDataObserver(Observer):
@@ -22,7 +23,9 @@ class MetaDataObserver(Observer):
     - Telegram count (number of messages received)
     """
 
-    def __init__(self, device_address, on_state_change):
+    def __init__(
+        self, device_address: Address, on_state_change: ObservationCallback | None
+    ) -> None:
         """Initialize the metadata observer."""
         super().__init__(device_address, on_state_change)
         self._telegram_count = 0

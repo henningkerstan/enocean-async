@@ -183,13 +183,13 @@ class Gateway:
     # ------------------------------------------------------------------
     # callback registration
     # ------------------------------------------------------------------
-    def add_esp3_received_callback(self, cb: ESP3Callback):
+    def add_esp3_received_callback(self, cb: ESP3Callback) -> None:
         """Add a callback that will be called for every received ESP3 packet.
 
         This is a low-level callback that will be called for every ESP3 packet as they are received from the serial port, before any parsing or processing. This can be useful for debugging or for implementing custom processing of ESP3 packets that is not covered by the built-in functionality of the Gateway class."""
         self.__esp3_receive_callbacks.append(cb)
 
-    def add_esp3_send_callback(self, cb: ESP3Callback):
+    def add_esp3_send_callback(self, cb: ESP3Callback) -> None:
         """Add a callback that will be called for every ESP3 packet that is sent to the EnOcean module.
 
         This can be useful for debugging or for implementing custom logging of sent packets."""
@@ -203,7 +203,7 @@ class Gateway:
         """
         self.__device_taught_in_callbacks.append(cb)
 
-    def add_new_device_callback(self, cb: NewDeviceCallback):
+    def add_new_device_callback(self, cb: NewDeviceCallback) -> None:
         """Add a callback that will be called for every newly detected EURID from incoming ERP1 telegrams.
 
         BaseAddress senders (other controllers/gateways) are silently tracked but do not trigger this callback.
@@ -212,7 +212,7 @@ class Gateway:
 
     def add_erp1_received_callback(
         self, cb: ERP1Callback, sender_filter: SenderAddress | None = None
-    ):
+    ) -> None:
         """Add a callback that will be called for every received ERP1 telegram. If sender_filter is provided, the callback will only be called for telegrams that have a sender address matching the filter.
 
         This is a semi-high-level callback that will be called for every received ERP1 telegram after parsing and basic processing, but before any EEP-specific decoding. This can be useful for handling ERP1 telegrams in a custom way, for example by implementing custom decoding for specific RORGs or by handling telegrams from unknown devices."""
@@ -220,7 +220,7 @@ class Gateway:
 
     def add_eep_message_received_callback(
         self, cb: EEPMessageCallback, sender_filter: SenderAddress | None = None
-    ):
+    ) -> None:
         """Add a callback that will be called for every received ERP1 telegram that could successfully be decoded as an EEP message. If sender_filter is provided, the callback will only be called for messages that have a sender address matching the filter.
 
         This is a high-level callback that will be called for every received EEP message after parsing, basic processing, and EEP-specific decoding. Prerequisite for this callback to be called for a message are:
@@ -228,13 +228,13 @@ class Gateway:
         - there is an EEPHandler capable of handling the eep of the sender device."""
         self.__eep_receive_callbacks.append(EEPCallbackWithFilter(cb, sender_filter))
 
-    def add_ute_received_callback(self, cb: UTECallback):
+    def add_ute_received_callback(self, cb: UTECallback) -> None:
         self.__ute_receive_callbacks.append(cb)
 
-    def add_parsing_failed_callback(self, cb: ParsingFailedCallback):
+    def add_parsing_failed_callback(self, cb: ParsingFailedCallback) -> None:
         self.__parsing_failed_callbacks.append(cb)
 
-    def add_response_callback(self, cb: ResponseCallback):
+    def add_response_callback(self, cb: ResponseCallback) -> None:
         self.__response_callbacks.append(cb)
 
     def add_observation_callback(self, cb: ObservationCallback) -> None:
@@ -431,7 +431,7 @@ class Gateway:
             self.__learning_timeout_task.cancel()
             self.__learning_timeout_task = None
 
-    async def __learning_timeout(self, timeout_seconds: int):
+    async def __learning_timeout(self, timeout_seconds: int) -> None:
         try:
             await asyncio.sleep(timeout_seconds)
             if self.__is_learning:
@@ -580,7 +580,7 @@ class Gateway:
             self.__reconnect_task.cancel()
         self.__reconnect_task = asyncio.create_task(self.__try_to_reconnect())
 
-    async def __try_to_reconnect(self):
+    async def __try_to_reconnect(self) -> None:
         for attempt in range(1, 721):
             await asyncio.sleep(5)
             try:
@@ -933,7 +933,7 @@ class Gateway:
     # ------------------------------------------------------------------
     # Internal packet processing
     # ------------------------------------------------------------------
-    def process_esp3_packet(self, packet: ESP3Packet):
+    def process_esp3_packet(self, packet: ESP3Packet) -> None:
         """Process a received ESP3 packet. This includes emitting the raw packet to registered callbacks and further processing based on packet type."""
         self.__emit(self.__esp3_receive_callbacks, packet)
 
@@ -978,15 +978,15 @@ class Gateway:
         self.__background_tasks.add(task)
         task.add_done_callback(self.__background_tasks.discard)
 
-    def __emit(self, callbacks: list[Callable], *args):
+    def __emit(self, callbacks: list[Callable], *args: object) -> None:
         """Emit arguments to all registered callbacks of the given type."""
         loop = asyncio.get_running_loop()
         for cb in callbacks:
             loop.call_soon(cb, *args)
 
     def __emit_with_sender_filter(
-        self, callbacks: list[CallbackWithFilter], sender: SenderAddress, obj
-    ):
+        self, callbacks: list[CallbackWithFilter], sender: SenderAddress, obj: object
+    ) -> None:
         """Emit an object to all registered callbacks of the given type that have a sender filter matching the sender address."""
         loop = asyncio.get_running_loop()
         for cb in callbacks:
@@ -997,7 +997,7 @@ class Gateway:
         """Check if the sender address is known (i.e. if we have an EEP ID for it)."""
         return sender in self.__devices or sender in self.__known_senders
 
-    def __process_response(self, response: ResponseTelegram):
+    def __process_response(self, response: ResponseTelegram) -> None:
         """Process a received RESPONSE packet. If we are currently awaiting a response, try to parse it and store it for the send() method to retrieve."""
         self.__emit(self.__response_callbacks, response)
         self._logger.debug(f"Processing received RESPONSE packet: {response}")
@@ -1005,7 +1005,7 @@ class Gateway:
         if self.__send_future and not self.__send_future.done():
             self.__send_future.set_result(response)
 
-    def __process_erp1_telegram(self, erp1: ERP1Telegram):
+    def __process_erp1_telegram(self, erp1: ERP1Telegram) -> None:
         """Process a received ERP1 telegram. This includes emitting it to registered callbacks and further processing based on RORG and learning bit."""
         self.__erp1_received += 1
         self.__emit_gateway_observation(
@@ -1209,7 +1209,7 @@ class Gateway:
             f"Successfully sent bidirectional 4BS teach-in response ({result})  with EEP {response.eep}."
         )
 
-    def __handle_ute_message(self, ute: UTEMessage):
+    def __handle_ute_message(self, ute: UTEMessage) -> None:
         self.__emit(self.__ute_receive_callbacks, ute)
 
         # ignore messages when not in learning mode — teach-out also requires an active session
@@ -1392,7 +1392,7 @@ class Gateway:
             )
         return BaseAddress(int(self.__base_id) + offset)
 
-    def __handle_4bs_teach_in_telegram(self, erp1: ERP1Telegram):
+    def __handle_4bs_teach_in_telegram(self, erp1: ERP1Telegram) -> None:
         if not self.__is_learning:
             self._logger.debug(
                 "4BS teach-in telegram received but not in learning mode; ignoring telegram."

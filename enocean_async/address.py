@@ -59,11 +59,11 @@ class Address:
         s = f"{self._address:08X}"
         return f"{s[0:2]}:{s[2:4]}:{s[4:6]}:{s[6:8]}"
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """Return a hash based on the integer value of the address, so addresses are usable as dict keys."""
         return self._address
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """Compare by integer value, regardless of subclass."""
         return int(self) == int(other)
 

@@ -35,7 +35,7 @@ where = [ "." ]
 include = [ "enocean_async*" ]
 
 [tool.setuptools.package-data]
-"*" = [ "*.xml", ]
+"enocean_async" = [ "*.xml", "py.typed" ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

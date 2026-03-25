@@ -60,10 +60,10 @@ class EEP:
     def __repr__(self) -> str:
         return str(self)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.rorg, self.func, self.type, self.manufacturer))
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, EEP):
             return NotImplemented
         return (

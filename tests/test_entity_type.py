@@ -132,9 +132,9 @@ class TestEntityTypeActuators:
             ),
             actions=frozenset(
                 {
-                    Instructable.COVER_SET_POSITION,
+                    Instructable.COVER_SET_POSITION_AND_ANGLE,
                     Instructable.COVER_STOP,
-                    Instructable.COVER_QUERY_POSITION,
+                    Instructable.COVER_QUERY_POSITION_AND_ANGLE,
                 }
             ),
         )

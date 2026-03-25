@@ -8,6 +8,10 @@
 ### New features
 - **A5-38-08 `dimming_mode` config entity** now active: `_DIM_MODE_SELECT` (`EnumOptions(options=("relative", "absolute"), default="relative")`) is consulted by `_encode_dim` when `Dim.use_relative` is `None`.
 
+### Internal / maintenance
+- **`py.typed` marker added** (PEP 561): the package now ships inline type information. Type checkers (mypy, pyright, pylance) will pick up type hints automatically without stubs.
+- Missing return type annotations added throughout (`gateway.py`, `address.py`, `eep/id.py`, `protocol/esp3/protocol.py`, `semantics/observers/metadata.py`).
+
 
 ## [0.11.0] — 2026-03-24
 

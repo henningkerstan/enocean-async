@@ -22,5 +22,5 @@ def test_hash():
 
 def test_repr():
     # __repr__ delegates to __str__; manufacturer is shown as enum member name.
-    id = EEP("F6-02-01", Manufacturer.ENOCEAN_GMBH)
-    assert repr(id) == "F6-02-01.ENOCEAN_GMBH"
+    id = EEP("F6-02-01", Manufacturer.ENOCEAN)
+    assert repr(id) == "F6-02-01.ENOCEAN"
