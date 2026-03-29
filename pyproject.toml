@@ -1,6 +1,6 @@
 [project]
 name = "enocean_async"
-version = "0.12.1-dev0"
+version = "0.12.1"
 authors = [
   { name="Henning Kerstan", email="mail@henningkerstan.de" },
 ]
@@ -61,7 +61,7 @@ split-on-trailing-comma = false
 case-sensitive = true
 
 [tool.bumpversion]
-current_version = "0.12.1-dev0"
+current_version = "0.12.1"
 parse = """(?x)
     (?P<major>\\d+)\\.
     (?P<minor>\\d+)\\.

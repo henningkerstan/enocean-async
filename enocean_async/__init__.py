@@ -2,8 +2,8 @@
 An async implementation of the EnOcean Serial Protocol Version 3.
 """
 
-__version__ = "0.12.1-dev0"
-__date__ = "2026-03-25"
+__version__ = "0.12.1"
+__date__ = "2026-03-29"
 
 from .address import EURID, BaseAddress, BroadcastAddress, SenderAddress
 from .device import Device
