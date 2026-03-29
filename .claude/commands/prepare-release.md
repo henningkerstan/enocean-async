@@ -27,7 +27,7 @@ Use the version number from step 1 (without the `-devN` suffix). Use today's dat
 
 6. Review and update documentation:
    a. Read `README.md` and update it if the release contains user-visible changes (new features, changed APIs, new examples, updated requirements).
-   b. Read any relevant docs files (e.g. `ARCHITECTURE.md`, `HOMEASSISTANT.md`) and update sections that are affected by the changes in this release.
+   b. Read any relevant docs files (e.g. `ARCHITECTURE.md`, `IMPLEMENT_EEP.md`) and update sections that are affected by the changes in this release.
    c. Present a summary of all proposed doc changes to the user before writing anything.
 
 7. Present the release notes to the user for review. Ask whether to:
