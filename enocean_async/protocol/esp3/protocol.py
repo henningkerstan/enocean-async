@@ -4,7 +4,7 @@ import asyncio
 from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
-    from ..gateway import Gateway
+    from ...gateway import Gateway
 
 import serial_asyncio_fast as serial_asyncio
 
@@ -75,12 +75,16 @@ class EnOceanSerialProtocol3(asyncio.Protocol):
                 del self.__buffer[:1]
                 continue
 
-            # create ESP3Packet and process it
-            pkt = ESP3Packet(ESP3PacketType(packet_type), data, optional)
-            self.__gateway.process_esp3_packet(pkt)
-
-            # Remove processed bytes
-            del self.__buffer[:total_len]
+            try:
+                # create ESP3Packet and process it
+                pkt = ESP3Packet(ESP3PacketType(packet_type), data, optional)
+                self.__gateway.process_esp3_packet(pkt)
+            except Exception:
+                # silently ignore any errors to avoid getting stuck on malformed packets
+                continue
+            finally:
+                # Remove processed bytes
+                del self.__buffer[:total_len]
 
     def connection_lost(self, exception: Exception | None) -> None:
         self.__gateway.connection_lost(exception)

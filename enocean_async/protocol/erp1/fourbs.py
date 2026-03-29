@@ -60,9 +60,13 @@ class FourBSTeachInTelegram:
             func = erp1.bitstring_raw_value(0, 6)
             type_ = erp1.bitstring_raw_value(6, 7)
             manufacturer_id = erp1.bitstring_raw_value(13, 11)
-            manufacturer = (
-                Manufacturer.from_id(manufacturer_id) or Manufacturer.RESERVED
-            )
+            try:
+                manufacturer = (
+                    Manufacturer.from_id(manufacturer_id) or Manufacturer.RESERVED
+                )
+            except ValueError:
+                manufacturer = Manufacturer.RESERVED
+
             eep = EEP([0xA5, func, type_], manufacturer)
 
         return cls(

@@ -1,6 +1,12 @@
 # Changelog
 
-## [0.12.0] — unreleased
+## [0.12.1] — 2026-03-29
+
+### Bug fixes
+- **ESP3 protocol buffer always advanced past processed frames**: packet creation (`ESP3PacketType(packet_type)`) and gateway dispatch (`process_esp3_packet`) are now wrapped in `try/except/finally` so `del buffer[:total_len]` runs unconditionally. Previously, an unknown packet-type byte would raise `ValueError` before the buffer was consumed, causing the same frame to be re-parsed in an infinite loop (fixes [#2](https://github.com/henningkerstan/enocean-async/issues/2)).
+- **4BS teach-in tolerates unknown manufacturer IDs**: `Manufacturer.from_id()` is now wrapped in `try/except ValueError` so unrecognized manufacturer codes fall back to `Manufacturer.RESERVED` instead of raising an exception.
+
+## [0.12.0] — 2026-03-25
 
 ### Breaking changes
 - **`Dim.use_relative`** default changed from `True` to `None` (sentinel for "use device config"). Explicit `True`/`False` still works; `None` (the new default) defers to device config `"dimming_mode"` (`"relative"` → EDIMR=1, `"absolute"` → EDIMR=0; falls back to `"relative"`).
