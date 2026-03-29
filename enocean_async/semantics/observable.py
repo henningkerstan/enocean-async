@@ -19,9 +19,18 @@ class Observable(str, Enum):
       not necessarily SI base units (e.g. °C rather than K, Wh rather than J).
     - ``kind`` — the nature of the value: ``SCALAR`` (continuous numeric), ``BINARY``
       (two-state), or ``ENUM`` (multi-value named set).
-    - ``possible_values`` — for ``ENUM``-kinded observables, the exhaustive list of
+    - ``possible_values`` — for ``ENUM``-kind observables, the exhaustive list of
       string values the observable can take; ``None`` for SCALAR/BINARY observables.
     """
+
+    name: str
+    """The semantic identifier of the observable (e.g. ``"temperature"``). Doubles as the enum value."""
+    kind: ValueKind
+    """Whether the observable is a continuous numeric (``SCALAR``), two-state (``BINARY``), or named-set (``ENUM``) quantity."""
+    unit: str | None
+    """Physical unit of the quantity (e.g. ``"°C"``, ``"W"``), or ``None`` for dimensionless / categorical values."""
+    possible_values: list[str] | None
+    """Exhaustive list of string values for ``ENUM``-kind observables; ``None`` for ``SCALAR`` / ``BINARY``."""
 
     def __new__(
         cls,
