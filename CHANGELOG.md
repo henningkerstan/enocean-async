@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.12.2] - 2026-03-29
+
+### Improvements
+- **`Observable` member type annotations added**: added type annotations to `name`, `kind`, `unit`, and `possible_values`.
+
 ## [0.12.1] — 2026-03-29
 
 ### Bug fixes
