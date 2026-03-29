@@ -20,9 +20,10 @@ This document describes the teach-in and teach-out behavior of enocean-async fro
 
 ```python
 # Fires after successful teach-in and device registration
-type DeviceTaughtInCallback = Callable[[EURID, EEP], None]
+# TaughtInDevice has: .address (EURID) and .eep (EEP)
+type DeviceTaughtInCallback = Callable[[TaughtInDevice], None]
 
-gateway.add_device_taught_in_callback(lambda address, eep: ...)
+gateway.add_device_taught_in_callback(lambda device: ...)
 
 await gateway.start_learning(
     timeout=30,           # session ends automatically after this many seconds
@@ -168,7 +169,7 @@ Sender-addresseds must have their sender address persisted by the caller and res
 ```python
 gateway.add_device(
     address=EURID(stored["eurid"]),
-    eep=EEP.from_string(stored["eep"]),
+    eep=EEP(stored["eep"]),
     sender=BaseAddress(stored["sender"]),  # None for addressed devices
 )
 ```

@@ -5,6 +5,7 @@ Thank you for your interest in contributing!
 - Open an issue for bugs or feature requests.
 - For code changes, please open a pull request.
 - Make sure your code follows the project’s style and passes all tests.
+- To add support for a new EEP, follow the step-by-step guide in [IMPLEMENT_EEP.md](./docs/IMPLEMENT_EEP.md).
 
 ## Development Setup
 1. Clone the repository

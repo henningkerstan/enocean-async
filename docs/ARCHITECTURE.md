@@ -7,7 +7,7 @@
 `enocean-async` is an asyncio-based Python library for communicating with EnOcean devices over an EnOcean USB gateway. The library has two symmetric pipelines:
 
 - **Observable pipeline** (receive): raw radio telegrams → typed `Observation` objects carrying entity state updates like `entity_id="temperature", values={TEMPERATURE: 21.3}`.
-- **Instruction pipeline** (send): typed `Instruction` subclasses carrying `entity_id` and action-specific parameters → encoded `ERP1Telegram` → radio signal, e.g. `SetCoverPosition(entity_id="cover", position=64)` or `StopCover(entity_id="cover")`.
+- **Instruction pipeline** (send): typed `Instruction` subclasses carrying `entity_id` and action-specific parameters → encoded `ERP1Telegram` → radio signal, e.g. `CoverSetPositionAndAngle(entity_id="cover", position=64)` or `CoverStop(entity_id="cover")`.
 
 Each pipeline layers protocol detail away from the application. The gateway orchestrates both.
 
@@ -54,10 +54,10 @@ Examples as declared in EEP files:
 ```python
 # F6-02: four single-rocker entities
 # Simultaneous two-button presses (SA=1) fire two atomic events with the same timestamp.
-Entity(id="a0", observables=frozenset({BUTTON_EVENT}))  # rocker A, down
-Entity(id="b0", observables=frozenset({BUTTON_EVENT}))  # rocker B, down
-Entity(id="a1", observables=frozenset({BUTTON_EVENT}))  # rocker A, up
-Entity(id="b1", observables=frozenset({BUTTON_EVENT}))  # rocker B, up
+Entity(id="a0", observables=frozenset({BUTTON_EVENT}))
+Entity(id="b0", observables=frozenset({BUTTON_EVENT}))
+Entity(id="a1", observables=frozenset({BUTTON_EVENT}))  
+Entity(id="b1", observables=frozenset({BUTTON_EVENT}))  
 
 # A5-04: two independent sensor entities (separate concerns)
 Entity(id="temperature", observables=frozenset({TEMPERATURE}))
@@ -67,7 +67,7 @@ Entity(id="humidity",    observables=frozenset({HUMIDITY}))
 Entity(
     id="cover",
     observables=frozenset({COVER_STATE, POSITION, ANGLE}),
-    actions=frozenset({SET_COVER_POSITION, STOP_COVER, QUERY_COVER_POSITION}),
+    actions=frozenset({COVER_SET_POSITION_AND_ANGLE, COVER_STOP, COVER_QUERY_POSITION_AND_ANGLE, COVER_OPEN, COVER_CLOSE}),
 )
 
 # D2-01-07: one relay channel with metering — one entity per observable
@@ -118,7 +118,7 @@ class Observable(str, Enum):
 
 The `str, Enum` pattern makes each member both an `Observable` instance and a plain `str`, preserving dict-key and equality semantics. The unit is fixed per observable type — if two quantities differ in unit, they are different observables (e.g. `POWER = "W"` and `ENERGY = "Wh"` are separate members). `possible_values` is the authoritative source for the allowed string values of ENUM-kinded observables — populated directly on the `Observable` member rather than on `Entity`, so that any consumer (observer, integration, documentation generator) can read them without a device context.
 
-Observable names are **semantic, not unit-encoding**. The name says *what* is being observed (`TEMPERATURE`, `POWER`), not *how* it is expressed. The unit is available as `Observable.TEMPERATURE.unit` — encoding it redundantly in the identifier (`TEMPERATURE_CELSIUS`, `POWER_WATTS`) would conflate two distinct properties and produce unnecessarily verbose names. The only reason to distinguish by unit in the name would be if the same physical concept existed in two units simultaneously — which cannot happen here since units are canonical and fixed.
+Observable names are **semantic, not unit-encoding**. The name says *what* is being observed (`TEMPERATURE`, `POWER`), not *how* it is expressed. The unit is available as `Observable.TEMPERATURE.unit`.
 
 An observable update is delivered as part of an `Observation` (see below).
 
@@ -128,17 +128,20 @@ An **instructable** is a category of command sent _to_ a device — telling a co
 
 ```python
 class Instructable(StrEnum):
-    SET_COVER_POSITION         = "set_cover_position"
-    STOP_COVER                 = "stop_cover"
-    QUERY_COVER_POSITION       = "query_cover_position"
-    DIM                        = "dim"
-    SET_FAN_SPEED              = "set_fan_speed"
-    SET_SWITCH_OUTPUT          = "set_switch_output"
-    QUERY_ACTUATOR_STATUS      = "query_actuator_status"
-    QUERY_ACTUATOR_MEASUREMENT = "query_actuator_measurement"
+    COVER_SET_POSITION_AND_ANGLE = "cover_set_position_and_angle"
+    COVER_STOP                   = "cover_stop"
+    COVER_QUERY_POSITION_AND_ANGLE = "cover_query_position_and_angle"
+    COVER_OPEN                   = "cover_open"
+    COVER_CLOSE                  = "cover_close"
+    SWITCH                       = "switch"
+    DIM                          = "dim"
+    SET_FAN_SPEED                = "set_fan_speed"
+    SET_SWITCH_OUTPUT            = "set_switch_output"
+    QUERY_ACTUATOR_STATUS        = "query_actuator_status"
+    QUERY_ACTUATOR_MEASUREMENT   = "query_actuator_measurement"
 ```
 
-`Instructable` names things you _send_. `Observable` names things you _receive_. They are separate classifiers: `STOP_COVER` is an instructable with no direct observable counterpart; `SET_COVER_POSITION` is an instructable that will eventually produce `POSITION` and `COVER_STATE` updates as the device reports back. The formal link between an instructable and the observables it affects is declared on the `Entity` — both `observables` and `actions` live together on the entity they belong to.
+`Instructable` names things you _send_. `Observable` names things you _receive_. They are separate classifiers: `COVER_STOP` is an instructable with no direct observable counterpart; `COVER_SET_POSITION_AND_ANGLE` is an instructable that will eventually produce `POSITION` and `COVER_STATE` updates as the device reports back. The formal link between an instructable and the observables it affects is declared on the `Entity` — both `observables` and `actions` live together on the entity they belong to.
 
 ---
 
@@ -187,23 +190,26 @@ class Instruction:
 @dataclass
 class SetSwitchOutput(Instruction):
     action = Instructable.SET_SWITCH_OUTPUT
-    state: str       # "on" / "off"
+    output_value: int   # 0=OFF, 1–100=percentage ON
 
 @dataclass
-class SetCoverPosition(Instruction):
-    action = Instructable.SET_COVER_POSITION
-    position: int    # 0–127 (maps to 0–100%)
-    angle: int = 0
+class CoverSetPositionAndAngle(Instruction):
+    action = Instructable.COVER_SET_POSITION_AND_ANGLE
+    position: int | None = None   # 0–100 %, or None to leave unchanged
+    angle: int | None = None      # 0–100 %, or None to leave unchanged
 
 @dataclass
-class StopCover(Instruction):
-    action = Instructable.STOP_COVER
+class CoverStop(Instruction):
+    action = Instructable.COVER_STOP
 
 @dataclass
 class Dim(Instruction):
     action = Instructable.DIM
-    value: int
-    speed: int
+    dim_value: float           # 0–100 % (percent of full brightness)
+    switch_on: bool = True
+    use_relative: bool | None = None   # None → use device config "dimming_mode"
+    ramp_time: int | None = None       # None → use device config "ramp_time"
+    store: bool | None = None          # None → use device config "store"
 ```
 
 Instruction parameters are action-specific and typed — there is no generic values dict, because instruction parameters are not "things being observed." The `entity_id` targets the physical sub-unit; the typed fields provide action-specific inputs.
@@ -213,7 +219,7 @@ The gateway send method:
 ```python
 await gateway.send_command(
     destination=device_address,
-    command=SetCoverPosition(entity_id="cover", position=64, angle=0),
+    command=CoverSetPositionAndAngle(entity_id="cover", position=64, angle=0),
 )
 ```
 
@@ -261,13 +267,14 @@ ERP1Telegram      rorg, sender EURID, raw payload bits, rssi
     │ EEP profile lookup → EEPHandler.decode()
     ▼
 EEPMessage
-  .values    {field_id  → EEPMessageValue}   ← EEP spec vocabulary: "TMP", "ILL1", "R1"
-  .entities  {observable → EntityValue}      ← semantic vocabulary: TEMPERATURE, ILLUMINATION
+  .raw      {field_id → int}                ← EEP spec vocabulary raw bits: "TMP", "ILL1", "R1"
+  .decoded  {field_id → ValueWithContext}   ← EEP spec vocabulary decoded: "TMP", "ILL1", "R1"
+  .values   {observable → ValueWithContext} ← semantic vocabulary: TEMPERATURE, ILLUMINATION
     │ Observer.decode()  (one call per observer in device.observers)
-    ├── ScalarObserver(observable=TEMPERATURE) → reads entities[TEMPERATURE]
-    ├── ScalarObserver(observable=ILLUMINATION) → reads entities[ILLUMINATION]
-    ├── CoverObserver → reads entities[POSITION]+entities[ANGLE], infers COVER_STATE
-    ├── ButtonObserver → reads values["R1"], values["EB"], … (raw field access)
+    ├── ScalarObserver(observable=TEMPERATURE) → reads values[TEMPERATURE]
+    ├── ScalarObserver(observable=ILLUMINATION) → reads values[ILLUMINATION]
+    ├── CoverObserver → reads values[POSITION]+values[ANGLE], infers COVER_STATE
+    ├── ButtonObserver → reads raw["R1"], raw["EB"], … (raw field access)
     └── MetaDataObserver → reads rssi, generates timestamps
     │ _emit()
     ▼
@@ -282,11 +289,11 @@ The `EEPHandler` runs four passes during decode:
 | Pass | Purpose |
 |------|---------|
 | **1 — Raw extraction** | Read every field's raw int from the telegram bitstring into a scratch dict. Done first so interdependent scale functions have full context. |
-| **2 — Value decoding** | Apply enum lookup or linear scaling per field → `EEPMessage.values[field.id]` as `EEPMessageValue(raw, value, unit)`. |
-| **3 — Observable propagation** | For each field with `observable` set: copy `values[field.id]` → `entities[observable]` as `EntityValue(value, unit)`. Translates spec vocabulary to semantic vocabulary. |
+| **2 — Value decoding** | Apply enum lookup or linear scaling per field → `EEPMessage.decoded[field.id]` as `ValueWithContext(value, unit, name)`. |
+| **3 — Observable propagation** | For each field with `observable` set: copy `decoded[field.id]` → `values[observable]` as `ValueWithContext`. Translates spec vocabulary to semantic vocabulary. |
 | **4 — Semantic resolvers** | Run `SemanticResolver` callables that synthesise a single observable from multiple fields (e.g., A5-06: pick ILL1 or ILL2 based on range-select bit). |
 
-Note: `EEPMessage.values` contains `EEPMessageValue` (raw int + decoded value + unit), while `EEPMessage.entities` contains the lighter `EntityValue` (decoded value + unit only — raw is not needed at the semantic layer).
+Note: `EEPMessage.decoded` holds per-field `ValueWithContext` objects (decoded value + unit + name) keyed by EEP field ID. `EEPMessage.values` holds the same type keyed by `Observable` — the semantic vocabulary used by observers. Raw integer field values are in `EEPMessage.raw`.
 
 ---
 
@@ -294,14 +301,14 @@ Note: `EEPMessage.values` contains `EEPMessageValue` (raw int + decoded value + 
 
 ```
 Application
-    │ gateway.send_command(destination, SetCoverPosition(entity_id="cover", position=64))
+    │ gateway.send_command(destination, CoverSetPositionAndAngle(entity_id="cover", position=64))
     ▼
 Instruction subclass instance (typed, with entity_id and validated fields)
-    │ spec.encoders[command.action](command)
+    │ spec.encoders[command.action](command, device.config)
     ▼
-EEPMessage
+RawEEPMessage
   .message_type  ← selects which telegram type to encode
-  .values        ← {field_id → EEPMessageValue(raw)} filled in by the encoder
+  .raw           ← {field_id → int} filled in by the encoder
     │ EEPHandler.encode()
     ├── Determine data buffer size from max(field.offset+field.size) + cmd_size
     ├── Allocate zero-filled bytearray
@@ -458,8 +465,6 @@ When the serial connection is lost unexpectedly, the gateway automatically attem
 
 Each EEP statically declares its `Entity` list. Entities are physical real-world sub-units (push buttons, relay channels, cover motors, sensor elements). The EEP fully specifies what entities exist — including their observable types and accepted instructables — before any telegram arrives.
 
-This is possible because EnOcean EEP variants are fixed: `D2-01-00` has exactly one relay channel; `F6-02-01` has exactly four rocker buttons. Instance count is per-variant, not discovered at runtime.
-
 ### Observable carries intrinsic metadata
 
 `Observable` is a `str, Enum` whose members carry `unit`, `kind`, and `possible_values` as intrinsic properties. The unit is fixed per observable type — temperature is always in `°C`, illumination always in `lx`. If two quantities differ in unit, they are distinct `Observable` members. `possible_values` for ENUM-kinded observables lives on `Observable` rather than on `Entity`, so any consumer can read allowed values without a device context. This eliminates all scattered `(Observable, str | None)` unit pairs and per-entity `possible_values` dicts that previously appeared in factory declarations, `DeviceSpec`, and `Entity`.
@@ -470,7 +475,7 @@ A single telegram updates an entity's state. When a cover reports its position, 
 
 ### Two-vocabulary `EEPMessage`
 
-`EEPMessage.values` holds the raw EEP field view (spec field IDs: `"TMP"`, `"ILL1"`), each as an `EEPMessageValue(raw, value, unit)`. `EEPMessage.entities` holds the semantic observable view (`Observable` enum members), each as a lighter `EntityValue(value, unit)` — the raw int is not needed at the semantic layer. Observers always read from `entities`, making them EEP-agnostic: `ScalarObserver(observable=TEMPERATURE)` works for A5-02, A5-04, A5-08, or any future temperature-bearing EEP without modification.
+`EEPMessage.raw` holds the raw integer field view (spec field IDs: `"TMP"`, `"ILL1"`). `EEPMessage.decoded` holds per-field `ValueWithContext` objects (scaled value + unit + name) by the same field IDs. `EEPMessage.values` holds the semantic observable view keyed by `Observable` enum members, also as `ValueWithContext`. Observers always read from `values`, making them EEP-agnostic: `ScalarObserver(observable=TEMPERATURE)` works for A5-02, A5-04, A5-08, or any future temperature-bearing EEP without modification.
 
 ### Semantic resolvers bridge multi-field observables
 

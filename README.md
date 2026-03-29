@@ -67,7 +67,7 @@ gateway.add_device(address=eurid, device_type=...,
 gateway.set_device_config(eurid, "ramp_time", 5)
 ```
 
-Config values are automatically applied in the send path (encoders) and the receive path (semantic resolvers). See [DEVICE_OPTIONS.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/DEVICE_OPTIONS.md) for details.
+Config values are automatically applied in the send path (encoders) and the receive path (semantic resolvers).
 
 `EURID`, `BaseAddress`, and `Address` all accept an `int`, a colon-separated hex string (`"01:23:45:67"`), or a 4-byte sequence (`bytes`, `bytearray`, `list[int]`). Use `int(addr)` and `str(addr)` for numeric/string conversion.
 
@@ -113,7 +113,7 @@ See [TEACHIN.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/
 
 ## What is missing / not yet implemented
 - ECID sub-dispatch for D2-01 extended commands
-- More EEPs (contributions welcome — see [SKILLS.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/SKILLS.md) for the step-by-step guide)
+- More EEPs (contributions welcome — see [IMPLEMENT_EEP.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/IMPLEMENT_EEP.md) for the step-by-step guide)
 - Logging coverage is partial
 
 
