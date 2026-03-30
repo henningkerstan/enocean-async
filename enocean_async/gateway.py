@@ -62,6 +62,7 @@ _GATEWAY_ENTITIES: list[Entity] = [
     Entity(
         id="connection_status",
         observables=frozenset({Observable.CONNECTION_STATUS}),
+        category=EntityCategory.DIAGNOSTIC,
     ),
     Entity(
         id="telegrams_received",
