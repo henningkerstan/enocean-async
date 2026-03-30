@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.12.3] — 2026-03-30
+
+### New features
+- **`Gateway.is_connected` property**: new read-only boolean property for direct connection-status polling, complementing the existing observer pattern.
+
+### Improvements
+- **`connection_status` gateway entity** now carries `EntityCategory.DIAGNOSTIC`.
+- **EEP implementation guide** added at `docs/IMPLEMENT_EEP.md`.
+
 ## [0.12.2] - 2026-03-29
 
 ### Improvements
