@@ -89,5 +89,5 @@ class EnOceanSerialProtocol3(asyncio.Protocol):
     def connection_lost(self, exception: Exception | None) -> None:
         self.__gateway.connection_lost(exception)
 
-    def eof_received(self, exception: Exception | None) -> bool | None:
+    def eof_received(self) -> bool | None:
         pass

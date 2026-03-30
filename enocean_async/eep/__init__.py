@@ -242,11 +242,16 @@ DEVICE_TYPES: dict[str, DeviceType] = {
 
 
 def device_type_for_eep(eep: EEP) -> DeviceType:
-    """Return the generic DeviceType for the given EEP.
+    """Return the DeviceType for the given EEP.
 
     Raises :exc:`KeyError` if the EEP is not in :data:`EEP_SPECIFICATIONS`.
     """
-    return DEVICE_TYPES[f"EEP/{eep}"]
+    eep_code = f"{eep.rorg:02X}-{eep.func:02X}-{eep.type:02X}"
+    if eep.manufacturer is not None:
+        key = f"{eep.manufacturer.name}/{eep_code}"
+    else:
+        key = f"EEP/{eep_code}"
+    return DEVICE_TYPES[key]
 
 
 __all__ = [
