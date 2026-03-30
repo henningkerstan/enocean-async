@@ -730,6 +730,11 @@ class Gateway:
         )
 
     @property
+    def is_connected(self) -> bool:
+        """True if the gateway is currently connected to the EnOcean module."""
+        return self.__connection_status == "connected"
+
+    @property
     def gateway_entities(self) -> list[Entity]:
         """Entities exposed by the gateway device itself."""
         return _GATEWAY_ENTITIES
