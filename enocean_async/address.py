@@ -13,7 +13,7 @@ class Address:
             value = int.from_bytes(value, "big")
         elif isinstance(value, str):
             parts = value.strip().split(":")
-            if len(parts) != 4:
+            if len(parts) != 4 or not all(len(p) == 2 for p in parts):
                 raise ValueError(
                     f"Invalid address string '{value}': expected 4 colon-separated hex bytes."
                 )

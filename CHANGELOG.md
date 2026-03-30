@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.12.4] — 2026-03-30
+
+### Bug fixes
+- **`Address` string parsing rejects malformed parts**: each colon-separated part must now be exactly 2 hex characters; previously a 3-digit part (e.g. `"01:AAA:BB:CC"`) was silently truncated to a wrong integer value.
+
 ## [0.12.3] — 2026-03-30
 
 ### New features
