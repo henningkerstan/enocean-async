@@ -385,3 +385,18 @@ pytest tests/ -q
 ```
 
 New EEPs are automatically picked up by the parametrised profile smoke tests in `tests/test_eep_profile.py` as soon as they are registered in `EEP_SPECIFICATIONS`. No new test file is needed for the smoke tests; add targeted tests only for non-trivial field logic or encoder behaviour.
+
+---
+
+## Appendix: Reading vendor documentation (Eltako)
+
+Eltako datasheets and older EnOcean documentation sometimes use **ESP2 terminology** instead of the current ESP3 terms. The key difference is the `ORG` field (Organisation) in ESP2, which maps directly to `RORG` in ESP3:
+
+| ORG (ESP2) | RORG (ESP3) | Telegram type |
+|---|---|---|
+| `0x05` | `0xF6` | RPS — rocker switch |
+| `0x06` | `0xD5` | 1BS — 1-byte sensor |
+| `0x07` | `0xA5` | 4BS — 4-byte sensor |
+| `0x10` | `0xD2` | VLD — variable-length data |
+
+So when an Eltako datasheet says **ORG = 0x07**, it means the EEP family is **A5-xx-xx** (4BS). Use the corresponding `RORG = 0xA5` when writing the EEP class.
