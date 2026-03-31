@@ -519,11 +519,17 @@ class Gateway:
         """
         device = self.__devices.get(destination)
         if device is None:
+            self._logger.error(
+                f"send_command: device {destination} not registered; call add_device() first."
+            )
             raise ValueError(f"Unknown device {destination}: call add_device() first")
 
         eep_id = device.eep
 
         if eep_id not in self.__eep_handlers:
+            self._logger.error(
+                f"send_command: no EEP handler loaded for {eep_id} (device {destination})."
+            )
             raise ValueError(f"No EEP handler loaded for {eep_id}")
 
         spec = EEP_SPECIFICATIONS[eep_id]
@@ -809,11 +815,20 @@ class Gateway:
         result: SendResult = await self.send_esp3_packet(cmd.to_esp3_packet())
         response = result.response
 
-        if (
-            response is None
-            or response.return_code != ResponseCode.OK
-            or len(response.response_data) < 4
-        ):
+        if response is None:
+            self._logger.error(
+                "fetch_base_id: no response from EnOcean module (timeout)."
+            )
+            return None
+        if response.return_code != ResponseCode.OK:
+            self._logger.error(
+                f"fetch_base_id: module returned error code {response.return_code.name}."
+            )
+            return None
+        if len(response.response_data) < 4:
+            self._logger.error(
+                f"fetch_base_id: response data too short ({len(response.response_data)} bytes)."
+            )
             return None
 
         self.__base_id = BaseAddress(response.response_data[:4])
@@ -904,11 +919,20 @@ class Gateway:
         send_result = await self.send_esp3_packet(cmd.to_esp3_packet())
         response = send_result.response
 
-        if (
-            response is None
-            or response.return_code != ResponseCode.OK
-            or len(response.response_data) < 32
-        ):
+        if response is None:
+            self._logger.error(
+                "fetch_version_info: no response from EnOcean module (timeout)."
+            )
+            return None
+        if response.return_code != ResponseCode.OK:
+            self._logger.error(
+                f"fetch_version_info: module returned error code {response.return_code.name}."
+            )
+            return None
+        if len(response.response_data) < 32:
+            self._logger.error(
+                f"fetch_version_info: response data too short ({len(response.response_data)} bytes)."
+            )
             return None
 
         self.__version_info = VersionInfo(
@@ -1314,7 +1338,13 @@ class Gateway:
         elif spec.uses_addressed_sending:
             sender = self.__sender_id_for_learning or self.__base_id
         else:
-            sender = self.__next_available_sender()
+            try:
+                sender = self.__next_available_sender()
+            except RuntimeError:
+                self._logger.warning(
+                    f"UTE teach-in from {device_address}: no sender slots available; falling back to base ID."
+                )
+                sender = self.__sender_id_for_learning or self.__base_id
 
         if response_expected:
             self.__create_tracked_task(
@@ -1487,11 +1517,16 @@ class Gateway:
             )
             return
 
-        sender = (
-            self.__next_available_sender()
-            if not spec.uses_addressed_sending
-            else self.__sender_id_for_learning or self.__base_id
-        )
+        if not spec.uses_addressed_sending:
+            try:
+                sender = self.__next_available_sender()
+            except RuntimeError:
+                self._logger.warning(
+                    f"4BS teach-in from {erp1.sender}: no sender slots available; falling back to base ID."
+                )
+                sender = self.__sender_id_for_learning or self.__base_id
+        else:
+            sender = self.__sender_id_for_learning or self.__base_id
         self.add_device(
             address=erp1.sender, device_type=device_type_for_eep(eep), sender=sender
         )

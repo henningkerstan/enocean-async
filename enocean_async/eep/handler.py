@@ -156,8 +156,12 @@ class EEPHandler:
         # Write each field's raw value
         for f in datafields:
             raw = message.raw.get(f.id)
-            if raw is not None:
-                erp1.set_bitstring_raw_value(offset=f.offset, size=f.size, value=raw)
+            if raw is None:
+                self.__logger.debug(
+                    f"encode: field '{f.id}' not provided for EEP {self.__eep.eep}; defaulting to 0."
+                )
+                raw = 0
+            erp1.set_bitstring_raw_value(offset=f.offset, size=f.size, value=raw)
 
         return erp1
 

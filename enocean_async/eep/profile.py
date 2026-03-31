@@ -1,6 +1,9 @@
 from dataclasses import dataclass, field
+import logging
 import math
 from typing import Callable
+
+_logger = logging.getLogger(__name__)
 
 from ..semantics.entity import Entity  # noqa: F401  (re-exported for EEP files)
 from ..semantics.instructable import Instructable
@@ -57,15 +60,24 @@ class EEPDataField:
 
     def __post_init__(self):
         if self.range_enum:
-            # If an enumeration is provided, range_min and range_max should be derived from the enum keys
+            # If an enumeration is provided, range_min and range_max are derived from the enum keys
             enum_keys = self.range_enum.keys()
+            if self.range_min != 0 or self.range_max is not None:
+                _logger.warning(
+                    f"EEPDataField '{self.id}': range_min/range_max are ignored when range_enum is provided."
+                )
             self.range_min = min(enum_keys)
-            # Use setter for validation
             self.range_max = max(enum_keys)
         else:
             # If no enumeration, ensure range_max is set based on size if not provided
-            if self.range_max is None or self.range_max > (1 << self.size) - 1:
-                self.range_max = (1 << self.size) - 1
+            bit_max = (1 << self.size) - 1
+            if self.range_max is None:
+                self.range_max = bit_max
+            elif self.range_max > bit_max:
+                _logger.warning(
+                    f"EEPDataField '{self.id}': range_max {self.range_max} exceeds maximum for {self.size}-bit field ({bit_max}); clamping."
+                )
+                self.range_max = bit_max
 
         if self.scale_max_fn is None:
             self.scale_max_fn = lambda _: float(self.range_max)
