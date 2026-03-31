@@ -3,10 +3,13 @@ from __future__ import annotations
 from abc import ABC
 import asyncio
 from dataclasses import dataclass
+import logging
 from typing import TYPE_CHECKING, Optional
 
 from ...address import Address
 from ..observation import Observation, ObservationCallback
+
+_logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from ...eep.message import EEPMessage
@@ -45,4 +48,10 @@ class Observer(ABC):
     def _emit(self, observation: Observation) -> None:
         """Emit an observation via callback, scheduled on the running event loop."""
         if self.on_observation:
-            asyncio.get_running_loop().call_soon(self.on_observation, observation)
+            try:
+                asyncio.get_running_loop().call_soon(self.on_observation, observation)
+            except RuntimeError:
+                _logger.error(
+                    "Cannot emit observation: no running event loop. Observation dropped: %s",
+                    observation,
+                )

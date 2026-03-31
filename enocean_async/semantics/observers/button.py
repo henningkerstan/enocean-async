@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
+import logging
 from time import time
 from typing import TYPE_CHECKING
+
+_logger = logging.getLogger(__name__)
 
 from ..observable import Observable
 from ..observation import Observation, ObservationSource
@@ -93,7 +96,11 @@ class ButtonObserver(Observer):
         """Handle a button press."""
         if current_time is None:
             current_time = time()
-        loop = asyncio.get_running_loop()
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            _logger.error("Cannot schedule button timers: no running event loop.")
+            return
 
         # if button was held, emit a `released` event before emitting the new `pressed` event;
         # this can only happen if the release telegram got lost

@@ -260,7 +260,9 @@ class Gateway:
                     ),
                 )
             except RuntimeError:
-                pass  # no running event loop; next status change will deliver the state
+                self._logger.debug(
+                    "No running event loop when registering observation callback; connection status will be delivered on next state change."
+                )
 
     # ------------------------------------------------------------------
     # start and stop
@@ -470,9 +472,16 @@ class Gateway:
 
                 # send the frame
                 self.__transport.write(packet.to_bytes())
-                response: ResponseTelegram | None = await asyncio.wait_for(
-                    self.__send_future, timeout=0.5
-                )
+                try:
+                    response: ResponseTelegram | None = await asyncio.wait_for(
+                        self.__send_future, timeout=0.5
+                    )
+                except TimeoutError:
+                    end = time.perf_counter()
+                    self._logger.debug(
+                        f"No response to sent packet within 500ms. Duration: {(end - start) * 1000:.2f} ms"
+                    )
+                    return SendResult(None, (end - start) * 1000)
 
                 # stop the timer and calculate duration
                 end = time.perf_counter()
@@ -589,9 +598,7 @@ class Gateway:
                     f"Trying to reconnect to EnOcean Module (attempt #{attempt}/720)"
                 )
                 await self.start()
-                self.__reconnect_task.cancel()
-                self.__reconnect_task = None
-                self._logger.info("Reconnect successfull")
+                self._logger.info("Reconnect successful")
                 return
             except Exception:
                 self._logger.warning(
@@ -733,7 +740,7 @@ class Gateway:
     @property
     def is_connected(self) -> bool:
         """True if the gateway is currently connected to the EnOcean module."""
-        return self.__connection_status == "connected"
+        return self.__transport is not None and self.__connection_status == "connected"
 
     @property
     def gateway_entities(self) -> list[Entity]:

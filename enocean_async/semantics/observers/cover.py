@@ -96,9 +96,12 @@ class CoverObserver(Observer):
         """Cancel existing watchdog and schedule a new one."""
         if self._watchdog_handle is not None:
             self._watchdog_handle.cancel()
-        self._watchdog_handle = asyncio.get_running_loop().call_later(
-            COVER_WATCHDOG_TIMEOUT, self._on_watchdog_timeout
-        )
+        try:
+            self._watchdog_handle = asyncio.get_running_loop().call_later(
+                COVER_WATCHDOG_TIMEOUT, self._on_watchdog_timeout
+            )
+        except RuntimeError:
+            self._watchdog_handle = None
 
     def _on_watchdog_timeout(self) -> None:
         """Called when the watchdog fires; emits stopped state."""

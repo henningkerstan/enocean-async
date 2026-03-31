@@ -83,6 +83,9 @@ class EEPHandler:
                         scale_max=scale_max,
                     )
                 else:
+                    self.__logger.debug(
+                        f"Scale function returned None for field '{field.id}' in EEP {self.__eep.eep}; using raw value {raw_value}."
+                    )
                     value = raw_value
             else:
                 value = raw_value
