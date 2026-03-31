@@ -142,17 +142,6 @@ class EEPHandler:
             destination=message.destination,
         )
 
-        # Write CMD bits
-        if self.__eep.cmd_size > 0 and self.__eep.cmd_offset is not None:
-            cmd_bit_offset = (
-                self.__eep.cmd_offset
-                if self.__eep.cmd_offset >= 0
-                else buffer_size * 8 + self.__eep.cmd_offset
-            )
-            erp1.set_bitstring_raw_value(
-                offset=cmd_bit_offset, size=self.__eep.cmd_size, value=cmd_value
-            )
-
         # Write each field's raw value
         for f in datafields:
             raw = message.raw.get(f.id)
@@ -162,6 +151,18 @@ class EEPHandler:
                 )
                 raw = 0
             erp1.set_bitstring_raw_value(offset=f.offset, size=f.size, value=raw)
+
+        # Write CMD bits last so they are never overwritten by the field loop
+        # (the CMD field may also appear in datafields for decoding purposes).
+        if self.__eep.cmd_size > 0 and self.__eep.cmd_offset is not None:
+            cmd_bit_offset = (
+                self.__eep.cmd_offset
+                if self.__eep.cmd_offset >= 0
+                else buffer_size * 8 + self.__eep.cmd_offset
+            )
+            erp1.set_bitstring_raw_value(
+                offset=cmd_bit_offset, size=self.__eep.cmd_size, value=cmd_value
+            )
 
         return erp1
 
