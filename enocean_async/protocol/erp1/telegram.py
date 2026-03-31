@@ -236,7 +236,7 @@ class ERP1Telegram:
         elif s.is_base_address():
             sender = BaseAddress(int(s))
         else:
-            raise ERP1ParseError(f"Invalid sender address: {sender}")
+            raise ERP1ParseError(f"Invalid sender address: {s}")
 
         status = data[-1]
 

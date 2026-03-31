@@ -1,6 +1,7 @@
 """Asynchronous EnOcean Serial Protocol Version 3 (ESP3) implementation."""
 
 import asyncio
+import logging
 from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
@@ -11,6 +12,9 @@ import serial_asyncio_fast as serial_asyncio
 from enocean_async.protocol.esp3.response import ResponseTelegram
 
 from .packet import SYNC_BYTE, ESP3Packet, ESP3PacketType, crc8
+
+_MAX_BUFFER_SIZE = 4096
+"""Maximum ESP3 receive buffer size. If exceeded, the buffer is cleared to recover from a corrupted stream."""
 
 
 class EnOceanSerialProtocol3(asyncio.Protocol):
@@ -23,6 +27,7 @@ class EnOceanSerialProtocol3(asyncio.Protocol):
     def __init__(self, gateway: "Gateway"):
         self.__buffer = bytearray()
         self.__gateway: "Gateway" = gateway
+        self.__logger = logging.getLogger(__name__)
 
     def connection_made(self, transport: serial_asyncio.SerialTransport) -> None:
         self.__gateway.connection_made()
@@ -30,6 +35,13 @@ class EnOceanSerialProtocol3(asyncio.Protocol):
     def data_received(self, data: bytes) -> None:
         """Process the internal buffer to extract complete ESP3 packets and emit them."""
         self.__buffer.extend(data)
+
+        if len(self.__buffer) > _MAX_BUFFER_SIZE:
+            self.__logger.warning(
+                f"ESP3 receive buffer exceeded {_MAX_BUFFER_SIZE} bytes; clearing buffer to recover from corrupted stream."
+            )
+            self.__buffer.clear()
+            return
 
         while True:
             # find sync byte
@@ -59,6 +71,7 @@ class EnOceanSerialProtocol3(asyncio.Protocol):
 
             # validate header CRC
             if self.__buffer[5] != crc8(header):
+                self.__logger.debug("ESP3 header CRC mismatch; skipping byte.")
                 del self.__buffer[:1]
                 continue
 
@@ -72,6 +85,7 @@ class EnOceanSerialProtocol3(asyncio.Protocol):
 
             # validate data CRC
             if self.__buffer[opt_end] != crc8(data + optional):
+                self.__logger.debug("ESP3 data CRC mismatch; skipping byte.")
                 del self.__buffer[:1]
                 continue
 
@@ -79,8 +93,11 @@ class EnOceanSerialProtocol3(asyncio.Protocol):
                 # create ESP3Packet and process it
                 pkt = ESP3Packet(ESP3PacketType(packet_type), data, optional)
                 self.__gateway.process_esp3_packet(pkt)
-            except Exception:
-                # silently ignore any errors to avoid getting stuck on malformed packets
+            except Exception as e:
+                self.__logger.debug(
+                    f"Failed to process ESP3 packet (type=0x{packet_type:02X}): {e}",
+                    exc_info=True,
+                )
                 continue
             finally:
                 # Remove processed bytes

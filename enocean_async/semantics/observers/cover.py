@@ -36,6 +36,9 @@ class CoverObserver(Observer):
     )
     """Watchdog timer handle to detect when cover movement has stopped."""
 
+    _stopped: bool = field(default=False, init=False, repr=False)
+    """Set to True by stop() to prevent watchdog callbacks from firing after teardown."""
+
     def _decode_impl(self, message: EEPMessage) -> None:
         if not message.decoded:
             return
@@ -100,6 +103,8 @@ class CoverObserver(Observer):
     def _on_watchdog_timeout(self) -> None:
         """Called when the watchdog fires; emits stopped state."""
         self._watchdog_handle = None
+        if self._stopped:
+            return
         self._current_cover_state = "stopped"
         self._emit(
             Observation(
@@ -112,7 +117,8 @@ class CoverObserver(Observer):
         )
 
     def stop(self) -> None:
-        """Cancel the watchdog timer."""
+        """Cancel the watchdog timer and prevent any further callbacks."""
+        self._stopped = True
         if self._watchdog_handle is not None:
             self._watchdog_handle.cancel()
             self._watchdog_handle = None

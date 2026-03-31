@@ -1,3 +1,6 @@
+import logging
+from typing import Any
+
 from enocean_async.address import BroadcastAddress
 
 from ..protocol.erp1.telegram import RORG, ERP1Telegram
@@ -10,8 +13,11 @@ class EEPHandler:
 
     def __init__(self, eep: EEPSpecification):
         self.__eep = eep
+        self.__logger = logging.getLogger(__name__)
 
-    def decode(self, telegram: ERP1Telegram, config: dict | None = None) -> EEPMessage:
+    def decode(
+        self, telegram: ERP1Telegram, config: dict[str, Any] | None = None
+    ) -> EEPMessage:
         """Convert an ERP1Telegram into an EEPMessage."""
 
         msg = EEPMessage(
@@ -38,7 +44,10 @@ class EEPHandler:
             )
 
         if cmd_value not in self.__eep.telegrams:
-            return msg  # unknown telegram type, return message with empty values; TODO: improve this!
+            self.__logger.debug(
+                f"Unknown telegram command 0x{cmd_value:02X} for EEP {self.__eep.eep}; ignoring telegram."
+            )
+            return msg
 
         msg.message_type = EEPMessageType(
             id=cmd_value,
@@ -150,7 +159,7 @@ class EEPHandler:
         return erp1
 
     def __call__(
-        self, telegram: ERP1Telegram, config: dict | None = None
+        self, telegram: ERP1Telegram, config: dict[str, Any] | None = None
     ) -> EEPMessage:
         """Allow decoder instances to be called like functions."""
         return self.decode(telegram, config)

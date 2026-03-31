@@ -982,7 +982,15 @@ class Gateway:
         """Schedule a coroutine as a background task, tracking it for cancellation on stop()."""
         task = asyncio.get_running_loop().create_task(coro)
         self.__background_tasks.add(task)
-        task.add_done_callback(self.__background_tasks.discard)
+
+        def _on_done(t: asyncio.Task) -> None:
+            self.__background_tasks.discard(t)
+            if not t.cancelled() and t.exception() is not None:
+                self._logger.error(
+                    "Background task raised an exception", exc_info=t.exception()
+                )
+
+        task.add_done_callback(_on_done)
 
     def __emit(self, callbacks: list[Callable], *args: object) -> None:
         """Emit arguments to all registered callbacks of the given type."""
