@@ -382,8 +382,6 @@ _CMD_0x5_ActuatorSetMeasurement = EEPTelegram(
             name="Measurement delta (LSB)",
             offset=16,
             size=4,
-            range_min=0,
-            range_max=4095,
         ),
         EEPDataField(id="UN", name="Unit", offset=21, size=3, range_enum=_UNIT_ENUM),
         EEPDataField(
@@ -391,8 +389,6 @@ _CMD_0x5_ActuatorSetMeasurement = EEPTelegram(
             name="Measurement delta (MSB)",
             offset=24,
             size=8,
-            range_min=0,
-            range_max=4095,
         ),
         EEPDataField(
             id="MAT",

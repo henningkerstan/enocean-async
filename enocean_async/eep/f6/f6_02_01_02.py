@@ -20,8 +20,6 @@ _F6_02_DATAFIELDS = [
         name="Rocker 1st action",
         offset=0,
         size=3,
-        range_min=0,
-        range_max=7,
         range_enum={
             0: "a1",
             1: "a0",
@@ -41,8 +39,6 @@ _F6_02_DATAFIELDS = [
         name="Rocker 2nd action",
         offset=4,
         size=3,
-        range_min=0,
-        range_max=7,
         range_enum={
             0: "a1",
             1: "a0",
