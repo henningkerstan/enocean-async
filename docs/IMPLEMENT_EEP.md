@@ -388,6 +388,79 @@ New EEPs are automatically picked up by the parametrised profile smoke tests in 
 
 ---
 
+## Appendix: Eltako devices and teach-in telegrams
+
+Some Eltako actuators (shutters, dimmers, relays, valves) require a manufacturer-specific teach-in: Before the device will respond to commands, the gateway must send a **learn (teach-in) telegram** to register its sender address with the device. 
+
+### `uses_addressed_sending = False`
+
+Set this on the spec when the device uses sender-addressed communication:
+
+```python
+EEP_XX_YY_ZZ = SimpleProfileSpecification(
+    ...
+    uses_addressed_sending=False,
+)
+```
+
+The gateway then allocates a dedicated BaseID+n sender slot per device (see `add_device()`).
+
+### `teach_in_payload`
+
+The learn telegram is a fixed 4-byte 4BS payload (DB3..DB0). Add it to the spec:
+
+```python
+EEP_XX_YY_ZZ = SimpleProfileSpecification(
+    ...
+    uses_addressed_sending=False,
+    teach_in_payload=bytes([0xFF, 0xF8, 0x0D, 0x80]),  # FSB family
+)
+```
+
+Known Eltako actuator learn telegram payloads (from "Inhalte der Eltako-Funktelegramme"):
+
+| Devices | DB3 | DB2 | DB1 | DB0 |
+|---|---|---|---|---|
+| FSB14, FSB61, FSB71, FJ62 (shutters) | `0xFF` | `0xF8` | `0x0D` | `0x80` |
+| FUD14/61/71, FDG14/71L, FSR14/61/71 etc. (dimmers/relays) | `0xE0` | `0x40` | `0x0D` | `0x80` |
+| FRGBW14, FRGBW71L, FWWKW71L (RGB/WW dimmers) | `0xFF` | `0xF8` | `0x0D` | `0x87` |
+| FHK61, FHK61SSR (heating valve) | `0x40` | `0x30` | `0x0D` | `0x87` |
+| FSUD-230V | `0x02` | `0x00` | `0x00` | `0x00` |
+
+### `_TEACH_IN_ENTITY`
+
+Add a teach-in trigger entity to any sender-addressed Eltako spec so integrations can expose the commissioning action:
+
+```python
+from ...semantics.entity import Entity, EntityCategory
+from ...semantics.instructable import Instructable
+
+_TEACH_IN_ENTITY = Entity(
+    id="teach_in",
+    actions=frozenset({Instructable.TEACH_IN}),
+    category=EntityCategory.CONFIG,
+)
+```
+
+Add it to `entities=[..., _TEACH_IN_ENTITY]`.
+
+### Sending the learn telegram
+
+The caller issues `TeachIn()` after `add_device()`:
+
+```python
+gateway.add_device(address, EEP("A5-7F-3F.ELTAKO.FSB"), name="Living room blind")
+await gateway.send_command(address, TeachIn())
+```
+
+The gateway detects `Instructable.TEACH_IN`, bypasses the normal encoder, and sends `teach_in_payload` as a 4BS ERP1 telegram from the device's registered sender slot. No encoder registration is needed in the spec — `teach_in_payload` is the sole source of truth.
+
+### Separate Eltako variant specs
+
+`EEP_A5_38_08` is shared with non-Eltako devices, so Eltako dimmers/relays get their own variant `EEP_A5_38_08_ELTAKO` (`eep=EEP("A5-38-08.ELTAKO")`). Follow the same pattern when an existing generic spec would need teach-in support added: create a manufacturer-specific variant rather than modifying the shared spec.
+
+---
+
 ## Appendix: Reading vendor documentation (Eltako)
 
 Eltako datasheets and older EnOcean documentation sometimes use **ESP2 terminology** instead of the current ESP3 terms. The key difference is the `ORG` field (Organisation) in ESP2, which maps directly to `RORG` in ESP3:

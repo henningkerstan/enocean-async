@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.12.5] — 2026-04-01
+
+### New features
+- **`TeachIn` instruction**: new `TeachIn()` command for sender-addressed Eltako devices (FSB shutters, FUD/FSR dimmers/relays). After `add_device()`, call `await gateway.send_command(address, TeachIn())` to register the gateway's sender slot with the device. Exported from the top-level package.
+- **`Instructable.TEACH_IN`**: new `"teach_in"` instructable constant.
+- **`EEPSpecification.teach_in_payload: bytes | None`**: fixed 4-byte learn telegram payload on specs that require it. The gateway bypasses `EEPHandler.encode()` for `TEACH_IN` and sends the payload directly as a 4BS ERP1 telegram.
+- **`EEP.variant` field**: new optional `variant: str | None` parameter on `EEP` for manufacturer-specific profile disambiguation where the same EEP bytes are reused for incompatible payloads. String form: `"A5-7F-3F.ELTAKO.FSB"`; `DeviceType` ID: `"ELTAKO/A5-7F-3F/FSB"`. Variant is a registration-time discriminator — never carried on the wire.
+- **`EEP_A5_7F_3F_ELTAKO_FSB`**: full spec for Eltako FSB14/FSB61/FSB71 roller-shutter actuator (`A5-7F-3F.ELTAKO.FSB`). Covers stop/open/close commands with configurable travel time, cover state decoding from completed-movement telegrams, and teach-in support.
+- **`EEP_A5_38_08_ELTAKO`**: new Eltako-specific variant of A5-38-08 (`A5-38-08.ELTAKO`) for FUD/FSR sender-addressed dimmers and relays. Identical to `EEP_A5_38_08` but adds `teach_in_payload` and a `teach_in` config entity. Eltako device type entries (`FUD61NPN`, `FLD61`) updated to reference this variant.
+- **`Instruction.action` declared in base class**: `ClassVar[Instructable]` contract is now part of `Instruction` itself, enabling correct typing wherever `command: Instruction` is used.
+- **`EEP.__hash__` / `__eq__` include `variant`**: `EEP("A5-7F-3F.ELTAKO")` and `EEP("A5-7F-3F.ELTAKO.FSB")` are now different keys. Existing EEPs without a variant (`variant=None`) are unaffected.
+- **`EEP_A5_7F_3F_ELTAKO` renamed to `EEP_A5_7F_3F_ELTAKO_FSB`**.
+
 ## [0.12.4] — 2026-03-30
 
 ### Bug fixes
