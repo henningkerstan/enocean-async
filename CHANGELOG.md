@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.12.6] — 2026-04-01
+
+### New features
+- **`INSTRUCTION_FOR: dict[Instructable, type[Instruction]]`**: library-maintained mapping from every `Instructable` constant to its `Instruction` subclass. Integrations can use this instead of maintaining their own map, eliminating silent gaps when new instructables are added. Exported from the top-level package.
+
 ## [0.12.5] — 2026-04-01
 
 ### New features
@@ -12,6 +17,7 @@
 - **`Instruction.action` declared in base class**: `ClassVar[Instructable]` contract is now part of `Instruction` itself, enabling correct typing wherever `command: Instruction` is used.
 - **`EEP.__hash__` / `__eq__` include `variant`**: `EEP("A5-7F-3F.ELTAKO")` and `EEP("A5-7F-3F.ELTAKO.FSB")` are now different keys. Existing EEPs without a variant (`variant=None`) are unaffected.
 - **`EEP_A5_7F_3F_ELTAKO` renamed to `EEP_A5_7F_3F_ELTAKO_FSB`**.
+
 
 ## [0.12.4] — 2026-03-30
 

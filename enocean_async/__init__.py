@@ -22,6 +22,7 @@ from .semantics.entity import (
 )
 from .semantics.instructable import Instructable
 from .semantics.instruction import Instruction
+from .semantics.instructions import INSTRUCTION_FOR
 from .semantics.instructions.cover import (
     CoverClose,
     CoverOpen,
@@ -86,4 +87,5 @@ __all__ = [
     "SetFanSpeed",
     "SetSwitchOutput",
     "TeachIn",
+    "INSTRUCTION_FOR",
 ]
