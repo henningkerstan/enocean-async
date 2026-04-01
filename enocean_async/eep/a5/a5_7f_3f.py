@@ -43,7 +43,6 @@ from ...semantics.instructions.cover import CoverClose, CoverOpen, CoverStop
 from ...semantics.observable import Observable
 from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
-from ..manufacturer import Manufacturer
 from ..message import EEPMessageType, RawEEPMessage, ValueWithContext
 from ..profile import EEPDataField, Entity, SimpleProfileSpecification
 
@@ -139,8 +138,8 @@ def _encode_cover_close(_action: CoverClose, config: dict) -> RawEEPMessage:
 
 # --- Profile specification ---------------------------------------------------
 
-EEP_A5_7F_3F_ELTAKO = SimpleProfileSpecification(
-    eep=EEP("A5-7F-3F", Manufacturer.ELTAKO),
+EEP_A5_7F_3F_ELTAKO_FSB = SimpleProfileSpecification(
+    eep=EEP("A5-7F-3F.ELTAKO.FSB"),
     name="Eltako FSB roller-shutter / blind actuator (FSB14, FSB61, FSB71)",
     datafields=[
         EEPDataField(

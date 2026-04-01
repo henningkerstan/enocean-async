@@ -10,6 +10,7 @@ These entries represent known physical products.
 | Eltako | FABH65S | A5-08-01.ELTAKO | Wireless outdoor occupancy and brightness sensor | `supply_voltage`, `illumination`, `motion` | — |
 | Eltako | FAH65S | A5-06-01.ELTAKO | Wireless outdoor brightness sensor | `illumination` | — |
 | Eltako | FLD61 | A5-38-08 | PWM LED dimmer 12–36 V DC, up to 4 A | `light`, `cover` (angle, cover_state, position), `dimming_mode`, `min_brightness`, `max_brightness`, `ramp_time`, `store` | `switch`, `dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle` |
+| Eltako | FSB61 | A5-7F-3F.ELTAKO.FSB | Eltako FSB roller-shutter / blind actuator (FSB14, FSB61, FSB71) | `cover`, `max_travel_time` | `cover_stop`, `cover_open`, `cover_close` |
 | Eltako | FT55 | F6-02-01 | Battery-less wireless wall switch | `a0`, `a1`, `b0`, `b1` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | Eltako | FUD61NPN | A5-38-08 | Wireless universal dimmer 230V | `light`, `cover` (angle, cover_state, position), `dimming_mode`, `min_brightness`, `max_brightness`, `ramp_time`, `store` | `switch`, `dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle` |
 | Hoppe Holding AG | SecuSignal | F6-10-00 | Wireless window handle | `window_state` | — |
@@ -107,7 +108,7 @@ These entries cover any device implementing the given EEP.
 | A5-12-03 | Automated meter reading (AMR), water | `water_volume`, `water_flow` | — |
 | A5-20-01 | HVAC component – battery powered actuator (BI-DIR) | `valve_position`, `temperature` | — |
 | A5-38-08 | Central command - gateway | `light`, `cover` (angle, cover_state, position), `dimming_mode`, `min_brightness`, `max_brightness`, `ramp_time`, `store` | `switch`, `dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle` |
-| A5-7F-3F.ELTAKO | Eltako FSB roller-shutter / blind actuator (FSB14, FSB61, FSB71) | `cover`, `max_travel_time` | `cover_stop`, `cover_open`, `cover_close` |
+| A5-7F-3F.ELTAKO.FSB | Eltako FSB roller-shutter / blind actuator (FSB14, FSB61, FSB71) | `cover`, `max_travel_time` | `cover_stop`, `cover_open`, `cover_close` |
 | D2-01-00 | Electronic switches and dimmers with local control – Type 0x00 – 1 channel, switching + dimming | `ch1_switch_state`, `ch1_error_level`, `ch1_output_value`, `query_status` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | D2-01-01 | Electronic switches and dimmers with local control – Type 0x01 – 1 channel, switching | `ch1_switch_state`, `ch1_error_level`, `query_status` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | D2-01-02 | Electronic switches and dimmers with local control – Type 0x02 – 1 channel, switching + dimming + metering | `ch1_switch_state`, `ch1_error_level`, `ch1_output_value`, `ch1_energy`, `ch1_power`, `query_status`, `query_measurement` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |

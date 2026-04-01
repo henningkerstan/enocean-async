@@ -44,7 +44,7 @@ from .a5 import (
     EEP_A5_08_01_ELTAKO,
     EEP_A5_08_02,
     EEP_A5_08_03,
-    EEP_A5_7F_3F_ELTAKO,
+    EEP_A5_7F_3F_ELTAKO_FSB,
     EEP_A5_10_0A,
     EEP_A5_10_0B,
     EEP_A5_10_0C,
@@ -197,7 +197,7 @@ EEP_SPECIFICATIONS: dict[EEP, EEPSpecification] = {
     EEP_A5_12_03.eep: EEP_A5_12_03,
     EEP_A5_20_01.eep: EEP_A5_20_01,
     EEP_A5_38_08.eep: EEP_A5_38_08,
-    EEP_A5_7F_3F_ELTAKO.eep: EEP_A5_7F_3F_ELTAKO,
+    EEP_A5_7F_3F_ELTAKO_FSB.eep: EEP_A5_7F_3F_ELTAKO_FSB,
     EEP_F6_02_01.eep: EEP_F6_02_01,
     EEP_F6_02_02.eep: EEP_F6_02_02,
     EEP_F6_10_00.eep: EEP_F6_10_00,
@@ -251,6 +251,8 @@ def device_type_for_eep(eep: EEP) -> DeviceType:
     eep_code = f"{eep.rorg:02X}-{eep.func:02X}-{eep.type:02X}"
     if eep.manufacturer is not None:
         key = f"{eep.manufacturer.name}/{eep_code}"
+        if eep.variant is not None:
+            key = f"{key}/{eep.variant}"
     else:
         key = f"EEP/{eep_code}"
     return DEVICE_TYPES[key]

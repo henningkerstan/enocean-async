@@ -38,7 +38,7 @@ from .a5_06 import (
 )
 from .a5_07_03 import EEP_A5_07_03
 from .a5_08 import EEP_A5_08_01, EEP_A5_08_01_ELTAKO, EEP_A5_08_02, EEP_A5_08_03
-from .a5_7f_3f import EEP_A5_7F_3F_ELTAKO
+from .a5_7f_3f import EEP_A5_7F_3F_ELTAKO_FSB
 from .a5_10 import (
     EEP_A5_10_0A,
     EEP_A5_10_0B,
@@ -157,5 +157,5 @@ __all__ = [
     "EEP_A5_12_03",
     "EEP_A5_20_01",
     "EEP_A5_38_08",
-    "EEP_A5_7F_3F_ELTAKO",
+    "EEP_A5_7F_3F_ELTAKO_FSB",
 ]

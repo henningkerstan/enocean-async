@@ -41,14 +41,18 @@ class DeviceType:
         Always ``{NAMESPACE}/{CODE}`` in uppercase:
 
         - Generic entries use ``EEP`` as the namespace: ``"EEP/A5-02-01"``.
-        - Manufacturer-specific entries use the manufacturer enum name: ``"ELTAKO/FAH65S"``,
-          ``"TRIO_2_SYS/WALL-SWITCH"``.
+        - Manufacturer-specific EEP entries: ``"ELTAKO/A5-08-01"``.
+        - Manufacturer-specific EEP entries with variant: ``"ELTAKO/A5-7F-3F/FSB"``.
+        - Named product entries: ``"ELTAKO/FAH65S"``, ``"TRIO_2_SYS/WALL-SWITCH"``.
         """
         if self.manufacturer is not None:
             return f"{self.manufacturer.name}/{self.model.replace(' ', '-')}".upper()
         if self.eep.manufacturer is not None:
             eep_code = f"{self.eep.rorg:02X}-{self.eep.func:02X}-{self.eep.type:02X}"
-            return f"{self.eep.manufacturer.name}/{eep_code}"
+            key = f"{self.eep.manufacturer.name}/{eep_code}"
+            if self.eep.variant is not None:
+                key = f"{key}/{self.eep.variant}"
+            return key
         return f"EEP/{self.eep}"
 
 
@@ -63,6 +67,11 @@ _NodOn = partial(DeviceType, Manufacturer.NODON)
 
 _MANUFACTURER_TYPES: list[DeviceType] = [
     # Eltako
+    _Eltako(
+        "FSB61",
+        EEP("A5-7F-3F.ELTAKO.FSB"),
+        "Eltako FSB roller-shutter / blind actuator (FSB14, FSB61, FSB71)",
+    ),
     _Eltako(
         "FAH65S",
         EEP("A5-06-01", Manufacturer.ELTAKO),
