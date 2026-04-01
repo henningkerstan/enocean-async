@@ -199,6 +199,12 @@ def _resolve_cover_angle(
     return ValueWithContext(name="Angle", value=angle_pct, unit="%")
 
 
+_TEACH_IN_ENTITY = Entity(
+    id="teach_in",
+    actions=frozenset({Instructable.TEACH_IN}),
+    category=EntityCategory.CONFIG,
+)
+
 _DIMMER_ENTITY = Entity(
     id="light",
     observables=frozenset({Observable.OUTPUT_VALUE}),
@@ -611,4 +617,27 @@ EEP_A5_38_08 = EEPSpecification(
         ),
     },
     uses_addressed_sending=False,
+)
+
+EEP_A5_38_08_ELTAKO = EEPSpecification(
+    eep=EEP("A5-38-08.ELTAKO"),
+    name="Central command - gateway (Eltako FUD/FSR)",
+    cmd_size=EEP_A5_38_08.cmd_size,
+    cmd_offset=EEP_A5_38_08.cmd_offset,
+    telegrams=EEP_A5_38_08.telegrams,
+    entities=[
+        _DIMMER_ENTITY,
+        _COVER_ENTITY,
+        _DIM_MODE_SELECT,
+        _MIN_BRIGHTNESS,
+        _MAX_BRIGHTNESS,
+        _RAMP_TIME,
+        _STORE,
+        _TEACH_IN_ENTITY,
+    ],
+    observers=EEP_A5_38_08.observers,
+    semantic_resolvers=EEP_A5_38_08.semantic_resolvers,
+    encoders=EEP_A5_38_08.encoders,
+    uses_addressed_sending=False,
+    teach_in_payload=bytes([0xE0, 0x40, 0x0D, 0x80]),
 )

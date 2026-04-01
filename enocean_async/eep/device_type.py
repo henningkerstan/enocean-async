@@ -82,8 +82,8 @@ _MANUFACTURER_TYPES: list[DeviceType] = [
         EEP("A5-08-01", Manufacturer.ELTAKO),
         "Wireless outdoor occupancy and brightness sensor",
     ),
-    _Eltako("FUD61NPN", EEP("A5-38-08"), "Wireless universal dimmer 230V"),
-    _Eltako("FLD61", EEP("A5-38-08"), "PWM LED dimmer 12–36 V DC, up to 4 A"),
+    _Eltako("FUD61NPN", EEP("A5-38-08.ELTAKO"), "Wireless universal dimmer 230V"),
+    _Eltako("FLD61", EEP("A5-38-08.ELTAKO"), "PWM LED dimmer 12–36 V DC, up to 4 A"),
     _Eltako("FT55", EEP("F6-02-01"), "Battery-less wireless wall switch"),
     # Hoppe
     DeviceType(

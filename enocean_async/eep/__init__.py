@@ -84,6 +84,7 @@ from .a5 import (
     EEP_A5_12_03,
     EEP_A5_20_01,
     EEP_A5_38_08,
+    EEP_A5_38_08_ELTAKO,
 )
 from .d2 import (
     EEP_D2_01_0A,
@@ -197,6 +198,7 @@ EEP_SPECIFICATIONS: dict[EEP, EEPSpecification] = {
     EEP_A5_12_03.eep: EEP_A5_12_03,
     EEP_A5_20_01.eep: EEP_A5_20_01,
     EEP_A5_38_08.eep: EEP_A5_38_08,
+    EEP_A5_38_08_ELTAKO.eep: EEP_A5_38_08_ELTAKO,
     EEP_A5_7F_3F_ELTAKO_FSB.eep: EEP_A5_7F_3F_ELTAKO_FSB,
     EEP_F6_02_01.eep: EEP_F6_02_01,
     EEP_F6_02_02.eep: EEP_F6_02_02,

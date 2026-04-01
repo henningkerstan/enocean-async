@@ -29,3 +29,6 @@ class Instructable(StrEnum):
     SET_SWITCH_OUTPUT = "set_switch_output"
     QUERY_ACTUATOR_STATUS = "query_actuator_status"
     QUERY_ACTUATOR_MEASUREMENT = "query_actuator_measurement"
+
+    # Device commissioning
+    TEACH_IN = "teach_in"

@@ -148,6 +148,13 @@ class EEPSpecification:
     If False, the device is sender-addressed: it learned the gateway's sender address at teach-in
     and filters commands by sender. The gateway allocates a dedicated BaseID+n slot per device."""
 
+    teach_in_payload: bytes | None = None
+    """Fixed 4-byte (DB3..DB0) payload for the learn telegram sent to sender-addressed devices.
+    ``None`` for devices that do not require a gateway-initiated learn telegram.
+
+    The gateway's send_command() detects TEACH_IN and sends this payload directly as a 4BS ERP1
+    telegram, bypassing EEPHandler.encode()."""
+
 
 @dataclass
 class SimpleProfileSpecification(EEPSpecification):
@@ -163,6 +170,7 @@ class SimpleProfileSpecification(EEPSpecification):
         encoders: dict[Instructable, InstructionEncoder] | None = None,
         entities: list[Entity] | None = None,
         uses_addressed_sending: bool = True,
+        teach_in_payload: bytes | None = None,
     ):
         """Initialize a single-telegram EEP.
 
@@ -175,6 +183,7 @@ class SimpleProfileSpecification(EEPSpecification):
             encoders: Optional dict of Instructable → encoder callables.
             entities: Optional list of Entity declarations for this EEP.
             uses_addressed_sending: See EEPSpecification.uses_addressed_sending.
+            teach_in_payload: See EEPSpecification.teach_in_payload.
         """
 
         super().__init__(
@@ -188,4 +197,5 @@ class SimpleProfileSpecification(EEPSpecification):
             encoders=encoders or {},
             entities=entities or [],
             uses_addressed_sending=uses_addressed_sending,
+            teach_in_payload=teach_in_payload,
         )

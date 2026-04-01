@@ -36,6 +36,7 @@ from .semantics.instructions.switch import (
     QueryActuatorStatus,
     SetSwitchOutput,
 )
+from .semantics.instructions.teach_in import TeachIn
 from .semantics.observable import Observable
 from .semantics.observation import Observation, ObservationCallback, ObservationSource
 from .semantics.value_kind import ValueKind
@@ -84,4 +85,5 @@ __all__ = [
     "QueryActuatorStatus",
     "SetFanSpeed",
     "SetSwitchOutput",
+    "TeachIn",
 ]

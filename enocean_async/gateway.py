@@ -33,6 +33,7 @@ from .protocol.esp3.response import ResponseCode, ResponseTelegram
 from .protocol.version import VersionIdentifier, VersionInfo
 from .semantics.device_spec import DeviceSpec
 from .semantics.entity import Entity, EntityCategory
+from .semantics.instructable import Instructable
 from .semantics.instruction import Instruction
 from .semantics.observable import Observable
 from .semantics.observation import Observation, ObservationCallback, ObservationSource
@@ -533,6 +534,39 @@ class Gateway:
             raise ValueError(f"No EEP handler loaded for {eep_id}")
 
         spec = EEP_SPECIFICATIONS[eep_id]
+
+        # TEACH_IN bypasses the encoder path entirely — the fixed payload is sent directly.
+        if command.action == Instructable.TEACH_IN:
+            if spec.teach_in_payload is None:
+                raise ValueError(f"EEP {eep_id} has no teach_in_payload defined")
+            # Resolve sender before building the telegram (same logic as below)
+            if sender is None:
+                if device.sender:
+                    sender = device.sender
+                else:
+                    sender = self.base_id
+                    if sender is not None:
+                        device.sender = sender
+            if sender is None:
+                raise ValueError(
+                    "Could not determine sender address; pass sender= explicitly or connect first"
+                )
+            erp1 = ERP1Telegram(
+                rorg=RORG.RORG_4BS,
+                telegram_data=spec.teach_in_payload,
+                sender=sender,
+                destination=None,
+            )
+            self._logger.info(
+                f"Sent learn telegram {spec.teach_in_payload.hex()} "
+                f"to {destination} from sender {sender}."
+            )
+            self.__erp1_sent += 1
+            self.__emit_gateway_observation(
+                "telegrams_sent", Observable.TELEGRAMS_SENT, self.__erp1_sent
+            )
+            return await self.send_esp3_packet(erp1.to_esp3())
+
         if command.action not in spec.encoders:
             raise ValueError(
                 f"Command '{command.action}' is not supported for EEP {eep_id}"

@@ -10,6 +10,7 @@ from .cover import (
 from .dimmer import Dim, Switch
 from .fan import SetFanSpeed
 from .switch import QueryActuatorMeasurement, QueryActuatorStatus, SetSwitchOutput
+from .teach_in import TeachIn
 
 __all__ = [
     "Instructable",
@@ -25,4 +26,5 @@ __all__ = [
     "QueryActuatorMeasurement",
     "QueryActuatorStatus",
     "SetSwitchOutput",
+    "TeachIn",
 ]
