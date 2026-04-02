@@ -900,7 +900,7 @@ class Gateway:
                         raise ValueError(
                             "Cannot start learning: gateway base ID not yet available."
                         )
-                    sender = SenderAddress(int(self.base_id) + int(sender_cfg))
+                    sender = BaseAddress(int(self.base_id) + int(sender_cfg))
                 await self.start_learning(timeout=timeout, sender_id=sender)
         else:
             raise ValueError(f"Gateway command '{command.action}' is not supported.")
