@@ -32,6 +32,7 @@ from .semantics.instructions.cover import (
 )
 from .semantics.instructions.dimmer import Dim, Switch
 from .semantics.instructions.fan import SetFanSpeed
+from .semantics.instructions.learning import ToggleLearning
 from .semantics.instructions.switch import (
     QueryActuatorMeasurement,
     QueryActuatorStatus,
@@ -87,5 +88,6 @@ __all__ = [
     "SetFanSpeed",
     "SetSwitchOutput",
     "TeachIn",
+    "ToggleLearning",
     "INSTRUCTION_FOR",
 ]

@@ -32,7 +32,7 @@ from .protocol.esp3.protocol import EnOceanSerialProtocol3
 from .protocol.esp3.response import ResponseCode, ResponseTelegram
 from .protocol.version import VersionIdentifier, VersionInfo
 from .semantics.device_spec import DeviceSpec
-from .semantics.entity import Entity, EntityCategory
+from .semantics.entity import Entity, EntityCategory, EnumOptions
 from .semantics.instructable import Instructable
 from .semantics.instruction import Instruction
 from .semantics.observable import Observable
@@ -59,6 +59,14 @@ _METADATA_ENTITIES = [
     ),
 ]
 
+_GATEWAY_SOURCE_OBSERVABLES = frozenset(
+    {
+        Observable.CONNECTION_STATUS,
+        Observable.LEARNING_ACTIVE,
+        Observable.LEARNING_REMAINING,
+    }
+)
+
 _GATEWAY_ENTITIES: list[Entity] = [
     Entity(
         id="connection_status",
@@ -74,6 +82,34 @@ _GATEWAY_ENTITIES: list[Entity] = [
         id="telegrams_sent",
         observables=frozenset({Observable.TELEGRAMS_SENT}),
         category=EntityCategory.DIAGNOSTIC,
+    ),
+    Entity(
+        id="learning_active",
+        observables=frozenset({Observable.LEARNING_ACTIVE}),
+        category=EntityCategory.DIAGNOSTIC,
+    ),
+    Entity(
+        id="learning_remaining",
+        observables=frozenset({Observable.LEARNING_REMAINING}),
+        category=EntityCategory.DIAGNOSTIC,
+    ),
+    Entity(
+        id="learning_toggle",
+        actions=frozenset({Instructable.TOGGLE_LEARNING}),
+        category=EntityCategory.CONFIG,
+    ),
+    Entity(
+        id="learning_timeout",
+        config_spec=EnumOptions(options=("30", "60", "120", "300"), default="30"),
+        category=EntityCategory.CONFIG,
+    ),
+    Entity(
+        id="learning_sender",
+        config_spec=EnumOptions(
+            options=("auto",) + tuple(str(i) for i in range(1, 128)),
+            default="auto",
+        ),
+        category=EntityCategory.CONFIG,
     ),
 ]
 
@@ -161,8 +197,16 @@ class Gateway:
         # learning
         self.__is_learning: bool = False
         self.__learning_timeout_task: asyncio.Task | None = None
+        self.__learning_deadline: float = 0.0
+        self.__learning_tick_handle: asyncio.TimerHandle | None = None
         self.__sender_id_for_learning: SenderAddress | None = None
         self.__allow_teach_out: bool = False
+
+        # gateway config (in-memory; integration re-applies at startup)
+        self.config: dict[str, Any] = {
+            "learning_timeout": "30",
+            "learning_sender": "auto",
+        }
 
         # logging
         self._logger = logging.getLogger(__name__)
@@ -427,6 +471,18 @@ class Gateway:
             self.__learning_timeout(timeout)
         )
 
+        self.__learning_deadline = time.monotonic() + timeout
+        self.__emit_gateway_observation(
+            "learning_active", Observable.LEARNING_ACTIVE, True
+        )
+        self.__emit_gateway_observation(
+            "learning_remaining", Observable.LEARNING_REMAINING, timeout
+        )
+        if self.__learning_tick_handle is not None:
+            self.__learning_tick_handle.cancel()
+        loop = asyncio.get_event_loop()
+        self.__learning_tick_handle = loop.call_later(1, self.__tick_learning_remaining)
+
     def stop_learning(self) -> None:
         """Stop learning mode."""
         self.__is_learning = False
@@ -434,6 +490,30 @@ class Gateway:
         if self.__learning_timeout_task is not None:
             self.__learning_timeout_task.cancel()
             self.__learning_timeout_task = None
+        if self.__learning_tick_handle is not None:
+            self.__learning_tick_handle.cancel()
+            self.__learning_tick_handle = None
+        self.__emit_gateway_observation(
+            "learning_active", Observable.LEARNING_ACTIVE, False
+        )
+        self.__emit_gateway_observation(
+            "learning_remaining", Observable.LEARNING_REMAINING, 0
+        )
+
+    def __tick_learning_remaining(self) -> None:
+        if not self.__is_learning:
+            return
+        remaining = max(0, int(self.__learning_deadline - time.monotonic()))
+        self.__emit_gateway_observation(
+            "learning_remaining", Observable.LEARNING_REMAINING, remaining
+        )
+        if remaining > 0:
+            loop = asyncio.get_event_loop()
+            self.__learning_tick_handle = loop.call_later(
+                1, self.__tick_learning_remaining
+            )
+        else:
+            self.__learning_tick_handle = None
 
     async def __learning_timeout(self, timeout_seconds: int) -> None:
         try:
@@ -763,9 +843,11 @@ class Gateway:
             return
         if observable is Observable.CONNECTION_STATUS:
             self.__connection_status = str(value)
-            source = ObservationSource.GATEWAY
-        else:
-            source = ObservationSource.TELEGRAM
+        source = (
+            ObservationSource.GATEWAY
+            if observable in _GATEWAY_SOURCE_OBSERVABLES
+            else ObservationSource.TELEGRAM
+        )
         self.__emit(
             self.__observation_callbacks,
             Observation(
@@ -786,6 +868,87 @@ class Gateway:
     def gateway_entities(self) -> list[Entity]:
         """Entities exposed by the gateway device itself."""
         return _GATEWAY_ENTITIES
+
+    def set_gateway_config(self, key: str, value: str) -> None:
+        """Update a gateway config value and emit an observation for the affected entity.
+
+        Args:
+            key: Config key (e.g. ``"learning_timeout"``, ``"learning_sender"``).
+            value: New value string.
+        """
+        self.config[key] = value
+
+    async def gateway_command(self, command: Instruction) -> None:
+        """Send a command to the gateway itself (not to a registered device).
+
+        Args:
+            command: A typed Instruction. Currently only ``ToggleLearning()`` is supported.
+
+        Raises:
+            ValueError: If the command action is not supported.
+        """
+        if command.action == Instructable.TOGGLE_LEARNING:
+            if self.__is_learning:
+                self.stop_learning()
+            else:
+                timeout = int(self.config.get("learning_timeout", 30))
+                sender_cfg = self.config.get("learning_sender", "auto")
+                if sender_cfg == "auto":
+                    sender = None
+                else:
+                    if self.base_id is None:
+                        raise ValueError(
+                            "Cannot start learning: gateway base ID not yet available."
+                        )
+                    sender = SenderAddress(int(self.base_id) + int(sender_cfg))
+                await self.start_learning(timeout=timeout, sender_id=sender)
+        else:
+            raise ValueError(f"Gateway command '{command.action}' is not supported.")
+
+    def learning_sender_options(self) -> list[tuple[str, str | None, list[str]]]:
+        """Return sender slot options for the ``learning_sender`` config entity.
+
+        Each entry is ``(value, address, devices)`` where:
+
+        - ``value`` — slot key: ``"auto"`` or ``"1"``–``"127"``
+        - ``address`` — resolved absolute address as colon-separated hex string,
+          or ``None`` for ``"auto"``
+        - ``devices`` — list of ``str(eurid)`` for devices currently using that
+          sender slot; empty list if unoccupied
+
+        Returns ``[("auto", None, [])]`` before ``start()`` (base ID not yet known).
+
+        Example::
+
+            [
+                ("auto", None, []),
+                ("1", "FF:FF:FF:01", []),
+                ("2", "FF:FF:FF:02", ["AB:CD:EF:12"]),
+                ("3", "FF:FF:FF:03", ["AB:CD:EF:AA", "F0:FB:AB:C3"]),
+                ...
+            ]
+        """
+        result: list[tuple[str, str | None, list[str]]] = [("auto", None, [])]
+        if self.base_id is None:
+            return result
+
+        # Build occupancy map: SenderAddress → list of EURID strings
+        occupied: dict[int, list[str]] = {}
+        for device in self.__devices.values():
+            if device.sender is not None:
+                occupied.setdefault(int(device.sender), []).append(str(device.address))
+
+        base_number = int(self.base_id)
+        for i in range(1, 128):
+            addr = BaseAddress(base_number + i)
+            result.append(
+                (
+                    str(i),
+                    str(addr),
+                    occupied.get(int(addr), []),
+                )
+            )
+        return result
 
     def remove_device(self, address: EURID) -> None:
         """Deregister a device by its sender address (EURID). This removes the device from the registry of known devices, so that incoming messages from this address will no longer be recognized as coming from a known device and will not be decoded as EEP messages."""

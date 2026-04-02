@@ -120,3 +120,5 @@ class Observable(str, Enum):
         _E,
         ["connected", "disconnected", "reconnecting"],
     )
+    LEARNING_ACTIVE = ("learning_active", None, _B)
+    LEARNING_REMAINING = ("learning_remaining", "s", _S)

@@ -9,6 +9,7 @@ from .cover import (
 )
 from .dimmer import Dim, Switch
 from .fan import SetFanSpeed
+from .learning import ToggleLearning
 from .switch import QueryActuatorMeasurement, QueryActuatorStatus, SetSwitchOutput
 from .teach_in import TeachIn
 
@@ -27,6 +28,7 @@ INSTRUCTION_FOR: dict[Instructable, type[Instruction]] = {
         QueryActuatorStatus,
         SetSwitchOutput,
         TeachIn,
+        ToggleLearning,
     ]
 }
 """Maps each ``Instructable`` constant to its ``Instruction`` subclass.
@@ -52,4 +54,5 @@ __all__ = [
     "QueryActuatorStatus",
     "SetSwitchOutput",
     "TeachIn",
+    "ToggleLearning",
 ]

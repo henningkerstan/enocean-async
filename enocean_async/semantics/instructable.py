@@ -32,3 +32,6 @@ class Instructable(StrEnum):
 
     # Device commissioning
     TEACH_IN = "teach_in"
+
+    # Gateway learning mode
+    TOGGLE_LEARNING = "toggle_learning"
