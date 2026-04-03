@@ -106,7 +106,7 @@ _GATEWAY_ENTITIES: list[Entity] = [
     Entity(
         id="learning_sender",
         config_spec=EnumOptions(
-            options=("auto",) + tuple(str(i) for i in range(1, 128)),
+            options=("auto",) + tuple(str(i) for i in range(0, 128)) + ("eurid",),
             default="auto",
         ),
         category=EntityCategory.CONFIG,
@@ -895,6 +895,12 @@ class Gateway:
                 sender_cfg = self.config.get("learning_sender", "auto")
                 if sender_cfg == "auto":
                     sender = None
+                elif sender_cfg == "eurid":
+                    if self.eurid is None:
+                        raise ValueError(
+                            "Cannot start learning: gateway EURID not yet available."
+                        )
+                    sender = self.eurid
                 else:
                     if self.base_id is None:
                         raise ValueError(
@@ -905,49 +911,60 @@ class Gateway:
         else:
             raise ValueError(f"Gateway command '{command.action}' is not supported.")
 
-    def learning_sender_options(self) -> list[tuple[str, str | None, list[str]]]:
+    def learning_sender_options(
+        self, for_device: EURID | None = None
+    ) -> list[tuple[str, SenderAddress | None, list[EURID]]]:
         """Return sender slot options for the ``learning_sender`` config entity.
 
         Each entry is ``(value, address, devices)`` where:
 
-        - ``value`` — slot key: ``"auto"`` or ``"1"``–``"127"``
-        - ``address`` — resolved absolute address as colon-separated hex string,
-          or ``None`` for ``"auto"``
-        - ``devices`` — list of ``str(eurid)`` for devices currently using that
+        - ``value`` — slot key: ``"auto"``, ``"0"``–``"127"``, or ``"eurid"``
+        - ``address`` — resolved :class:`BaseAddress` or :class:`EURID` for that
+          slot, or ``None`` for ``"auto"``
+        - ``devices`` — list of :class:`EURID` for devices currently using that
           sender slot; empty list if unoccupied
 
+        Slots occupied by other devices are excluded — only free slots and the slot
+        already assigned to ``for_device`` (if provided) are included.
+
         Returns ``[("auto", None, [])]`` before ``start()`` (base ID not yet known).
-
-        Example::
-
-            [
-                ("auto", None, []),
-                ("1", "FF:FF:FF:01", []),
-                ("2", "FF:FF:FF:02", ["AB:CD:EF:12"]),
-                ("3", "FF:FF:FF:03", ["AB:CD:EF:AA", "F0:FB:AB:C3"]),
-                ...
-            ]
         """
-        result: list[tuple[str, str | None, list[str]]] = [("auto", None, [])]
-        if self.base_id is None:
+        result: list[tuple[str, SenderAddress | None, list[EURID]]] = [
+            ("auto", None, [])
+        ]
+        if self.base_id is None or self.eurid is None:
             return result
 
-        # Build occupancy map: SenderAddress → list of EURID strings
-        occupied: dict[int, list[str]] = {}
+        # Build occupancy map: sender address int → list of EURIDs
+        occupied: dict[int, list[EURID]] = {}
         for device in self.__devices.values():
             if device.sender is not None:
-                occupied.setdefault(int(device.sender), []).append(str(device.address))
+                occupied.setdefault(int(device.sender), []).append(device.address)
+
+        # Slot 0 (BaseID+0) is for destination-addressed devices only;
+        # omit it when for_device is a known sender-addressed device.
+        _spec = (
+            EEP_SPECIFICATIONS.get(self.__devices[for_device].eep)
+            if for_device is not None and for_device in self.__devices
+            else None
+        )
+        uses_addressed = _spec.uses_addressed_sending if _spec is not None else None
 
         base_number = int(self.base_id)
-        for i in range(1, 128):
+        for i in range(0, 128):
             addr = BaseAddress(base_number + i)
-            result.append(
-                (
-                    str(i),
-                    str(addr),
-                    occupied.get(int(addr), []),
-                )
-            )
+            devices = occupied.get(int(addr), [])
+            if i == 0 and uses_addressed is False:
+                continue  # slot 0 not applicable for sender-addressed devices
+            # for_device=None: show all slots; otherwise only free + own slot
+            if for_device is None or not devices or for_device in devices:
+                result.append((str(i), addr, devices))
+
+        # Gateway EURID — technically a valid sender but an unusual choice
+        eurid_devices = occupied.get(int(self.eurid), [])
+        if for_device is None or not eurid_devices or for_device in eurid_devices:
+            result.append(("eurid", self.eurid, eurid_devices))
+
         return result
 
     def remove_device(self, address: EURID) -> None:
