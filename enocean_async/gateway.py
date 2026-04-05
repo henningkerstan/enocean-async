@@ -6,6 +6,8 @@ from typing import Any, Callable, Optional
 
 import serial_asyncio_fast as serial_asyncio
 
+from enocean_async.semantics.instructions.learning import ToggleLearning
+
 from .address import EURID, BaseAddress, SenderAddress
 from .device import Device
 from .eep import EEP_SPECIFICATIONS, device_type_for_eep
@@ -67,6 +69,25 @@ _GATEWAY_SOURCE_OBSERVABLES = frozenset(
     }
 )
 
+_SENDER_SLOT_ENTITY = Entity(
+    id="sender_slot",
+    config_spec=EnumOptions(
+        options=("auto",) + tuple(str(i) for i in range(0, 128)) + ("eurid",),
+        default="auto",
+    ),
+    category=EntityCategory.CONFIG,
+)
+
+_LEARNING_TOGGLE_ENTITY = Entity(
+    id="learning_toggle",
+    actions=frozenset({Instructable.TOGGLE_LEARNING}),
+)
+
+_LEARNING_REMAINING_ENTITY = Entity(
+    id="learning_remaining",
+    observables=frozenset({Observable.LEARNING_REMAINING}),
+)
+
 _GATEWAY_ENTITIES: list[Entity] = [
     Entity(
         id="connection_status",
@@ -118,6 +139,20 @@ _GATEWAY_ENTITIES: list[Entity] = [
 class SendResult:
     response: Optional[ResponseTelegram]
     duration_ms: Optional[float]
+
+
+def _sender_to_slot_string(
+    sender: SenderAddress | None, base_id: BaseAddress | None
+) -> str:
+    """Convert a concrete sender address to the ``sender_slot`` config string."""
+    if sender is None or base_id is None:
+        return "auto"
+    if isinstance(sender, EURID):
+        return "eurid"
+    offset = int(sender) - int(base_id)
+    if 0 <= offset <= 127:
+        return str(offset)
+    return "auto"
 
 
 # callback types
@@ -201,6 +236,7 @@ class Gateway:
         self.__learning_tick_handle: asyncio.TimerHandle | None = None
         self.__sender_id_for_learning: SenderAddress | None = None
         self.__allow_teach_out: bool = False
+        self.__focus_device: EURID | None = None
 
         # gateway config (in-memory; integration re-applies at startup)
         self.config: dict[str, Any] = {
@@ -418,6 +454,7 @@ class Gateway:
         timeout: int = 30,
         allow_teach_out: bool = False,
         sender_id: SenderAddress | None = None,
+        focus_device: EURID | None = None,
     ) -> None:
         """Start learning mode for pairing new EnOcean devices.
 
@@ -430,6 +467,8 @@ class Gateway:
             allow_teach_out: If True, teach-out requests are honored during this session.
                 Defaults to False.
             sender_id: Sender address used in UTE responses. Defaults to the gateway's base ID.
+            focus_device: If set, only accept teach-in telegrams from this specific EURID.
+                All other teach-in telegrams are ignored during the learning window.
         """
 
         base_id = self.base_id
@@ -440,6 +479,7 @@ class Gateway:
 
         self.__is_learning = True
         self.__allow_teach_out = allow_teach_out
+        self.__focus_device = focus_device
 
         if sender_id is not None and not self.is_valid_sender(sender_id):
             raise ValueError(
@@ -462,8 +502,9 @@ class Gateway:
                 )
             else:
                 sender_info = f"Gateway selected sender {base_id} (base ID), but no sender-addressed slots are available; consider freeing up sender-addressed slots"
+        focus_info = f" Focused on {focus_device}." if focus_device else ""
         self._logger.info(
-            f"Learning mode started. {sender_info}. Learning mode will timeout after {timeout} seconds."
+            f"Learning mode started.{focus_info} {sender_info}. Learning mode will timeout after {timeout} seconds."
         )
         if self.__learning_timeout_task is not None:
             self.__learning_timeout_task.cancel()
@@ -486,6 +527,7 @@ class Gateway:
     def stop_learning(self) -> None:
         """Stop learning mode."""
         self.__is_learning = False
+        self.__focus_device = None
         self._logger.info("Learning mode stopped.")
         if self.__learning_timeout_task is not None:
             self.__learning_timeout_task.cancel()
@@ -803,6 +845,11 @@ class Gateway:
         if config:
             device.config.update(config)
 
+        # seed sender_slot from the assigned sender address
+        device.config["sender_slot"] = _sender_to_slot_string(
+            device.sender, self.__base_id
+        )
+
         # build observer list from EEP observers
         if not eep_spec.observers:
             self._logger.debug(
@@ -823,13 +870,45 @@ class Gateway:
     def set_device_config(self, address: EURID, entity_id: str, value: Any) -> None:
         """Update a single per-device config value (e.g. ``"min_brightness"``, ``"max_brightness"``).
 
+        For ``entity_id == "sender_slot"``, also updates ``device.sender`` and validates
+        that the requested slot is not already taken by another registered device.
+
         Raises:
-            ValueError: If the device is not registered.
+            ValueError: If the device is not registered or the sender slot is already in use.
         """
         device = self.__devices.get(address)
         if device is None:
             raise ValueError(f"Unknown device {address}")
+        if entity_id == "sender_slot":
+            new_sender = self.__resolve_sender_slot(value)
+            if new_sender is not None:
+                for other in self.__devices.values():
+                    if other.address != address and other.sender == new_sender:
+                        raise ValueError(
+                            f"Sender slot {value!r} is already used by device {other.address}"
+                        )
+            device.sender = new_sender
+            self._logger.debug(
+                f"Device {address}: sender_slot changed to {value!r} → sender={new_sender}"
+            )
         device.config[entity_id] = value
+
+    def __resolve_sender_slot(self, value: str) -> SenderAddress | None:
+        """Resolve a ``sender_slot`` string to a concrete sender address.
+
+        Returns ``None`` when the slot is ``"auto"`` or base_id is not available.
+        """
+        if value == "auto":
+            return None
+        if value == "eurid":
+            return self.eurid
+        if self.__base_id is not None:
+            try:
+                offset = int(value)
+                return BaseAddress(int(self.__base_id) + offset)
+            except ValueError:
+                pass
+        return None
 
     def __on_observation(self, observation: Observation) -> None:
         """Internal callback forwarding observer Observations to registered callbacks."""
@@ -887,7 +966,7 @@ class Gateway:
         Raises:
             ValueError: If the command action is not supported.
         """
-        if command.action == Instructable.TOGGLE_LEARNING:
+        if isinstance(command, ToggleLearning):
             if self.__is_learning:
                 self.stop_learning()
             else:
@@ -907,7 +986,10 @@ class Gateway:
                             "Cannot start learning: gateway base ID not yet available."
                         )
                     sender = BaseAddress(int(self.base_id) + int(sender_cfg))
-                await self.start_learning(timeout=timeout, sender_id=sender)
+                focus = command.for_device if hasattr(command, "for_device") else None
+                await self.start_learning(
+                    timeout=timeout, sender_id=sender, focus_device=focus
+                )
         else:
             raise ValueError(f"Gateway command '{command.action}' is not supported.")
 
@@ -992,9 +1074,14 @@ class Gateway:
         spec = EEP_SPECIFICATIONS.get(device.eep)
         if spec is None:
             return None
+        extra_device = list(_METADATA_ENTITIES) + [_SENDER_SLOT_ENTITY]
+        extra_gateway: list[Entity] = []
+        if not spec.uses_addressed_sending and spec.teach_in_payload is None:
+            extra_gateway = [_LEARNING_TOGGLE_ENTITY, _LEARNING_REMAINING_ENTITY]
         return DeviceSpec(
             device_type=device.device_type,
-            entities=spec.entities + _METADATA_ENTITIES,
+            entities=spec.entities + extra_device,
+            gateway_entities=extra_gateway,
         )
 
     @property
@@ -1489,6 +1576,14 @@ class Gateway:
         )
         device_address = ute.sender  # always set when decoded from ERP1
 
+        # focused learning: only accept telegrams from the targeted device
+        if self.__focus_device is not None and device_address != self.__focus_device:
+            self._logger.debug(
+                f"Focused learning: ignoring UTE message from {device_address} "
+                f"(expected {self.__focus_device})."
+            )
+            return
+
         match request_type:
             case UTEQueryRequestType.TEACH_IN:
                 self._logger.info(f"UTE teach-in query from {device_address}.")
@@ -1663,6 +1758,15 @@ class Gateway:
                 "4BS teach-in telegram received but not in learning mode; ignoring telegram."
             )
             return
+
+        # focused learning: only accept telegrams from the targeted device
+        if self.__focus_device is not None and erp1.sender != self.__focus_device:
+            self._logger.debug(
+                f"Focused learning: ignoring 4BS teach-in from {erp1.sender} "
+                f"(expected {self.__focus_device})."
+            )
+            return
+
         try:
             teach_in_telegram = FourBSTeachInTelegram.from_erp1(erp1)
         except ValueError as e:

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from ..eep.id import EEP
@@ -21,9 +21,13 @@ class DeviceSpec:
     """The device type (manufacturer + model + EEP) this spec was built for."""
 
     entities: list[Entity]
-    """All entities this device type exposes, including the three metadata entities
-    (rssi, last_seen, telegram_count) always added by the gateway.
+    """All entities this device type exposes, including the metadata entities
+    (rssi, last_seen, telegram_count) and the sender_slot config entity,
+    always added by the gateway.
     """
+
+    gateway_entities: list[Entity] = field(default_factory=list)
+    """Entities sourced from the gateway device but useful for configuration of this device. """
 
     @property
     def eep(self) -> EEP:
