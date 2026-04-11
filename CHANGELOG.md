@@ -9,6 +9,9 @@
 - **`EEPSpecification.teach_in_payload` → `learn_telegram_payload`**: field renamed to match the instruction rename.
 - **`start_learning(focus_device=...)` → `start_learning(for_device=...)`**: parameter renamed to align with `LearningToggle.for_device`.
 
+### Bug fixes
+- **A5-7F-3F FSB open/close commands raised `ValueError: Unknown telegram type`**: the open and close encoders used `EEPMessageType(id=1)` / `id=2)`, treating the message type ID as a semantic command selector. For `SimpleProfileSpecification` the ID is a telegram-definition lookup key and only `0` is valid. Fixed by setting `id=0` in all three encoders; the `DIR` field already encodes the direction distinction.
+
 ## [0.12.7] — 2026-04-05
 
 ### New features

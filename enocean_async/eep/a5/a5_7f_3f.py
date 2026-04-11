@@ -115,7 +115,7 @@ def _encode_cover_open(_action: CoverOpen, config: dict) -> RawEEPMessage:
     runtime_s = max(1, min(255, int(config.get("max_travel_time", 60))))
     msg = RawEEPMessage(
         sender=None,
-        message_type=EEPMessageType(id=1, description="Open (up)"),
+        message_type=EEPMessageType(id=0, description="Open (up)"),
     )
     msg.raw["RTS"] = 0
     msg.raw["RTL"] = runtime_s
@@ -131,7 +131,7 @@ def _encode_cover_close(_action: CoverClose, config: dict) -> RawEEPMessage:
     runtime_s = max(1, min(255, int(config.get("max_travel_time", 60))))
     msg = RawEEPMessage(
         sender=None,
-        message_type=EEPMessageType(id=2, description="Close (down)"),
+        message_type=EEPMessageType(id=0, description="Close (down)"),
     )
     msg.raw["RTS"] = 0
     msg.raw["RTL"] = runtime_s
