@@ -128,18 +128,24 @@ An **instructable** is a category of command sent _to_ a device — telling a co
 
 ```python
 class Instructable(StrEnum):
-    COVER_SET_POSITION_AND_ANGLE = "cover_set_position_and_angle"
-    COVER_STOP                   = "cover_stop"
+    COVER_SET_POSITION_AND_ANGLE   = "cover_set_position_and_angle"
+    COVER_STOP                     = "cover_stop"
     COVER_QUERY_POSITION_AND_ANGLE = "cover_query_position_and_angle"
-    COVER_OPEN                   = "cover_open"
-    COVER_CLOSE                  = "cover_close"
-    SWITCH                       = "switch"
-    DIM                          = "dim"
-    SET_FAN_SPEED                = "set_fan_speed"
-    SET_SWITCH_OUTPUT            = "set_switch_output"
-    QUERY_ACTUATOR_STATUS        = "query_actuator_status"
-    QUERY_ACTUATOR_MEASUREMENT   = "query_actuator_measurement"
+    COVER_OPEN                     = "cover_open"
+    COVER_CLOSE                    = "cover_close"
+    SWITCH                         = "switch"
+    DIM                            = "dim"
+    SET_FAN_SPEED                  = "set_fan_speed"
+    SET_SWITCH_OUTPUT              = "set_switch_output"
+    QUERY_ACTUATOR_STATUS          = "query_actuator_status"
+    QUERY_ACTUATOR_MEASUREMENT     = "query_actuator_measurement"
+    TEACH_IN                       = "teach_in"
+    TOGGLE_LEARNING                = "toggle_learning"
 ```
+
+`TEACH_IN` is used by sender-addressed devices that require the gateway to announce its sender slot to the device (e.g. Eltako FSB/FUD/FSR). `TOGGLE_LEARNING` controls gateway learning mode: `ToggleLearning()` starts a new session (or stops one already in progress); `ToggleLearning(for_device=eurid)` starts a focused session that only accepts teach-in telegrams from that specific EURID.
+
+**`INSTRUCTION_FOR: dict[Instructable, type[Instruction]]`** is a library-maintained mapping from every `Instructable` constant to its `Instruction` subclass, exported from the top-level package. Integrations can use this instead of maintaining their own map.
 
 `Instructable` names things you _send_. `Observable` names things you _receive_. They are separate classifiers: `COVER_STOP` is an instructable with no direct observable counterpart; `COVER_SET_POSITION_AND_ANGLE` is an instructable that will eventually produce `POSITION` and `COVER_STATE` updates as the device reports back. The formal link between an instructable and the observables it affects is declared on the `Entity` — both `observables` and `actions` live together on the entity they belong to.
 
@@ -234,20 +240,26 @@ await gateway.send_command(
 class DeviceSpec:
     device_type: DeviceType
     entities: list[Entity]
+    gateway_entities: list[Entity] = field(default_factory=list)
 
     @property
     def eep(self) -> EEP: ...  # shortcut for device_type.eep
 ```
 
-`entities` always includes three metadata entities added by the gateway regardless of EEP:
+`entities` always includes entities added by the gateway regardless of EEP:
 
-```python
-Entity(id="rssi",           observables=frozenset({RSSI}),           actions=[])
-Entity(id="last_seen",      observables=frozenset({LAST_SEEN}),      actions=[])
-Entity(id="telegram_count", observables=frozenset({TELEGRAM_COUNT}), actions=[])
-```
+- Three **metadata** entities (`rssi`, `last_seen`, `telegram_count`)
+- One **`sender_slot`** `CONFIG_ENUM` entity (options: `"auto"`, `"0"`–`"127"`, `"eurid"`). Setting this via `set_device_config(address, "sender_slot", value)` immediately updates `device.sender` and validates no collision with other devices.
 
-An integration (e.g. Home Assistant) uses `DeviceSpec.entities` to create platform entities at setup time — without waiting for a single telegram.
+`gateway_entities` holds entities that are **sourced from the gateway device** (observed/commanded via the gateway) but **rendered on the device's config page** by the integration. The gateway injects these based on device type:
+
+| Device type | `entities` additions | `gateway_entities` |
+|---|---|---|
+| Destination-addressed (`uses_addressed_sending=True`) | metadata + `sender_slot` | — |
+| Sender-addressed, has `teach_in_payload` (e.g. Eltako) | metadata + `sender_slot` + `teach_in` | — |
+| Sender-addressed, no `teach_in_payload` | metadata + `sender_slot` | `learning_toggle`, `learning_remaining` |
+
+An integration (e.g. Home Assistant) uses `DeviceSpec.entities` to create device-scoped platform entities, and `DeviceSpec.gateway_entities` to create gateway-sourced entities that appear on the device's config page.
 
 ---
 
@@ -447,7 +459,23 @@ The gateway handles UTE and 4BS teach-in telegrams during an active learning ses
 
 Both UTE and 4BS-with-profile support bidirectional teach-in: the gateway sends a protocol-level response acknowledging or rejecting the pairing. For UTE this is mandatory; for 4BS it is conditional on the device requesting a response (`learn_status=QUERY`). Re-teach-in of an already-registered device is handled gracefully — same EEP is acknowledged and ignored; a different EEP updates the registration.
 
+**Focused learning mode:** `start_learning(focus_device: EURID | None = None)` — when `focus_device` is set, UTE and 4BS handlers silently discard telegrams from any other EURID. This allows integrations to retrigger teach-in for a specific device (e.g. from the device's config page) without risk of accidentally registering an unrelated device that happens to be in teaching mode nearby. `stop_learning()` always clears the focus.
+
+The gateway can also initiate outbound teach-in for Eltako-style sender-addressed devices (those with `EEPSpecification.teach_in_payload` set): `send_command(address, TeachIn())` sends the fixed 4BS payload that registers the gateway's sender slot with the device.
+
 See [TEACHIN.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/TEACHIN.md) for the full behavior.
+
+#### Gateway learning entities and sender_slot
+
+The gateway itself exposes additional observable and configurable entities beyond the connection-status group. All are available via `gateway.gateway_entities`:
+
+- **`learning_active`** — `Observable.LEARNING_ACTIVE` (bool); emitted `True`/`False` on session start/stop
+- **`learning_remaining`** — `Observable.LEARNING_REMAINING` (seconds); counted down once per second via `loop.call_later()` while learning is active
+- **`learning_toggle`** — trigger entity accepting `Instructable.TOGGLE_LEARNING`; `gateway_command(ToggleLearning())` starts or stops the session; `ToggleLearning(for_device=eurid)` starts a focused session
+- **`learning_timeout`** — `CONFIG_NUMBER`; default session length in seconds
+- **`learning_sender`** — `CONFIG_ENUM`; sender slot used when the gateway responds during teach-in
+
+Every registered device also receives a **`sender_slot`** `CONFIG_ENUM` entity (injected by `device_spec()`). Updating it via `set_device_config(address, "sender_slot", value)` resolves the string to a `BaseAddress` or `EURID`, validates no slot collision, and updates `device.sender` in place. The next `send_command()` or `TeachIn()` picks up the new sender automatically.
 
 #### Auto-reconnect
 
@@ -490,6 +518,7 @@ Some EEP profiles spread one observable across multiple fields (A5-06: two illum
 3. Annotate fields with `observable` where a 1:1 mapping to an observable exists. Add a `SemanticResolver` for multi-field combinations.
 4. Populate `observers` with the appropriate factory callables (e.g. `scalar_factory`, `cover_factory`, `f6_button_factory`).
 5. Set `uses_addressed_sending=False` if the device is sender-addressed (learns the gateway's BaseID+n at teach-in). Default is `True` (VLD / destination-addressed).
+5a. For sender-addressed devices where the gateway announces itself with a fixed 4BS payload (e.g. Eltako actuators), set `teach_in_payload: bytes` (4 bytes). The gateway's `send_command(address, TeachIn())` will send this payload directly, bypassing `EEPHandler.encode()`. These devices get a `teach_in` trigger entity in `DeviceSpec.entities` but **not** `learning_toggle`/`learning_remaining` in `gateway_entities`.
 6. Optionally populate `encoders` if the device accepts instructions. Add the corresponding `Instruction` subclass in `semantics/instructions/<profile>.py`.
 7. Register in `eep/__init__.py`'s `EEP_SPECIFICATIONS`. A generic `DeviceType` entry is auto-derived from this automatically.
 8. Optionally add known physical products for this EEP to `_MANUFACTURER_TYPES` in `eep/device_type.py`.

@@ -23,6 +23,7 @@ from .semantics.entity import (
 from .semantics.instructable import Instructable
 from .semantics.instruction import Instruction
 from .semantics.instructions import INSTRUCTION_FOR
+from .semantics.instructions.central_command import CentralDim, CentralSwitch
 from .semantics.instructions.cover import (
     CoverClose,
     CoverOpen,
@@ -30,15 +31,14 @@ from .semantics.instructions.cover import (
     CoverSetPositionAndAngle,
     CoverStop,
 )
-from .semantics.instructions.dimmer import Dim, Switch
 from .semantics.instructions.fan import SetFanSpeed
-from .semantics.instructions.learning import ToggleLearning
+from .semantics.instructions.learn_telegram import LearnTelegram
+from .semantics.instructions.learning import LearningToggle
 from .semantics.instructions.switch import (
     QueryActuatorMeasurement,
     QueryActuatorStatus,
     SetSwitchOutput,
 )
-from .semantics.instructions.teach_in import TeachIn
 from .semantics.observable import Observable
 from .semantics.observation import Observation, ObservationCallback, ObservationSource
 from .semantics.value_kind import ValueKind
@@ -81,13 +81,13 @@ __all__ = [
     "CoverQueryPositionAndAngle",
     "CoverSetPositionAndAngle",
     "CoverStop",
-    "Dim",
-    "Switch",
+    "CentralDim",
+    "CentralSwitch",
     "QueryActuatorMeasurement",
     "QueryActuatorStatus",
     "SetFanSpeed",
     "SetSwitchOutput",
-    "TeachIn",
-    "ToggleLearning",
+    "LearnTelegram",
+    "LearningToggle",
     "INSTRUCTION_FOR",
 ]

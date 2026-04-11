@@ -8,13 +8,13 @@ from ...semantics.entity import (
     NumberRange,
 )
 from ...semantics.instructable import Instructable
+from ...semantics.instructions.central_command import CentralDim, CentralSwitch
 from ...semantics.instructions.cover import (
     CoverClose,
     CoverOpen,
     CoverSetPositionAndAngle,
     CoverStop,
 )
-from ...semantics.instructions.dimmer import Dim, Switch
 from ...semantics.observable import Observable
 from ...semantics.observers.cover import cover_factory
 from ...semantics.observers.scalar import scalar_factory
@@ -50,7 +50,7 @@ def _resolve_edim(raw: dict, _scaled: dict, config: dict) -> ValueWithContext | 
     return ValueWithContext(name="Dimming value", value=round(dim_value, 1), unit="%")
 
 
-def _encode_switch(action: Switch) -> RawEEPMessage:
+def _encode_central_switch(action: CentralSwitch) -> RawEEPMessage:
     msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=1, description="Switching"),
@@ -63,7 +63,7 @@ def _encode_switch(action: Switch) -> RawEEPMessage:
     return msg
 
 
-def _encode_dim(action: Dim, config: dict) -> RawEEPMessage:
+def _encode_central_dim(action: CentralDim, config: dict) -> RawEEPMessage:
     msg = RawEEPMessage(
         sender=None,
         message_type=EEPMessageType(id=2, description="Dimming"),
@@ -199,16 +199,16 @@ def _resolve_cover_angle(
     return ValueWithContext(name="Angle", value=angle_pct, unit="%")
 
 
-_TEACH_IN_ENTITY = Entity(
-    id="teach_in",
-    actions=frozenset({Instructable.TEACH_IN}),
+_LEARN_TELEGRAM_ENTITY = Entity(
+    id="learn_telegram",
+    actions=frozenset({Instructable.LEARN_TELEGRAM}),
     category=EntityCategory.CONFIG,
 )
 
 _DIMMER_ENTITY = Entity(
     id="light",
     observables=frozenset({Observable.OUTPUT_VALUE}),
-    actions=frozenset({Instructable.DIM, Instructable.SWITCH}),
+    actions=frozenset({Instructable.CENTRAL_DIM, Instructable.CENTRAL_SWITCH}),
 )
 
 _DIM_MODE_SELECT = Entity(
@@ -607,8 +607,8 @@ EEP_A5_38_08 = EEPSpecification(
         Observable.ANGLE: _resolve_cover_angle,
     },
     encoders={
-        Instructable.SWITCH: lambda a, _: _encode_switch(a),
-        Instructable.DIM: _encode_dim,
+        Instructable.CENTRAL_SWITCH: lambda a, _: _encode_central_switch(a),
+        Instructable.CENTRAL_DIM: _encode_central_dim,
         Instructable.COVER_STOP: lambda a, _: _encode_cover_stop(a),
         Instructable.COVER_OPEN: lambda a, _: _encode_cover_open(a),
         Instructable.COVER_CLOSE: lambda a, _: _encode_cover_close(a),
@@ -633,11 +633,11 @@ EEP_A5_38_08_ELTAKO = EEPSpecification(
         _MAX_BRIGHTNESS,
         _RAMP_TIME,
         _STORE,
-        _TEACH_IN_ENTITY,
+        _LEARN_TELEGRAM_ENTITY,
     ],
     observers=EEP_A5_38_08.observers,
     semantic_resolvers=EEP_A5_38_08.semantic_resolvers,
     encoders=EEP_A5_38_08.encoders,
     uses_addressed_sending=False,
-    teach_in_payload=bytes([0xE0, 0x40, 0x0D, 0x80]),
+    learn_telegram_payload=bytes([0xE0, 0x40, 0x0D, 0x80]),
 )

@@ -1,4 +1,4 @@
-"""Teach-in (learn telegram) command for sender-addressed Eltako devices."""
+"""Learn telegram command for sender-addressed Eltako devices."""
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -8,7 +8,7 @@ from ..instruction import Instruction
 
 
 @dataclass
-class TeachIn(Instruction):
+class LearnTelegram(Instruction):
     """Send the learn telegram to a sender-addressed device.
 
     Can be issued at any time after the device has been registered —
@@ -16,8 +16,8 @@ class TeachIn(Instruction):
     the sender slot needs to be re-taught.
 
     The gateway bypasses the normal encoder path and sends the fixed
-    ``teach_in_payload`` bytes from the EEP specification directly as a
+    ``learn_telegram_payload`` bytes from the EEP specification directly as a
     4BS ERP1 telegram with the device's registered sender address.
     """
 
-    action: ClassVar[Instructable] = Instructable.TEACH_IN
+    action: ClassVar[Instructable] = Instructable.LEARN_TELEGRAM

@@ -1,11 +1,11 @@
 from .instructable import Instructable
 from .instruction import Instruction
+from .instructions.central_command import CentralDim, CentralSwitch
 from .instructions.cover import (
     CoverQueryPositionAndAngle,
     CoverSetPositionAndAngle,
     CoverStop,
 )
-from .instructions.dimmer import Dim
 from .instructions.fan import SetFanSpeed
 from .instructions.switch import (
     QueryActuatorMeasurement,
@@ -23,7 +23,8 @@ __all__ = [
     "Instructable",
     "Instruction",
     "CoverObserver",
-    "Dim",
+    "CentralDim",
+    "CentralSwitch",
     "Observation",
     "ObservationCallback",
     "ObservationSource",

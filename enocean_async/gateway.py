@@ -6,7 +6,7 @@ from typing import Any, Callable, Optional
 
 import serial_asyncio_fast as serial_asyncio
 
-from enocean_async.semantics.instructions.learning import ToggleLearning
+from enocean_async.semantics.instructions.learning import LearningToggle
 
 from .address import EURID, BaseAddress, SenderAddress
 from .device import Device
@@ -80,7 +80,7 @@ _SENDER_SLOT_ENTITY = Entity(
 
 _LEARNING_TOGGLE_ENTITY = Entity(
     id="learning_toggle",
-    actions=frozenset({Instructable.TOGGLE_LEARNING}),
+    actions=frozenset({Instructable.LEARNING_TOGGLE}),
 )
 
 _LEARNING_REMAINING_ENTITY = Entity(
@@ -116,7 +116,7 @@ _GATEWAY_ENTITIES: list[Entity] = [
     ),
     Entity(
         id="learning_toggle",
-        actions=frozenset({Instructable.TOGGLE_LEARNING}),
+        actions=frozenset({Instructable.LEARNING_TOGGLE}),
         category=EntityCategory.CONFIG,
     ),
     Entity(
@@ -454,7 +454,7 @@ class Gateway:
         timeout: int = 30,
         allow_teach_out: bool = False,
         sender_id: SenderAddress | None = None,
-        focus_device: EURID | None = None,
+        for_device: EURID | None = None,
     ) -> None:
         """Start learning mode for pairing new EnOcean devices.
 
@@ -467,7 +467,7 @@ class Gateway:
             allow_teach_out: If True, teach-out requests are honored during this session.
                 Defaults to False.
             sender_id: Sender address used in UTE responses. Defaults to the gateway's base ID.
-            focus_device: If set, only accept teach-in telegrams from this specific EURID.
+            for_device: If set, only accept teach-in telegrams from this specific EURID.
                 All other teach-in telegrams are ignored during the learning window.
         """
 
@@ -479,7 +479,7 @@ class Gateway:
 
         self.__is_learning = True
         self.__allow_teach_out = allow_teach_out
-        self.__focus_device = focus_device
+        self.__focus_device = for_device
 
         if sender_id is not None and not self.is_valid_sender(sender_id):
             raise ValueError(
@@ -502,7 +502,7 @@ class Gateway:
                 )
             else:
                 sender_info = f"Gateway selected sender {base_id} (base ID), but no sender-addressed slots are available; consider freeing up sender-addressed slots"
-        focus_info = f" Focused on {focus_device}." if focus_device else ""
+        focus_info = f" Focused on {for_device}." if for_device else ""
         self._logger.info(
             f"Learning mode started.{focus_info} {sender_info}. Learning mode will timeout after {timeout} seconds."
         )
@@ -629,7 +629,7 @@ class Gateway:
         Args:
             destination: The device's address (must have been registered via add_device()).
                          Used to look up the correct EEP; not necessarily the RF destination.
-            command: A typed Command instance (e.g. SetCoverPosition, Dim).
+            command: A typed Command instance (e.g. CoverSetPositionAndAngle, CentralDim).
             sender: Sender address to use. If None, uses the device's registered sender
                     or falls back to the gateway's base ID.
 
@@ -657,9 +657,9 @@ class Gateway:
 
         spec = EEP_SPECIFICATIONS[eep_id]
 
-        # TEACH_IN bypasses the encoder path entirely — the fixed payload is sent directly.
-        if command.action == Instructable.TEACH_IN:
-            if spec.teach_in_payload is None:
+        # LEARN_TELEGRAM bypasses the encoder path entirely — the fixed payload is sent directly.
+        if command.action == Instructable.LEARN_TELEGRAM:
+            if spec.learn_telegram_payload is None:
                 raise ValueError(f"EEP {eep_id} has no teach_in_payload defined")
             # Resolve sender before building the telegram (same logic as below)
             if sender is None:
@@ -675,12 +675,12 @@ class Gateway:
                 )
             erp1 = ERP1Telegram(
                 rorg=RORG.RORG_4BS,
-                telegram_data=spec.teach_in_payload,
+                telegram_data=spec.learn_telegram_payload,
                 sender=sender,
                 destination=None,
             )
             self._logger.info(
-                f"Sent learn telegram {spec.teach_in_payload.hex()} "
+                f"Sent learn telegram {spec.learn_telegram_payload.hex()} "
                 f"to {destination} from sender {sender}."
             )
             self.__erp1_sent += 1
@@ -881,7 +881,7 @@ class Gateway:
             raise ValueError(f"Unknown device {address}")
         if entity_id == "sender_slot":
             new_sender = self.__resolve_sender_slot(value)
-            if new_sender is not None:
+            if new_sender is not None and new_sender != self.base_id:
                 for other in self.__devices.values():
                     if other.address != address and other.sender == new_sender:
                         raise ValueError(
@@ -961,12 +961,12 @@ class Gateway:
         """Send a command to the gateway itself (not to a registered device).
 
         Args:
-            command: A typed Instruction. Currently only ``ToggleLearning()`` is supported.
+            command: A typed Instruction. Currently only ``LearningToggle()`` is supported.
 
         Raises:
             ValueError: If the command action is not supported.
         """
-        if isinstance(command, ToggleLearning):
+        if isinstance(command, LearningToggle):
             if self.__is_learning:
                 self.stop_learning()
             else:
@@ -988,7 +988,7 @@ class Gateway:
                     sender = BaseAddress(int(self.base_id) + int(sender_cfg))
                 focus = command.for_device if hasattr(command, "for_device") else None
                 await self.start_learning(
-                    timeout=timeout, sender_id=sender, focus_device=focus
+                    timeout=timeout, sender_id=sender, for_device=focus
                 )
         else:
             raise ValueError(f"Gateway command '{command.action}' is not supported.")
@@ -1076,7 +1076,7 @@ class Gateway:
             return None
         extra_device = list(_METADATA_ENTITIES) + [_SENDER_SLOT_ENTITY]
         extra_gateway: list[Entity] = []
-        if not spec.uses_addressed_sending and spec.teach_in_payload is None:
+        if not spec.uses_addressed_sending and spec.learn_telegram_payload is None:
             extra_gateway = [_LEARNING_TOGGLE_ENTITY, _LEARNING_REMAINING_ENTITY]
         return DeviceSpec(
             device_type=device.device_type,

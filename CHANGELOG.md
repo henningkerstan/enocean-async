@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.13.0] — 2026-04-11
+
+### Breaking changes
+- **`Dim` → `CentralDim`**, **`Switch` → `CentralSwitch`**, **`Instructable.DIM` → `CENTRAL_DIM`**, **`Instructable.SWITCH` → `CENTRAL_SWITCH`**: A5-38-08 lighting instructions prefixed with `Central` to reflect the "central command gateway" profile and avoid confusion with D2-01's `SetSwitchOutput`. Module `semantics/instructions/dimmer.py` renamed to `central_command.py`.
+- **`ToggleLearning` → `LearningToggle`**, **`Instructable.TOGGLE_LEARNING` → `LEARNING_TOGGLE`**: class name, instructable constant, and entity id `learning_toggle` now all use the same noun-first word order.
+- **`TeachIn` → `LearnTelegram`**, **`Instructable.TEACH_IN` → `LEARN_TELEGRAM`**: renamed to match Eltako documentation terminology. Module `semantics/instructions/teach_in.py` renamed to `learn_telegram.py`.
+- **`EEPSpecification.teach_in_payload` → `learn_telegram_payload`**: field renamed to match the instruction rename.
+- **`start_learning(focus_device=...)` → `start_learning(for_device=...)`**: parameter renamed to align with `LearningToggle.for_device`.
+
+## [0.12.7] — 2026-04-05
+
+### New features
+- **`ToggleLearning` instruction + `Instructable.TOGGLE_LEARNING`**: new `ToggleLearning()` command to start/stop gateway learning mode from the instruction pipeline. When `for_device: EURID | None` is set, the gateway enters **focused learning mode** — UTE and 4BS teach-in telegrams from any EURID other than `for_device` are silently ignored during the window, preventing accidental registration of other devices. Exported from the top-level package.
+- **`DeviceSpec.gateway_entities`**: second entity list on `DeviceSpec` for entities that are sourced from the **gateway device** but rendered on the device's config page. The integration observes and commands these via the gateway's EURID. Currently populated with `learning_toggle` and `learning_remaining` for sender-addressed devices that have no fixed `teach_in_payload` (i.e. require the gateway to listen for an inbound teach-in from the device).
+- **`sender_slot` entity injected for all devices**: `device_spec()` now always appends a `sender_slot` `CONFIG_ENUM` entity (options: `"auto"`, `"0"`–`"127"`, `"eurid"`; default `"auto"`) to `DeviceSpec.entities`. Setting it via `set_device_config(address, "sender_slot", value)` immediately updates `device.sender`; a collision check raises `ValueError` if the target slot is already in use by another device. The initial value is seeded at `add_device()` time from the device's current sender address.
+- **Gateway learning-mode entities**: five new entities added to `gateway.gateway_entities`:
+  - `learning_active` — `Observable.LEARNING_ACTIVE` (bool); `True` while a learning session is open
+  - `learning_remaining` — `Observable.LEARNING_REMAINING` (seconds); counts down from the timeout once per second via `loop.call_later()`
+  - `learning_toggle` — trigger entity accepting `Instructable.TOGGLE_LEARNING`
+  - `learning_timeout` — `CONFIG_NUMBER` controlling the default learning window length (seconds)
+  - `learning_sender` — `CONFIG_ENUM` selecting which sender slot the gateway uses when responding during teach-in
+- **Focused learning mode**: `start_learning(focus_device: EURID | None = None)` — when `focus_device` is set, the UTE and 4BS handlers reject telegrams from any other EURID before processing them. `stop_learning()` clears the focus. Allows integrations to retrigger teach-in for a specific device from the device's config page without the risk of registering an unrelated device.
+- **`Observable.LEARNING_ACTIVE`** (bool) and **`Observable.LEARNING_REMAINING`** (seconds) added.
+
 ## [0.12.6] — 2026-04-01
 
 ### New features

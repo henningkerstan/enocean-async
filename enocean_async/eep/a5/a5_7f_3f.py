@@ -64,9 +64,9 @@ _MAX_TRAVEL_TIME = Entity(
     category=EntityCategory.CONFIG,
 )
 
-_TEACH_IN_ENTITY = Entity(
-    id="teach_in",
-    actions=frozenset({Instructable.TEACH_IN}),
+_LEARN_TELEGRAM_ENTITY = Entity(
+    id="learn_telegram",
+    actions=frozenset({Instructable.LEARN_TELEGRAM}),
     category=EntityCategory.CONFIG,
 )
 
@@ -206,7 +206,7 @@ EEP_A5_7F_3F_ELTAKO_FSB = SimpleProfileSpecification(
         Instructable.COVER_OPEN: _encode_cover_open,
         Instructable.COVER_CLOSE: _encode_cover_close,
     },
-    entities=[_COVER_ENTITY, _MAX_TRAVEL_TIME, _TEACH_IN_ENTITY],
+    entities=[_COVER_ENTITY, _MAX_TRAVEL_TIME, _LEARN_TELEGRAM_ENTITY],
     uses_addressed_sending=False,
-    teach_in_payload=bytes([0xFF, 0xF8, 0x0D, 0x80]),
+    learn_telegram_payload=bytes([0xFF, 0xF8, 0x0D, 0x80]),
 )

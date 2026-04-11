@@ -1,5 +1,6 @@
 from ..instructable import Instructable
 from ..instruction import Instruction
+from .central_command import CentralDim, CentralSwitch
 from .cover import (
     CoverClose,
     CoverOpen,
@@ -7,11 +8,10 @@ from .cover import (
     CoverSetPositionAndAngle,
     CoverStop,
 )
-from .dimmer import Dim, Switch
 from .fan import SetFanSpeed
-from .learning import ToggleLearning
+from .learn_telegram import LearnTelegram
+from .learning import LearningToggle
 from .switch import QueryActuatorMeasurement, QueryActuatorStatus, SetSwitchOutput
-from .teach_in import TeachIn
 
 INSTRUCTION_FOR: dict[Instructable, type[Instruction]] = {
     cls.action: cls
@@ -21,14 +21,14 @@ INSTRUCTION_FOR: dict[Instructable, type[Instruction]] = {
         CoverQueryPositionAndAngle,
         CoverSetPositionAndAngle,
         CoverStop,
-        Dim,
-        Switch,
+        CentralDim,
+        CentralSwitch,
         SetFanSpeed,
         QueryActuatorMeasurement,
         QueryActuatorStatus,
         SetSwitchOutput,
-        TeachIn,
-        ToggleLearning,
+        LearnTelegram,
+        LearningToggle,
     ]
 }
 """Maps each ``Instructable`` constant to its ``Instruction`` subclass.
@@ -47,12 +47,12 @@ __all__ = [
     "CoverQueryPositionAndAngle",
     "CoverSetPositionAndAngle",
     "CoverStop",
-    "Dim",
-    "Switch",
+    "CentralDim",
+    "CentralSwitch",
     "SetFanSpeed",
     "QueryActuatorMeasurement",
     "QueryActuatorStatus",
     "SetSwitchOutput",
-    "TeachIn",
-    "ToggleLearning",
+    "LearnTelegram",
+    "LearningToggle",
 ]

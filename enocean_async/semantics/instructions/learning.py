@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class ToggleLearning(Instruction):
+class LearningToggle(Instruction):
     """Toggle gateway learning mode on/off.
 
     When issued while learning is inactive, starts a new session using
@@ -26,7 +26,7 @@ class ToggleLearning(Instruction):
     the learning window.
     """
 
-    action: ClassVar[Instructable] = Instructable.TOGGLE_LEARNING
+    action: ClassVar[Instructable] = Instructable.LEARNING_TOGGLE
 
     for_device: EURID | None = field(default=None, kw_only=True)
     """If set, only accept teach-in from this EURID during the learning window."""

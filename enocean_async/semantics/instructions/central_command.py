@@ -8,10 +8,10 @@ from ..instruction import Instruction
 
 
 @dataclass
-class Switch(Instruction):
+class CentralSwitch(Instruction):
     """Switch a device on or off, with optional timed and lock control."""
 
-    action: ClassVar[Instructable] = Instructable.SWITCH
+    action: ClassVar[Instructable] = Instructable.CENTRAL_SWITCH
 
     switch_on: bool
     """SW field: True = switch on, False = switch off."""
@@ -28,10 +28,10 @@ class Switch(Instruction):
 
 
 @dataclass
-class Dim(Instruction):
+class CentralDim(Instruction):
     """Dim a light to a specific value."""
 
-    action: ClassVar[Instructable] = Instructable.DIM
+    action: ClassVar[Instructable] = Instructable.CENTRAL_DIM
 
     dim_value: float
     """Dimming value as a percentage: 0 = off, 100 = full brightness."""

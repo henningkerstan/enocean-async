@@ -87,7 +87,11 @@ gateway.stop_learning()
 Supported teach-in methods:
 - **UTE**: automatic bidirectional response; sender address auto-allocated from the base ID pool
 - **4BS with profile**: auto-registered when EEP is supported; bidirectional response always sent
+- **Outbound `TeachIn`**: for Eltako-style sender-addressed actuators, call `await gateway.send_command(address, TeachIn())` to send a fixed 4BS payload that registers the gateway's sender slot with the device
+
 1BS teach-in is intentionally not auto-registered (no EEP information available). The `NewDeviceCallback` fires in all cases.
+
+**Focused learning mode:** pass `focus_device=eurid` to `start_learning()` (or use `ToggleLearning(for_device=eurid)`) to restrict the learning window to a single device EURID — useful for re-commissioning a specific device from a device config page without accidentally registering nearby devices.
 
 See [TEACHIN.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/TEACHIN.md) for the full teach-in and teach-out behavior.
 
@@ -95,20 +99,43 @@ See [TEACHIN.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/
 - Retrieve EURID, Base ID and firmware version info
 - Change the Base ID
 - Auto-reconnect: when the serial connection is lost, the gateway retries for up to 1 hour
-- **Gateway device**: the gateway itself is observable via `gateway.gateway_entities`. Connection status (`"connected"` / `"disconnected"` / `"reconnecting"`) and ERP1 telegram counters (received / sent, never reset on reconnect) are emitted as `Observation` objects through the same `add_observation_callback` pipeline. Newly registered callbacks immediately receive the current connection status.
+- **Gateway device**: the gateway itself is observable via `gateway.gateway_entities`. Available entities:
+  - `connection_status` — `"connected"` / `"disconnected"` / `"reconnecting"`
+  - `telegrams_received` / `telegrams_sent` — counters (never reset on reconnect)
+  - `learning_active` — `True` while a learning session is open
+  - `learning_remaining` — seconds remaining in the current learning window (counts down per second)
+  - `learning_toggle` — trigger; accepts `ToggleLearning()` / `ToggleLearning(for_device=eurid)`
+  - `learning_timeout` — config: default window length in seconds
+  - `learning_sender` — config: sender slot used during teach-in responses
+- **Per-device `sender_slot`**: every device gets a `sender_slot` `CONFIG_ENUM` in its `DeviceSpec.entities`. Use `gateway.set_device_config(address, "sender_slot", "3")` to change it at runtime; `device.sender` is updated immediately and collisions are checked.
+
+#### Sender address selection rules
+
+Every outbound telegram carries a sender address. The gateway selects it as follows:
+
+| Device type | Default sender | Reason |
+|---|---|---|
+| Destination-addressed (`uses_addressed_sending=True`, e.g. D2-01, D2-05) | BaseID+0 (the base ID itself) | Device is addressed by EURID in the destination field; the sender is irrelevant to routing |
+| Sender-addressed (`uses_addressed_sending=False`, e.g. A5-38-08, A5-7F-3F Eltako) | Next free BaseID+n slot (1–127) | Device filters incoming telegrams by the sender address it learned at teach-in time |
+
+The slot is allocated at teach-in time (or at `add_device()` time if `sender=None`) and stored in `device.sender`. The `sender_slot` config entity reflects this as `"0"`–`"127"` or `"eurid"`. `"auto"` means no sender has been assigned yet — the first `send_command()` or `TeachIn()` that needs one will allocate the next free slot from the pool and backfill `device.sender` and `device.config["sender_slot"]`.
+- **`DeviceSpec.gateway_entities`**: for sender-addressed devices that need an inbound teach-in from the device (no fixed teach-in payload), `device_spec()` populates this list with `learning_toggle` and `learning_remaining` so integrations can surface them on the device's config page (observed/commanded via the gateway's EURID).
 
 
 ## What works
 - Full receive pipeline: raw serial bytes → ESP3 → ERP1 → EEP decode → observers → `Observation` callbacks
 - Full send pipeline: typed `Instruction` → `EEPHandler.encode()` → ERP1 → ESP3 → serial
 - Device registration with per-device EEP and observer instantiation
-- Learning mode: UTE and 4BS-with-profile teach-in (auto-response, device registration, sender pool allocation); 4BS re-teach-in with EEP change supported
+- Learning mode: UTE and 4BS-with-profile teach-in (auto-response, device registration, sender pool allocation); 4BS re-teach-in with EEP change supported; focused learning mode (single-EURID restriction)
+- Outbound `TeachIn` for Eltako-style sender-addressed actuators
 - `DeviceTaughtInCallback` with EURID + EEP on successful teach-in
 - Auto-reconnect on connection loss
 - EURID, Base ID, firmware version retrieval; Base ID change
-- Gateway device: connection status + telegram counters as observations (see [Gateway utilities](#gateway-utilities))
+- Gateway device: connection status, telegram counters, learning state (active/remaining), learning control entities (see [Gateway utilities](#gateway-utilities))
+- Per-device `sender_slot` config entity; runtime slot change updates `device.sender` with collision detection
+- `DeviceSpec.gateway_entities` for gateway-sourced entities rendered on device config pages
 - Parsing of all EEPs listed in [SUPPORTED_DEVICES.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/SUPPORTED_DEVICES.md)
-- Sending instructions for: D2-05-00 (covers), D2-20-02 (fan), A5-38-08 (dim gateway + cover status receive), D2-01 (switches/dimmers)
+- Sending instructions for: D2-05-00 (covers), D2-20-02 (fan), A5-38-08 (dim gateway + cover status receive + teach-in), A5-7F-3F Eltako FSB (shutter + teach-in), D2-01 (switches/dimmers)
 
 
 ## What is missing / not yet implemented

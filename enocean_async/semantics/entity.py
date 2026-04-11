@@ -137,7 +137,7 @@ class Entity:
         8. ``SENSOR`` — default.
         """
         obs, act = self.observables, self.actions
-        if Instructable.DIM in act:
+        if Instructable.CENTRAL_DIM in act:
             return EntityType.DIMMER
         if Instructable.SET_FAN_SPEED in act:
             return EntityType.FAN

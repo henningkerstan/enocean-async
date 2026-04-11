@@ -19,8 +19,8 @@ class Instructable(StrEnum):
     COVER_CLOSE = "cover_close"
 
     # Central command — lighting (A5-38-08 CMD 0x01, 0x02)
-    SWITCH = "switch"
-    DIM = "dim"
+    CENTRAL_SWITCH = "central_switch"
+    CENTRAL_DIM = "central_dim"
 
     # Fan control (D2-20-02)
     SET_FAN_SPEED = "set_fan_speed"
@@ -31,7 +31,7 @@ class Instructable(StrEnum):
     QUERY_ACTUATOR_MEASUREMENT = "query_actuator_measurement"
 
     # Device commissioning
-    TEACH_IN = "teach_in"
+    LEARN_TELEGRAM = "learn_telegram"
 
     # Gateway learning mode
-    TOGGLE_LEARNING = "toggle_learning"
+    LEARNING_TOGGLE = "learning_toggle"
