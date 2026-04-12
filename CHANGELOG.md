@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.13.1] — 2026-04-12
+
+### Bug fixes
+- **`SemanticResolver` signature mismatch in six EEP modules**: resolvers in `a5_06.py` (`_a5_06_illumination_resolver`, `_a5_06_eltako_illumination_resolver`) and `d2_01.py` (`_resolve_switch_state`, `_resolve_output_value`, `_resolve_energy`, `_resolve_power`) were declared with only two positional arguments `(raw, scaled)` instead of the required three `(raw, scaled, config)`, causing a `TypeError` when any of those EEPs received a telegram.
+
 ## [0.13.0] — 2026-04-11
 
 ### Breaking changes

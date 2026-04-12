@@ -644,7 +644,7 @@ _POWER_UN = {0x03, 0x04}
 
 
 def _resolve_switch_state(
-    raw: dict[str, int], _scaled: dict
+    raw: dict[str, int], _scaled: dict, _config: dict
 ) -> ValueWithContext | None:
     ov = raw.get("OV")
     if ov is None or ov == 0x7F:
@@ -653,7 +653,7 @@ def _resolve_switch_state(
 
 
 def _resolve_output_value(
-    raw: dict[str, int], _scaled: dict
+    raw: dict[str, int], _scaled: dict, _config: dict
 ) -> ValueWithContext | None:
     ov = raw.get("OV")
     if ov is None or ov > 100:
@@ -661,7 +661,9 @@ def _resolve_output_value(
     return ValueWithContext(name="Output value", value=ov, unit="%")
 
 
-def _resolve_energy(raw: dict[str, int], _scaled: dict) -> ValueWithContext | None:
+def _resolve_energy(
+    raw: dict[str, int], _scaled: dict, _config: dict
+) -> ValueWithContext | None:
     mv = raw.get("MV")
     un = raw.get("UN")
     if mv is None or un is None or un not in _ENERGY_UN:
@@ -669,7 +671,9 @@ def _resolve_energy(raw: dict[str, int], _scaled: dict) -> ValueWithContext | No
     return ValueWithContext(name="Energy", value=mv, unit=_UN_TO_UNIT[un])
 
 
-def _resolve_power(raw: dict[str, int], _scaled: dict) -> ValueWithContext | None:
+def _resolve_power(
+    raw: dict[str, int], _scaled: dict, _config: dict
+) -> ValueWithContext | None:
     mv = raw.get("MV")
     un = raw.get("UN")
     if mv is None or un is None or un not in _POWER_UN:

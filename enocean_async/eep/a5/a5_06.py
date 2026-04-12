@@ -9,7 +9,7 @@ from ..profile import EEPDataField, Entity, SimpleProfileSpecification
 
 
 def _a5_06_illumination_resolver(
-    raw: dict[str, int], scaled: dict[str, ValueWithContext]
+    raw: dict[str, int], scaled: dict[str, ValueWithContext], _config: dict
 ) -> ValueWithContext | None:
     """Select the illumination value for standard A5-06 variants using the RS range-select field."""
     rs = raw.get("RS")
@@ -22,7 +22,7 @@ def _a5_06_illumination_resolver(
 
 
 def _a5_06_eltako_illumination_resolver(
-    raw: dict[str, int], scaled: dict[str, ValueWithContext]
+    raw: dict[str, int], scaled: dict[str, ValueWithContext], _config: dict
 ) -> ValueWithContext | None:
     """Select the illumination value for the Eltako A5-06-01 variant.
 
