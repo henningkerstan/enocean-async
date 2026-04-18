@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.13.2] — 2026-04-18
+
+### Internal / maintenance
+- **Switched serial backend from `pyserial-asyncio-fast` to `serialx==1.2.3`**: no public API changes; `gateway.py` and `protocol/esp3/protocol.py` updated to import `serialx` directly.
+
 ## [0.13.1] — 2026-04-12
 
 ### Bug fixes

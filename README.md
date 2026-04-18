@@ -1,5 +1,5 @@
 # enocean-async
-A light-weight, asynchronous, fully typed Python library for communicating with EnOcean devices over a USB gateway. Based on [pyserial-asyncio-fast](https://pypi.org/project/pyserial-asyncio-fast/) and the [EnOcean Serial Protocol Version 3 (ESP3)](https://www.enocean.com/wp-content/uploads/Knowledge-Base/EnOceanSerialProtocol3-1.pdf).
+A light-weight, asynchronous, fully typed Python library for communicating with EnOcean devices over a USB gateway. Based on [serialx](https://pypi.org/project/serialx/) and the [EnOcean Serial Protocol Version 3 (ESP3)](https://www.enocean.com/wp-content/uploads/Knowledge-Base/EnOceanSerialProtocol3-1.pdf).
 
 > **Note:** The API may still change (even significantly!). Feedback and contributions are welcome.
 
@@ -221,7 +221,7 @@ See [VERSIONING.md](https://github.com/henningkerstan/enocean-async/blob/main/VE
 
 ## Dependencies
 This library has one dependency:
-- [pyserial-asyncio-fast](https://pypi.org/project/pyserial-asyncio-fast/) (BSD-3 licensed)
+- [serialx](https://pypi.org/project/serialx/)
 
 
 ## Technology documentation

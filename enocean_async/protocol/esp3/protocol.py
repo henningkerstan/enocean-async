@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Callable
 if TYPE_CHECKING:
     from ...gateway import Gateway
 
-import serial_asyncio_fast as serial_asyncio
+import serialx
 
 from enocean_async.protocol.esp3.response import ResponseTelegram
 
@@ -29,7 +29,7 @@ class EnOceanSerialProtocol3(asyncio.Protocol):
         self.__gateway: "Gateway" = gateway
         self.__logger = logging.getLogger(__name__)
 
-    def connection_made(self, transport: serial_asyncio.SerialTransport) -> None:
+    def connection_made(self, transport: serialx.SerialTransport) -> None:
         self.__gateway.connection_made()
 
     def data_received(self, data: bytes) -> None:

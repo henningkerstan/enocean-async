@@ -4,7 +4,7 @@ import logging
 import time
 from typing import Any, Callable, Optional
 
-import serial_asyncio_fast as serial_asyncio
+import serialx
 
 from enocean_async.semantics.instructions.learning import LearningToggle
 
@@ -198,7 +198,7 @@ class Gateway:
         # serial connection, transport and protocol parameters
         self.__port: str = port
         self.__baudrate: int = baudrate
-        self.__transport: serial_asyncio.SerialTransport | None = None
+        self.__transport: serialx.SerialTransport | None = None
         self.__protocol: EnOceanSerialProtocol3 | None = None
 
         # cached information about the connected module (to avoid unnecessary requests for information that doesn't change)
@@ -362,7 +362,7 @@ class Gateway:
             (
                 self.__transport,
                 self.__protocol,
-            ) = await serial_asyncio.create_serial_connection(
+            ) = await serialx.create_serial_connection(
                 loop,
                 lambda: EnOceanSerialProtocol3(self),
                 self.__port,

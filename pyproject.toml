@@ -16,7 +16,7 @@ classifiers = [
 license = "Apache-2.0"
 license-files = ["LICENSE*"]
 dependencies = [
-  "pyserial-asyncio-fast==0.16"
+  "serialx==1.2.3"
 ]
 
 [project.urls]
