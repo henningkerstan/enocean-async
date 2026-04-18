@@ -729,6 +729,7 @@ class Gateway:
 
     def connection_lost(self, exc: Exception | None) -> None:
         self.__transport = None
+        self.stop_learning()
         if self.__stopped:
             return
         if not self.auto_reconnect:
