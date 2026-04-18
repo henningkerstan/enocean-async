@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.13.3] — 2026-04-18
+
+### Bug fixes
+- **Learning mode is now stopped on disconnect**: previously, `stop_learning()` was not called from `connection_lost()`, so the learning window remained nominally active (countdown ticking, `learning_active=True`) while the gateway was disconnected or reconnecting — a state in which no teach-in telegrams can be received. Learning mode is now cancelled immediately on any disconnect; the user must re-trigger it after reconnection.
+
 ## [0.13.2] — 2026-04-18
 
 ### Internal / maintenance
