@@ -259,6 +259,12 @@ class Gateway:
         # background tasks (teach-in response sends); tracked for clean cancellation on stop()
         self.__background_tasks: set[asyncio.Task] = set()
 
+        # echo filter: cache of recently sent ERP1 fingerprints (RORG + data + sender bytes)
+        # used to detect and drop our own packets echoed back by repeaters
+        self.__sent_erp1_cache: list[tuple[bytes, float]] = []
+        self.__sent_erp1_cache_ttl: float = 2.0
+        self.__sent_erp1_cache_max: int = 32
+
         self.auto_reconnect: bool = True
         """If True (default), automatically attempt to reconnect when the connection is lost. Set to False to disable reconnection entirely."""
 
@@ -592,6 +598,8 @@ class Gateway:
 
                 # send the frame
                 self.__transport.write(packet.to_bytes())
+                if packet.packet_type == ESP3PacketType.RADIO_ERP1:
+                    self.__cache_sent_erp1(packet.data[:-1])
                 self.__emit(self.__esp3_send_callbacks, packet)
 
                 try:
@@ -1370,8 +1378,37 @@ class Gateway:
         if self.__send_future and not self.__send_future.done():
             self.__send_future.set_result(response)
 
+    def __cache_sent_erp1(self, fingerprint: bytes) -> None:
+        """Add a sent ERP1 fingerprint to the echo-filter cache, evicting expired and excess entries."""
+        now = time.monotonic()
+        cutoff = now - self.__sent_erp1_cache_ttl
+        self.__sent_erp1_cache = [
+            (fp, ts) for fp, ts in self.__sent_erp1_cache if ts > cutoff
+        ]
+        if len(self.__sent_erp1_cache) >= self.__sent_erp1_cache_max:
+            self.__sent_erp1_cache.pop(0)
+        self.__sent_erp1_cache.append((fingerprint, now))
+
+    def __is_own_echo(self, erp1: ERP1Telegram) -> bool:
+        """Return True if this telegram is an echo of a packet we sent recently."""
+        if not self.is_valid_sender(erp1.sender):
+            return False
+        fingerprint = (
+            bytes([erp1.rorg]) + erp1.telegram_data + bytes(erp1.sender.bytelist)
+        )
+        cutoff = time.monotonic() - self.__sent_erp1_cache_ttl
+        return any(
+            fp == fingerprint and ts > cutoff for fp, ts in self.__sent_erp1_cache
+        )
+
     def __process_erp1_telegram(self, erp1: ERP1Telegram) -> None:
         """Process a received ERP1 telegram. This includes emitting it to registered callbacks and further processing based on RORG and learning bit."""
+        if self.__is_own_echo(erp1):
+            self._logger.debug(
+                f"Received own packet echoed back by repeater; dropping: {erp1}"
+            )
+            return
+
         self.__erp1_received += 1
         self.__emit_gateway_observation(
             "telegrams_received", Observable.TELEGRAMS_RECEIVED, self.__erp1_received
