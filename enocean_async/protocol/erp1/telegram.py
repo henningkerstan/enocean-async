@@ -273,18 +273,15 @@ class ERP1Telegram:
             + bytes(self.sender.bytelist)
             + bytes([self.status])
         )
-        optional = bytes()
-        optional += (
-            bytes([self.sub_tel_num]) if self.sub_tel_num is not None else bytes([0x03])
-        )
-        optional += (
-            bytes(self.destination.bytelist)
-            if self.destination is not None
-            else bytes(BroadcastAddress().bytelist)
-        )
-        optional += bytes([self.rssi]) if self.rssi is not None else bytes([0xFF])
-        optional += (
-            bytes([self.sec_level]) if self.sec_level is not None else bytes([0x00])
+        optional = (
+            bytes([self.sub_tel_num if self.sub_tel_num is not None else 0x03])
+            + bytes(
+                self.destination.bytelist
+                if self.destination is not None
+                else BroadcastAddress().bytelist
+            )
+            + bytes([self.rssi if self.rssi is not None else 0xFF])
+            + bytes([self.sec_level if self.sec_level is not None else 0x00])
         )
 
         return ESP3Packet(

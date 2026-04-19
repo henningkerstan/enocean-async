@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 import logging
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import serialx
 
@@ -137,8 +137,8 @@ _GATEWAY_ENTITIES: list[Entity] = [
 
 @dataclass
 class SendResult:
-    response: Optional[ResponseTelegram]
-    duration_ms: Optional[float]
+    response: ResponseTelegram | None
+    duration_ms: float | None
 
 
 def _sender_to_slot_string(
@@ -520,8 +520,9 @@ class Gateway:
         )
         if self.__learning_tick_handle is not None:
             self.__learning_tick_handle.cancel()
-        loop = asyncio.get_event_loop()
-        self.__learning_tick_handle = loop.call_later(1, self.__tick_learning_remaining)
+        self.__learning_tick_handle = asyncio.get_running_loop().call_later(
+            1, self.__tick_learning_remaining
+        )
 
     def stop_learning(self) -> None:
         """Stop learning mode."""
@@ -551,8 +552,7 @@ class Gateway:
             "learning_remaining", Observable.LEARNING_REMAINING, remaining
         )
         if remaining > 0:
-            loop = asyncio.get_event_loop()
-            self.__learning_tick_handle = loop.call_later(
+            self.__learning_tick_handle = asyncio.get_running_loop().call_later(
                 1, self.__tick_learning_remaining
             )
         else:
@@ -585,17 +585,15 @@ class Gateway:
             self.__send_future = asyncio.get_running_loop().create_future()
 
             try:
-                # emit to the send callbacks; we do this before sending the packet (WHY?)
-                self.__emit(self.__esp3_send_callbacks, packet)
                 self._logger.debug(
                     f"Sending ESP3 packet: {packet}. Waiting for response..."
                 )
-
-                # start a timer before sending the packet, so that we can measure the time it takes to receive the response after sending the packet
                 start = time.perf_counter()
 
                 # send the frame
                 self.__transport.write(packet.to_bytes())
+                self.__emit(self.__esp3_send_callbacks, packet)
+
                 try:
                     response: ResponseTelegram | None = await asyncio.wait_for(
                         self.__send_future, timeout=0.5
@@ -726,6 +724,10 @@ class Gateway:
         return await self.send_esp3_packet(erp1.to_esp3())
 
     def connection_made(self) -> None:
+        # Intentional no-op. EnOceanSerialProtocol3.connection_made() forwards here after
+        # storing the transport. Actual post-connect setup (fetch_base_id, fetch_version_info)
+        # runs in start() once create_serial_connection() returns — do not add init logic here
+        # as it would race with start()'s await chain.
         pass
 
     def connection_lost(self, exc: Exception | None) -> None:
@@ -768,7 +770,6 @@ class Gateway:
                 self._logger.warning(
                     f"Reconnection attempt #{attempt}/720 failed, retrying again in 5s."
                 )
-                continue
 
         self._logger.error(
             "Could not reconnect to EnOcean module after 720 attempts (1 hour). Stopping auto-reconnect."
@@ -988,7 +989,7 @@ class Gateway:
                             "Cannot start learning: gateway base ID not yet available."
                         )
                     sender = BaseAddress(int(self.base_id) + int(sender_cfg))
-                focus = command.for_device if hasattr(command, "for_device") else None
+                focus = command.for_device
                 await self.start_learning(
                     timeout=timeout, sender_id=sender, for_device=focus
                 )

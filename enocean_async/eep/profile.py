@@ -40,7 +40,8 @@ class EEPDataField:
     """Minimum value of the data field's range."""
 
     range_max: int | None = None
-    """Maximum value of the data field's range, defaulting to the maximum representable by the given size in bits (e.g. 2^size - 1)."""
+    """Maximum value of the data field's range. ``None`` means "derive from field size" (default).
+    Always resolved to a concrete ``int`` by ``__post_init__``; callers may treat it as ``int`` thereafter."""
 
     scale_min_fn: ScaleFunction = lambda _: 0.0
     """Function to compute scale_min based on message values. Defaults to constant 0.0."""
