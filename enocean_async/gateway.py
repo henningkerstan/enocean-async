@@ -21,7 +21,7 @@ from .protocol.erp1.fourbs import (
     FourBSTeachInResult,
     FourBSTeachInTelegram,
 )
-from .protocol.erp1.telegram import RORG, ERP1Telegram
+from .protocol.erp1.telegram import RORG, ERP1Telegram, RepeaterCount
 from .protocol.erp1.ute import (
     EEPTeachInResponseMessageExpectation,
     UTEMessage,
@@ -264,6 +264,12 @@ class Gateway:
         self.__sent_erp1_cache: list[tuple[bytes, float]] = []
         self.__sent_erp1_cache_ttl: float = 2.0
         self.__sent_erp1_cache_max: int = 32
+
+        # repeat filter: cache of recently received original ERP1 fingerprints
+        # used to detect and drop repeated copies relayed by repeaters
+        self.__received_erp1_cache: list[tuple[bytes, float]] = []
+        self.__received_erp1_cache_ttl: float = 2.0
+        self.__received_erp1_cache_max: int = 64
 
         self.auto_reconnect: bool = True
         """If True (default), automatically attempt to reconnect when the connection is lost. Set to False to disable reconnection entirely."""
@@ -1401,11 +1407,48 @@ class Gateway:
             fp == fingerprint and ts > cutoff for fp, ts in self.__sent_erp1_cache
         )
 
+    def __is_repeated_copy(self, erp1: ERP1Telegram) -> bool:
+        """Return True if this telegram is a repeated copy of one we already processed.
+
+        Originals (repeater_count in Original/ShallNotBeRepeated) are cached so that
+        subsequent repeated copies can be identified and dropped.  If an original was
+        never received (e.g. RF loss), the first repeated copy passes through normally.
+        """
+        fingerprint = (
+            bytes([erp1.rorg]) + erp1.telegram_data + bytes(erp1.sender.bytelist)
+        )
+        now = time.monotonic()
+        cutoff = now - self.__received_erp1_cache_ttl
+
+        if erp1.repeater_count in (
+            RepeaterCount.Original,
+            RepeaterCount.ShallNotBeRepeated,
+        ):
+            # Cache this original; prune expired entries first
+            self.__received_erp1_cache = [
+                (fp, ts) for fp, ts in self.__received_erp1_cache if ts > cutoff
+            ]
+            if len(self.__received_erp1_cache) >= self.__received_erp1_cache_max:
+                self.__received_erp1_cache.pop(0)
+            self.__received_erp1_cache.append((fingerprint, now))
+            return False
+
+        # Repeated copy: drop if the original is in cache
+        return any(
+            fp == fingerprint and ts > cutoff for fp, ts in self.__received_erp1_cache
+        )
+
     def __process_erp1_telegram(self, erp1: ERP1Telegram) -> None:
         """Process a received ERP1 telegram. This includes emitting it to registered callbacks and further processing based on RORG and learning bit."""
         if self.__is_own_echo(erp1):
             self._logger.debug(
                 f"Received own packet echoed back by repeater; dropping: {erp1}"
+            )
+            return
+
+        if self.__is_repeated_copy(erp1):
+            self._logger.debug(
+                f"Received repeated copy of already-processed telegram; dropping: {erp1}"
             )
             return
 
