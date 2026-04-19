@@ -1,10 +1,18 @@
 # Changelog
 
-## [0.13.4] — 2026-04-19
+## [0.13.3] — 2026-04-19
 
 ### Bug fixes
+- **A5-38-08 CMD=2 (Dimming) status telegrams silently dropped**: `EDIM` field had `scale_min_fn=lambda _: None`, causing a `TypeError` in `bitstring_scaled_value()` on every incoming dimming status telegram. The exception was swallowed by the gateway, so `OUTPUT_VALUE` was never updated from device feedback. Fixed to `0.0` (the semantic resolver overrides the value anyway).
+- **UTE teach-in success log showed gateway address instead of device address**: `response.sender` (the gateway's own sender slot) was logged as "device"; corrected to `response.destination`.
+- **4BS re-teach-in crash when `device.sender` is `None`**: `response_for_query()` was called with `existing.sender` directly; if the device had been added before `start()` (base ID not yet available), this is `None`, leading to `AttributeError` in `to_esp3()`. Now falls back to `__sender_id_for_learning` or `__base_id`.
+- **`MetaDataObserver` constructor parameter name mismatch**: `__init__` used `on_state_change` while the parent `Observer` dataclass field is `on_observation`; the callback was stored correctly (passed positionally) but the keyword argument in `gateway.add_device()` used the wrong name. Both renamed to `on_observation`.
+- **UTE re-teach-in incorrectly fired `DeviceTaughtInCallback` and logged "successfully registered"**: the log line and callback were outside the `if existing is None:` guard, so they fired even for re-teach-ins of already-registered devices.
+- **`LEARN_TELEGRAM` always used BaseID+0 for sender-addressed devices**: when `device.sender` was unset (device added via `add_device()` without explicit sender), the LEARN_TELEGRAM path fell back to `self.base_id` regardless of EEP type. For sender-addressed EEPs (`uses_addressed_sending=False`) the gateway now allocates the next free BaseID+n slot, persists it on `device.sender` and `device.config["sender_slot"]`, so the Eltako device learns a unique sender address rather than the shared BaseID+0.
 - **`start_learning()` left gateway in broken state on invalid `sender_id`**: state mutations (`__is_learning`, `__allow_teach_out`, `__focus_device`) happened before the `sender_id` validity check, so a `ValueError` left the gateway with `__is_learning=True` but no timeout task or deadline. Validation now runs first.
 - **`asyncio.get_event_loop()` replaced with `get_running_loop()`** in `start_learning()` and `__tick_learning_remaining()`.
+- **Learning mode is now stopped on disconnect**: previously, `stop_learning()` was not called from `connection_lost()`, so the learning window remained nominally active (countdown ticking, `learning_active=True`) while the gateway was disconnected or reconnecting — a state in which no teach-in telegrams can be received. Learning mode is now cancelled immediately on any disconnect; the user must re-trigger it after reconnection.
+
 
 ### Internal / maintenance
 - **`remove_device()` now clears the sender from `__known_senders`**: previously, removing a device left its EURID in the internal seen-senders set, suppressing future `NewDeviceCallback` notifications for that address.
@@ -15,10 +23,8 @@
 - **`send_esp3_packet()`: send callbacks now fire after the serial write**, not before; debug log moved to pre-write position.
 - Minor: removed dead `hasattr` check in `gateway_command()`; removed trailing `continue` in reconnect loop; `Optional[X]` → `X | None` in `SendResult`; `bytes +=` chain in `ERP1Telegram.to_esp3()` replaced with a single concatenation expression.
 
-## [0.13.3] — 2026-04-18
-
-### Bug fixes
-- **Learning mode is now stopped on disconnect**: previously, `stop_learning()` was not called from `connection_lost()`, so the learning window remained nominally active (countdown ticking, `learning_active=True`) while the gateway was disconnected or reconnecting — a state in which no teach-in telegrams can be received. Learning mode is now cancelled immediately on any disconnect; the user must re-trigger it after reconnection.
+### Other
+- Double space removed from 4BS teach-in response log string.
 
 ## [0.13.2] — 2026-04-18
 
