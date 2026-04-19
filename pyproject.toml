@@ -16,7 +16,7 @@ classifiers = [
 license = "Apache-2.0"
 license-files = ["LICENSE*"]
 dependencies = [
-  "serialx==1.2.3"
+  "serialx>=1.2.2"
 ]
 
 [project.urls]

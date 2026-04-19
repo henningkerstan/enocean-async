@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.13.4] — 2026-04-19
+
+### Internal / maintenance
+- **Relaxed `serialx` version constraint from `==1.2.3` to `>=1.2.2`** to allow use alongside other packages (e.g. Home Assistant) that may pin a compatible version.
+
 ## [0.13.3] — 2026-04-19
 
 ### Bug fixes
