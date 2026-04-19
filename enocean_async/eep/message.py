@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, NamedTuple
+from typing import Any, NamedTuple
 
 from ..address import EURID, Address, BaseAddress, BroadcastAddress
 from ..eep.id import EEP
@@ -46,7 +46,7 @@ class RawEEPMessage:
     sender: EURID | BaseAddress | None
     """Sender address. Set to ``None`` by encoders; filled in by the gateway before encoding."""
 
-    destination: Address = BroadcastAddress()
+    destination: Address = field(default_factory=BroadcastAddress)
     """Destination address. Differs from broadcast only for addressed telegrams (e.g. VLD)."""
 
     eep: EEP | None = None
@@ -58,7 +58,7 @@ class RawEEPMessage:
     message_type: EEPMessageType | None = None
     """Telegram sub-type within the EEP (selects the CMD value). ``None`` for single-telegram EEPs."""
 
-    raw: Dict[str, int] = field(default_factory=dict)
+    raw: dict[str, int] = field(default_factory=dict)
     """Raw field values keyed by EEP field ID (e.g. ``'POS'``, ``'R1'``).
 
     Values are plain integers as they appear on the wire — no scaling applied.
@@ -72,7 +72,7 @@ class EEPMessage(RawEEPMessage):
     Produced by ``EEPHandler.decode()``. Not intended to be constructed manually.
     """
 
-    decoded: Dict[str, ValueWithContext] = field(default_factory=dict)
+    decoded: dict[str, ValueWithContext] = field(default_factory=dict)
     """Per-field decoded values keyed by EEP field ID.
 
     Each entry holds the scaled or enum-resolved value for that field together
@@ -80,7 +80,7 @@ class EEPMessage(RawEEPMessage):
     Populated in parallel with ``raw`` during decode.
     """
 
-    values: Dict[Observable, ValueWithContext] = field(default_factory=dict)
+    values: dict[Observable, ValueWithContext] = field(default_factory=dict)
     """Semantic entity values keyed by ``Observable``.
 
     Populated from ``decoded`` via ``EEPDataField.observable`` annotations and

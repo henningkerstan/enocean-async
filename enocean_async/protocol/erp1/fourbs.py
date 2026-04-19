@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Optional
 
 from enocean_async.eep.manufacturer import Manufacturer
 
@@ -40,8 +39,8 @@ class FourBSTeachInTelegram:
     eep: EEP | None = None
 
     # result fields (only valid for responses)
-    eep_result: Optional[FourBSEEPResult] = field(default=None, repr=False)
-    learn_result: Optional[FourBSTeachInResult] = field(default=None, repr=False)
+    eep_result: FourBSEEPResult | None = field(default=None, repr=False)
+    learn_result: FourBSTeachInResult | None = field(default=None, repr=False)
 
     @classmethod
     def from_erp1(cls, erp1: ERP1Telegram) -> "FourBSTeachInTelegram":
@@ -84,7 +83,7 @@ class FourBSTeachInTelegram:
         sender: SenderAddress,
     ) -> "FourBSTeachInTelegram":
         """Build a bidirectional 4BS teach-in response for a given query."""
-        if not query.learn_status == FourBSLearnStatus.QUERY:
+        if query.learn_status != FourBSLearnStatus.QUERY:
             raise ValueError("Cannot create response: not a query.")
         if query.eep is None:
             raise ValueError("Cannot create response: query has no EEP.")
@@ -93,6 +92,7 @@ class FourBSTeachInTelegram:
             learn_status=FourBSLearnStatus.RESPONSE,
             eep=query.eep,
             sender=sender,
+            eep_result=FourBSEEPResult.SUPPORTED,
             learn_result=result,
         )
 

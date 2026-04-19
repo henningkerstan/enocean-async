@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional
 
 from ...address import EURID, SenderAddress
 from ...eep.id import EEP
@@ -41,19 +40,17 @@ class EEPTeachInResponseMessageExpectation(IntEnum):
 @dataclass
 class UTEMessage:
     communication_during_eep_operation: CommunicationDuringEEPOperation
-    teach_in_response_message_expectation: Optional[
-        EEPTeachInResponseMessageExpectation
-    ]
+    teach_in_response_message_expectation: EEPTeachInResponseMessageExpectation | None
     request_type: UTEQueryRequestType | UTEResponseType
     command: CommandIdentifier
     number_of_channels_to_be_taught_in: int
     manufacturer: Manufacturer
     eep: EEP
 
-    sender: Optional[EURID] = None
+    sender: EURID | None = None
     """Not part of the UTE message itself. Will be filled in if created using the from_erp1 class method."""
 
-    destination: Optional[EURID] = None
+    destination: EURID | None = None
     """Not part of the UTE message itself. Is autofilled when creating a response message using the response_for_query class method."""
 
     @classmethod
@@ -72,9 +69,9 @@ class UTEMessage:
 
         command = CommandIdentifier(telegram.bitstring_raw_value(4, 4))
 
-        teach_in_response_message_expectation: Optional[
-            EEPTeachInResponseMessageExpectation
-        ] = None
+        teach_in_response_message_expectation: (
+            EEPTeachInResponseMessageExpectation | None
+        ) = None
         if command == CommandIdentifier.TEACH_IN_QUERY:
             teach_in_response_message_expectation = (
                 EEPTeachInResponseMessageExpectation(telegram.bitstring_raw_value(1, 1))

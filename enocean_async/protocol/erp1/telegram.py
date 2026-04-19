@@ -222,6 +222,12 @@ class ERP1Telegram:
                         f"MSC telegram data must be at most 14 bytes, got {len(telegram_data)} bytes"
                     )
 
+            case RORG.RORG_UTE:
+                if len(telegram_data) != 7:
+                    raise ERP1ParseError(
+                        f"UTE telegram data must be exactly 7 bytes, got {len(telegram_data)} bytes"
+                    )
+
         # determine sender address
         try:
             s = Address(data[-5:-1])
@@ -241,7 +247,7 @@ class ERP1Telegram:
         status = data[-1]
 
         # parse optional
-        sub_tel_num = opt[0] if len(opt) > 0 else None
+        sub_tel_num = opt[0] if opt else None
 
         destination_bytes = opt[1:5] if len(opt) > 4 else None
         d = Address(destination_bytes) if destination_bytes else None

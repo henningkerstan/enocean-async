@@ -861,7 +861,7 @@ class Gateway:
             return
 
         cb = self.__on_observation
-        capabilities = [MetaDataObserver(device_address=address, on_state_change=cb)]
+        capabilities = [MetaDataObserver(device_address=address, on_observation=cb)]
         for factory in eep_spec.observers:
             capabilities.append(factory(address, cb))
 
@@ -1675,11 +1675,11 @@ class Gateway:
                 device_type=device_type_for_eep(eep),
                 sender=sender,
             )
-        if not response_expected:
-            self._logger.info(
-                f"UTE teach-in from {device_address}: successfully registered with EEP {eep}."
-            )
-        self.__emit(self.__device_taught_in_callbacks, device_address, eep)
+            if not response_expected:
+                self._logger.info(
+                    f"UTE teach-in from {device_address}: successfully registered with EEP {eep}."
+                )
+            self.__emit(self.__device_taught_in_callbacks, device_address, eep)
 
     def __handle_ute_teach_out(
         self,

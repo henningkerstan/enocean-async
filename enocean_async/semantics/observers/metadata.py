@@ -24,10 +24,10 @@ class MetaDataObserver(Observer):
     """
 
     def __init__(
-        self, device_address: Address, on_state_change: ObservationCallback | None
+        self, device_address: Address, on_observation: ObservationCallback | None
     ) -> None:
         """Initialize the metadata observer."""
-        super().__init__(device_address, on_state_change)
+        super().__init__(device_address, on_observation)
         self._telegram_count = 0
 
     def _decode_impl(self, message: EEPMessage) -> None:

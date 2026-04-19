@@ -4,7 +4,7 @@ from abc import ABC
 import asyncio
 from dataclasses import dataclass
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from ...address import Address
 from ..observation import Observation, ObservationCallback
@@ -21,7 +21,7 @@ class Observer(ABC):
     It is responsible for decoding EEP messages related to that functionality and emitting observations accordingly."""
 
     device_address: Address
-    on_observation: Optional[ObservationCallback] = None
+    on_observation: ObservationCallback | None = None
 
     def decode(self, message: EEPMessage) -> None:
         """Decode the given EEPMessage according to this observer's logic.

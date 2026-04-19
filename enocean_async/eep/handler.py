@@ -70,27 +70,18 @@ class EEPHandler:
             if field.range_enum is not None:
                 value = field.range_enum.get(raw_value, f"Unknown({raw_value})")
             elif field.range_min is not None and field.range_max is not None:
-                scale_min = field.scale_min_fn(msg.raw)
-                scale_max = field.scale_max_fn(msg.raw)
-
-                if scale_min is not None and scale_max is not None:
-                    value = telegram.bitstring_scaled_value(
-                        offset=field.offset,
-                        size=field.size,
-                        range_min=field.range_min,
-                        range_max=field.range_max,
-                        scale_min=scale_min,
-                        scale_max=scale_max,
-                    )
-                else:
-                    self.__logger.debug(
-                        f"Scale function returned None for field '{field.id}' in EEP {self.__eep.eep}; using raw value {raw_value}."
-                    )
-                    value = raw_value
+                value = telegram.bitstring_scaled_value(
+                    offset=field.offset,
+                    size=field.size,
+                    range_min=field.range_min,
+                    range_max=field.range_max,
+                    scale_min=field.scale_min_fn(msg.raw),
+                    scale_max=field.scale_max_fn(msg.raw),
+                )
             else:
                 value = raw_value
 
-            unit = field.unit_fn(msg.raw) or None
+            unit = field.unit_fn(msg.raw) or None  # "" treated as None (no unit)
             msg.decoded[field.id] = ValueWithContext(
                 name=field.name or field.id, value=value, unit=unit
             )
