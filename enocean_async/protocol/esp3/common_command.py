@@ -24,7 +24,7 @@ class CommonCommandTelegram:
 
     common_command_code: int
     common_command_data: bytes | None = None
-    optional_data: bytes = None
+    optional_data: bytes = b""
 
     @classmethod
     def CO_RD_VERSION(cls) -> "CommonCommandTelegram":
@@ -45,10 +45,6 @@ class CommonCommandTelegram:
             common_command_code=CommonCommandCode.CO_WR_IDBASE,
             common_command_data=id_base_bytes,
         )
-
-    def __post_init__(self):
-        if self.optional_data is None:
-            self.optional_data = b""
 
     def to_esp3_packet(self) -> ESP3Packet:
         data_size = (

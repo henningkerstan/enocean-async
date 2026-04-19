@@ -207,7 +207,7 @@ class Gateway:
         self.__base_id: BaseAddress | None = None
 
         # device and EEP management
-        self.__known_senders: list[SenderAddress] = []
+        self.__known_senders: set[SenderAddress] = set()
         self.__eep_handlers: dict[EEP, EEPHandler] = {}
         self.__devices: dict[EURID, Device] = {}
         self.__observation_callbacks: list[ObservationCallback] = []
@@ -477,15 +477,14 @@ class Gateway:
                 "Cannot start learning mode: gateway's base ID is not set. Ensure the gateway is properly connected and configured."
             )
 
-        self.__is_learning = True
-        self.__allow_teach_out = allow_teach_out
-        self.__focus_device = for_device
-
         if sender_id is not None and not self.is_valid_sender(sender_id):
             raise ValueError(
                 f"Invalid sender_id {sender_id} for learning mode. Must be a valid sender address for this gateway."
             )
 
+        self.__is_learning = True
+        self.__allow_teach_out = allow_teach_out
+        self.__focus_device = for_device
         self.__sender_id_for_learning = sender_id if sender_id is not None else base_id
 
         if sender_id is not None:
@@ -526,6 +525,8 @@ class Gateway:
 
     def stop_learning(self) -> None:
         """Stop learning mode."""
+        if not self.__is_learning:
+            return
         self.__is_learning = False
         self.__focus_device = None
         self._logger.info("Learning mode stopped.")
@@ -1056,6 +1057,7 @@ class Gateway:
             for observer in self.__devices[address].capabilities:
                 observer.stop()
             del self.__devices[address]
+            self.__known_senders.discard(address)
             self._logger.info(f"Removed device with address {address}")
         else:
             self._logger.warning(
@@ -1364,7 +1366,7 @@ class Gateway:
 
         # check if sender is known; if not, track it and notify callbacks (EURIDs only)
         if not self.__is_sender_known(erp1.sender):
-            self.__known_senders.append(erp1.sender)
+            self.__known_senders.add(erp1.sender)
             if isinstance(erp1.sender, EURID):
                 self.__emit(self.__new_device_callbacks, erp1.sender)
                 self._logger.info(

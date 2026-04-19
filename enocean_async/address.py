@@ -65,6 +65,8 @@ class Address:
 
     def __eq__(self, other: object) -> bool:
         """Compare by integer value, regardless of subclass."""
+        if not isinstance(other, Address):
+            return NotImplemented
         return int(self) == int(other)
 
     def __repr__(self) -> str:
