@@ -1384,58 +1384,66 @@ class Gateway:
         if self.__send_future and not self.__send_future.done():
             self.__send_future.set_result(response)
 
-    def __cache_sent_erp1(self, fingerprint: bytes) -> None:
-        """Add a sent ERP1 fingerprint to the echo-filter cache, evicting expired and excess entries."""
+    @staticmethod
+    def __erp1_fingerprint(erp1: ERP1Telegram) -> bytes:
+        """Compute the deduplication fingerprint for an ERP1 telegram (RORG + data + sender)."""
+        return bytes([erp1.rorg]) + erp1.telegram_data + bytes(erp1.sender.bytelist)
+
+    @staticmethod
+    def __cache_fingerprint(
+        cache: list[tuple[bytes, float]],
+        fingerprint: bytes,
+        ttl: float,
+        max_size: int,
+    ) -> None:
+        """Append a fingerprint to a ring-buffer cache, pruning expired and excess entries."""
         now = time.monotonic()
-        cutoff = now - self.__sent_erp1_cache_ttl
-        self.__sent_erp1_cache = [
-            (fp, ts) for fp, ts in self.__sent_erp1_cache if ts > cutoff
-        ]
-        if len(self.__sent_erp1_cache) >= self.__sent_erp1_cache_max:
-            self.__sent_erp1_cache.pop(0)
-        self.__sent_erp1_cache.append((fingerprint, now))
+        cutoff = now - ttl
+        cache[:] = [(fp, ts) for fp, ts in cache if ts > cutoff]
+        if len(cache) >= max_size:
+            cache.pop(0)
+        cache.append((fingerprint, now))
+
+    @staticmethod
+    def __fingerprint_in_cache(
+        cache: list[tuple[bytes, float]], fingerprint: bytes, ttl: float
+    ) -> bool:
+        """Return True if fingerprint is present in cache and not yet expired."""
+        cutoff = time.monotonic() - ttl
+        return any(fp == fingerprint and ts > cutoff for fp, ts in cache)
+
+    def __cache_sent_erp1(self, fingerprint: bytes) -> None:
+        """Add a sent ERP1 fingerprint to the echo-filter cache."""
+        self.__cache_fingerprint(
+            self.__sent_erp1_cache,
+            fingerprint,
+            self.__sent_erp1_cache_ttl,
+            self.__sent_erp1_cache_max,
+        )
 
     def __is_own_echo(self, erp1: ERP1Telegram) -> bool:
         """Return True if this telegram is an echo of a packet we sent recently."""
-        if not self.is_valid_sender(erp1.sender):
-            return False
-        fingerprint = (
-            bytes([erp1.rorg]) + erp1.telegram_data + bytes(erp1.sender.bytelist)
+        return self.__fingerprint_in_cache(
+            self.__sent_erp1_cache,
+            self.__erp1_fingerprint(erp1),
+            self.__sent_erp1_cache_ttl,
         )
-        cutoff = time.monotonic() - self.__sent_erp1_cache_ttl
-        return any(
-            fp == fingerprint and ts > cutoff for fp, ts in self.__sent_erp1_cache
+
+    def __cache_received_erp1(self, erp1: ERP1Telegram) -> None:
+        """Cache an original received ERP1 telegram for repeat-filter tracking."""
+        self.__cache_fingerprint(
+            self.__received_erp1_cache,
+            self.__erp1_fingerprint(erp1),
+            self.__received_erp1_cache_ttl,
+            self.__received_erp1_cache_max,
         )
 
     def __is_repeated_copy(self, erp1: ERP1Telegram) -> bool:
-        """Return True if this telegram is a repeated copy of one we already processed.
-
-        Originals (repeater_count in Original/ShallNotBeRepeated) are cached so that
-        subsequent repeated copies can be identified and dropped.  If an original was
-        never received (e.g. RF loss), the first repeated copy passes through normally.
-        """
-        fingerprint = (
-            bytes([erp1.rorg]) + erp1.telegram_data + bytes(erp1.sender.bytelist)
-        )
-        now = time.monotonic()
-        cutoff = now - self.__received_erp1_cache_ttl
-
-        if erp1.repeater_count in (
-            RepeaterCount.Original,
-            RepeaterCount.ShallNotBeRepeated,
-        ):
-            # Cache this original; prune expired entries first
-            self.__received_erp1_cache = [
-                (fp, ts) for fp, ts in self.__received_erp1_cache if ts > cutoff
-            ]
-            if len(self.__received_erp1_cache) >= self.__received_erp1_cache_max:
-                self.__received_erp1_cache.pop(0)
-            self.__received_erp1_cache.append((fingerprint, now))
-            return False
-
-        # Repeated copy: drop if the original is in cache
-        return any(
-            fp == fingerprint and ts > cutoff for fp, ts in self.__received_erp1_cache
+        """Return True if this telegram is a repeated copy of one we already processed."""
+        return self.__fingerprint_in_cache(
+            self.__received_erp1_cache,
+            self.__erp1_fingerprint(erp1),
+            self.__received_erp1_cache_ttl,
         )
 
     def __process_erp1_telegram(self, erp1: ERP1Telegram) -> None:
@@ -1446,7 +1454,12 @@ class Gateway:
             )
             return
 
-        if self.__is_repeated_copy(erp1):
+        if erp1.repeater_count in (
+            RepeaterCount.Original,
+            RepeaterCount.ShallNotBeRepeated,
+        ):
+            self.__cache_received_erp1(erp1)
+        elif self.__is_repeated_copy(erp1):
             self._logger.debug(
                 f"Received repeated copy of already-processed telegram; dropping: {erp1}"
             )

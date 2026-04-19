@@ -3,8 +3,8 @@
 ## [0.13.5] — 2026-04-19
 
 ### New features
-- **Echo filter**: the gateway now detects and drops its own packets echoed back by repeaters. Sent RADIO_ERP1 packets are fingerprinted (`RORG + telegram_data + sender`) and cached for 2 seconds (ring buffer, max 32 entries). On receive, if the sender is one of the gateway's own addresses and the fingerprint matches a recently sent packet, the telegram is silently dropped with a debug log entry. This prevents the gateway from processing its own commands as if they were incoming device telegrams.
-- **Repeat filter**: the gateway now detects and drops repeated copies of device telegrams relayed by repeaters. When an original telegram (`repeater_count` = `Original` or `ShallNotBeRepeated`) is received, its fingerprint is cached for 2 seconds (ring buffer, max 64 entries). If a subsequent telegram with `repeater_count > 0` carries the same fingerprint, it is dropped with a debug log entry. If the original was never received (lost in RF noise), the first repeated copy passes through normally.
+- **Echo filter**: the gateway now detects and drops its own packets echoed back by repeaters. Sent RADIO_ERP1 packets are fingerprinted (`RORG + telegram_data + sender`) and cached for 2 seconds (ring buffer, max 32 entries). On receive, if the fingerprint matches a recently sent packet, the telegram is silently dropped with a debug log entry. This prevents the gateway from processing its own commands as if they were incoming device telegrams.
+- **Repeat filter**: the gateway now detects and drops repeated copies of device telegrams relayed by repeaters. When an original telegram (`repeater_count` = `Original` or `ShallNotBeRepeated`) is received, its fingerprint is cached for 2 seconds (ring buffer, max 64 entries) and the `repeater_count` check is made at the call site in `__process_erp1_telegram`. If a subsequent telegram with `repeater_count > 0` carries the same fingerprint, it is dropped with a debug log entry. If the original was never received (lost in RF noise), the first repeated copy passes through normally.
 
 
 ## [0.13.4] — 2026-04-19
