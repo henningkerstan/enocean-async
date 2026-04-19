@@ -1,11 +1,21 @@
 # Changelog
 
+## [0.13.5] — 2026-04-19
+
+### New features
+- **Echo filter**: the gateway now detects and drops its own packets echoed back by repeaters. Sent RADIO_ERP1 packets are fingerprinted (`RORG + telegram_data + sender`) and cached for 2 seconds (ring buffer, max 32 entries). On receive, if the sender is one of the gateway's own addresses and the fingerprint matches a recently sent packet, the telegram is silently dropped with a debug log entry. This prevents the gateway from processing its own commands as if they were incoming device telegrams.
+- **Repeat filter**: the gateway now detects and drops repeated copies of device telegrams relayed by repeaters. When an original telegram (`repeater_count` = `Original` or `ShallNotBeRepeated`) is received, its fingerprint is cached for 2 seconds (ring buffer, max 64 entries). If a subsequent telegram with `repeater_count > 0` carries the same fingerprint, it is dropped with a debug log entry. If the original was never received (lost in RF noise), the first repeated copy passes through normally.
+
+
 ## [0.13.4] — 2026-04-19
 
 ### Internal / maintenance
 - **Relaxed `serialx` version constraint from `==1.2.3` to `>=1.2.2`** to allow use alongside other packages (e.g. Home Assistant) that may pin a compatible version.
 
 ## [0.13.3] — 2026-04-19
+
+### New Features
+- **`LEARN_TELEGRAM` now allocates a free sender slot for sender-addressed devices**: previously, if a device was added via `add_device()` without an explicit `sender`, sending a learn telegram always used BaseID+0 regardless of EEP type. For sender-addressed EEPs (`uses_addressed_sending=False`), the gateway now calls `__next_available_sender()` to allocate a free BaseID+n slot, persists it on `device.sender` and `device.config["sender_slot"]`.
 
 ### Bug fixes
 - **A5-38-08 CMD=2 (Dimming) status telegrams silently dropped**: `EDIM` field had `scale_min_fn=lambda _: None`, causing a `TypeError` in `bitstring_scaled_value()` on every incoming dimming status telegram. The exception was swallowed by the gateway, so `OUTPUT_VALUE` was never updated from device feedback. Fixed to `0.0` (the semantic resolver overrides the value anyway).
