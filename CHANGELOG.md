@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.13.4] — 2026-04-19
+
+### Bug fixes
+- **`start_learning()` left gateway in broken state on invalid `sender_id`**: state mutations (`__is_learning`, `__allow_teach_out`, `__focus_device`) happened before the `sender_id` validity check, so a `ValueError` left the gateway with `__is_learning=True` but no timeout task or deadline. Validation now runs first.
+- **`asyncio.get_event_loop()` replaced with `get_running_loop()`** in `start_learning()` and `__tick_learning_remaining()`.
+
+### Internal / maintenance
+- **`remove_device()` now clears the sender from `__known_senders`**: previously, removing a device left its EURID in the internal seen-senders set, suppressing future `NewDeviceCallback` notifications for that address.
+- **`__known_senders` changed from `list` to `set`**: membership test runs on every received telegram; `set` gives O(1) lookup vs. O(n) for `list`.
+- **`Address.__eq__` returns `NotImplemented` for non-`Address` types** instead of raising `TypeError`.
+- **`CommonCommandTelegram.optional_data` default corrected** from `None` (wrong type) to `b""`; removed now-redundant `__post_init__` null-check.
+- **`stop_learning()` is now a no-op when learning is not active**, preventing a spurious "Learning mode stopped" log entry on every disconnect.
+- **`send_esp3_packet()`: send callbacks now fire after the serial write**, not before; debug log moved to pre-write position.
+- Minor: removed dead `hasattr` check in `gateway_command()`; removed trailing `continue` in reconnect loop; `Optional[X]` → `X | None` in `SendResult`; `bytes +=` chain in `ERP1Telegram.to_esp3()` replaced with a single concatenation expression.
+
 ## [0.13.3] — 2026-04-18
 
 ### Bug fixes
