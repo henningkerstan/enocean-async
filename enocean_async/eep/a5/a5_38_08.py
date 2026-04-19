@@ -340,7 +340,7 @@ EEP_A5_38_08 = EEPSpecification(
                     size=8,
                     range_min=0,
                     range_max=255,
-                    scale_min_fn=lambda _: None,  # scaling done by semantic resolver
+                    scale_min_fn=lambda _: 0.0,  # actual scaling done by semantic resolver
                 ),
                 EEPDataField(
                     id="RMP",

@@ -660,10 +660,25 @@ class Gateway:
         if command.action == Instructable.LEARN_TELEGRAM:
             if spec.learn_telegram_payload is None:
                 raise ValueError(f"EEP {eep_id} has no teach_in_payload defined")
-            # Resolve sender before building the telegram (same logic as below)
+            # Resolve sender before building the telegram.
+            # For sender-addressed EEPs (uses_addressed_sending=False) with no assigned slot,
+            # allocate the next free BaseID+n slot so the Eltako device learns a unique sender.
             if sender is None:
                 if device.sender:
                     sender = device.sender
+                elif not spec.uses_addressed_sending:
+                    try:
+                        sender = self.__next_available_sender()
+                    except RuntimeError:
+                        self._logger.warning(
+                            f"LEARN_TELEGRAM for {destination}: no free sender slots; falling back to base ID."
+                        )
+                        sender = self.base_id
+                    if sender is not None:
+                        device.sender = sender
+                        device.config["sender_slot"] = _sender_to_slot_string(
+                            sender, self.__base_id
+                        )
                 else:
                     sender = self.base_id
                     if sender is not None:
@@ -1527,7 +1542,7 @@ class Gateway:
             else "teach-in"
         )
         self._logger.info(
-            f"Successfully confirmed bidirectional UTE {action} for device {response.sender} with EEP {response.eep}."
+            f"Successfully confirmed bidirectional UTE {action} for device {response.destination} with EEP {response.eep}."
         )
 
     async def __send_4bs_teach_in_response(
@@ -1556,7 +1571,7 @@ class Gateway:
             else "not accepted"
         )
         self._logger.info(
-            f"Successfully sent bidirectional 4BS teach-in response ({result})  with EEP {response.eep}."
+            f"Successfully sent bidirectional 4BS teach-in response ({result}) with EEP {response.eep}."
         )
 
     def __handle_ute_message(self, ute: UTEMessage) -> None:
@@ -1833,7 +1848,9 @@ class Gateway:
                     FourBSTeachInTelegram.response_for_query(
                         teach_in_telegram,
                         FourBSTeachInResult.SENDER_ID_STORED,
-                        existing.sender,
+                        existing.sender
+                        or self.__sender_id_for_learning
+                        or self.__base_id,
                     )
                 )
             )
