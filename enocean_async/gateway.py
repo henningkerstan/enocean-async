@@ -219,10 +219,8 @@ class Gateway:
         self.__eep_receive_callbacks: list[EEPCallbackWithFilter] = []
         self.__parsing_failed_callbacks: list[ParsingFailedCallback] = []
         self.__response_callbacks: list[ResponseCallback] = []
-
         self.__new_device_callbacks: list[NewDeviceCallback] = []
         self.__device_taught_in_callbacks: list[DeviceTaughtInCallback] = []
-
         self.__esp3_send_callbacks: list[ESP3Callback] = []
 
         # send handling
@@ -360,6 +358,15 @@ class Gateway:
     # ------------------------------------------------------------------
     # start and stop
     # ------------------------------------------------------------------
+    def __disconnect(self) -> None:
+        self.__stopped = True
+        if self.__transport is not None:
+            self.__transport.close()
+            self.__transport = None
+            self._logger.info(
+                f"Serial connection to EnOcean module on {self.__port} closed"
+            )
+
     async def start(self, auto_reconnect: bool = True) -> None:
         """Open the serial connection to the EnOcean module and start processing incoming packets.
 
@@ -370,6 +377,8 @@ class Gateway:
         self.__stopped = False
         self.auto_reconnect = auto_reconnect
         loop = asyncio.get_running_loop()
+
+        # 1. connect to the serial port and set up the protocol
         try:
             (
                 self.__transport,
@@ -384,36 +393,71 @@ class Gateway:
             self._logger.info(
                 f"Successfully connected to EnOcean module on {self.__port} at baudrate {self.__baudrate}"
             )
-            await (
-                self.fetch_base_id()
-            )  # ensure __base_id is populated so gateway observations can be emitted
-            await self.fetch_version_info()  # ensure __version_info is populated so gateway observations can be emitted
-            self.__emit_gateway_observation(
-                "connection_status", Observable.CONNECTION_STATUS, "connected"
-            )
         except Exception as e:
             self._logger.error(
-                f"Failed to connect to EnOcean module on {self.__port} at baudrate {self.__baudrate}: {e}"
+                f"Failed to connect to EnOcean module on {self.__port} at baudrate {self.__baudrate}: {e}."
             )
+            self.__disconnect()
             raise ConnectionError(
                 f"Failed to connect to EnOcean module on {self.__port} at baudrate {self.__baudrate}: {e}"
             )
 
-    def stop(self) -> None:
-        """Close the serial connection to the EnOcean module."""
+        # 2. get base id; if this fails, the connection is likely unusable and we close it immediately instead of leaving it open in a broken state
+        try:
+            await self.fetch_base_id()
+        except Exception as e:
+            self._logger.error(
+                f"Failed to fetch base ID from EnOcean module on {self.__port}: {e}. Connection will be closed."
+            )
+            self.__disconnect()
+            raise ConnectionError(
+                f"Failed to fetch base ID from EnOcean module on {self.__port}: {e}"
+            )
+
+        # 3. get version info; if this fails, the connection is likely unusable and we close it immediately instead of leaving it open in a broken state
+        try:
+            await self.fetch_version_info()
+        except Exception as e:
+            self._logger.error(
+                f"Failed to fetch version info from EnOcean module on {self.__port}: {e}. Connection will be closed."
+            )
+            self.__disconnect()
+            raise ConnectionError(
+                f"Failed to fetch version info from EnOcean module on {self.__port}: {e}"
+            )
+
+        self.__emit_gateway_observation(
+            "connection_status", Observable.CONNECTION_STATUS, "connected"
+        )
+
+    async def stop(self) -> None:
+        """Stop the gateway. This closes the serial connection to the EnOcean module and stops all background tasks."""
         self.__stopped = True
+        self.stop_learning()
+
+        # if a reconnect task is running, cancel it and wait for it to finish to avoid racing with the cleanup logic below
         if self.__reconnect_task is not None:
             self.__reconnect_task.cancel()
+            try:
+                await self.__reconnect_task
+            except (asyncio.CancelledError, Exception):
+                pass
             self.__reconnect_task = None
+
+        # Re-assert: start() unconditionally resets __stopped = False, so if it
+        # ran inside __try_to_reconnect during the await above, the flag is wrong.
+        self.__stopped = True
+
+        # cancel any background tasks (e.g. pending teach-in response sends) to avoid them running after the connection is closed and trying to send on a closed transport; wait for them to finish to ensure clean shutdown
         for task in self.__background_tasks:
             task.cancel()
+        await asyncio.gather(*self.__background_tasks, return_exceptions=True)
         self.__background_tasks.clear()
-        if self.__transport is not None:
-            self.__transport.close()
-            self.__transport = None
-            self._logger.info(
-                f"Serial connection to EnOcean module on {self.__port} closed"
-            )
+
+        if self.__send_future is not None and not self.__send_future.done():
+            self.__send_future.cancel()
+
+        self.__disconnect()
 
     def is_valid_sender(self, sender: SenderAddress) -> bool:
         """Return ``True`` if *sender* is a valid sender for this gateway.
@@ -760,6 +804,7 @@ class Gateway:
         pass
 
     def connection_lost(self, exc: Exception | None) -> None:
+        """Handle loss of connection to the EnOcean module; clean up state and, if auto_reconnect is enabled, start trying to reconnect."""
         self.__transport = None
         self.stop_learning()
         if self.__stopped:
