@@ -632,7 +632,7 @@ class Gateway:
         """
 
         if not self.__transport:
-            self._logger.error(
+            self._logger.warning(
                 "Cannot send: gateway is not connected to an EnOcean module."
             )
             return SendResult(None, None)
@@ -699,17 +699,11 @@ class Gateway:
         """
         device = self.__devices.get(destination)
         if device is None:
-            self._logger.error(
-                f"send_command: device {destination} not registered; call add_device() first."
-            )
             raise ValueError(f"Unknown device {destination}: call add_device() first")
 
         eep_id = device.eep
 
         if eep_id not in self.__eep_handlers:
-            self._logger.error(
-                f"send_command: no EEP handler loaded for {eep_id} (device {destination})."
-            )
             raise ValueError(f"No EEP handler loaded for {eep_id}")
 
         spec = EEP_SPECIFICATIONS[eep_id]
@@ -873,9 +867,6 @@ class Gateway:
                     Missing keys are filled from the EEP spec's entity ``config_spec.default`` values.
         """
         if address in self.__devices:
-            self._logger.warning(
-                f"Tried to add device with address {address}, but it is already registered."
-            )
             raise ValueError(f"Device {address} is already registered.")
 
         eep = device_type.eep
@@ -1186,7 +1177,7 @@ class Gateway:
         """The cached base ID of the connected EnOcean module, or ``None`` before ``start()``."""
         return self.__base_id
 
-    async def fetch_base_id(self) -> BaseAddress | None:
+    async def fetch_base_id(self) -> BaseAddress:
         """Fetch and cache the base ID from the module. Returns the cached value immediately if already known."""
         if self.__base_id is not None:
             return self.__base_id
@@ -1199,20 +1190,17 @@ class Gateway:
         response = result.response
 
         if response is None:
-            self._logger.error(
+            raise ConnectionError(
                 "fetch_base_id: no response from EnOcean module (timeout)."
             )
-            return None
         if response.return_code != ResponseCode.OK:
-            self._logger.error(
+            raise ConnectionError(
                 f"fetch_base_id: module returned error code {response.return_code.name}."
             )
-            return None
         if len(response.response_data) < 4:
-            self._logger.error(
+            raise ConnectionError(
                 f"fetch_base_id: response data too short ({len(response.response_data)} bytes)."
             )
-            return None
 
         self.__base_id = BaseAddress(response.response_data[:4])
 
@@ -1290,7 +1278,7 @@ class Gateway:
         """The cached version information of the connected EnOcean module, or ``None`` before ``start()``."""
         return self.__version_info
 
-    async def fetch_version_info(self) -> VersionInfo | None:
+    async def fetch_version_info(self) -> VersionInfo:
         """Fetch and cache version info from the module. Returns the cached value immediately if already known."""
         if self.__version_info is not None:
             return self.__version_info
@@ -1303,20 +1291,17 @@ class Gateway:
         response = send_result.response
 
         if response is None:
-            self._logger.error(
+            raise ConnectionError(
                 "fetch_version_info: no response from EnOcean module (timeout)."
             )
-            return None
         if response.return_code != ResponseCode.OK:
-            self._logger.error(
+            raise ConnectionError(
                 f"fetch_version_info: module returned error code {response.return_code.name}."
             )
-            return None
         if len(response.response_data) < 32:
-            self._logger.error(
+            raise ConnectionError(
                 f"fetch_version_info: response data too short ({len(response.response_data)} bytes)."
             )
-            return None
 
         self.__version_info = VersionInfo(
             app_version=VersionIdentifier(
@@ -1666,14 +1651,14 @@ class Gateway:
             send_result = await self.send_esp3_packet(esp3)
 
         except Exception as e:
-            self._logger.error(f"Failed to send UTE response: {e}")
+            self._logger.warning(f"Failed to send UTE response: {e}")
             return
 
         if (
             send_result.response is None
             or send_result.response.return_code != ResponseCode.OK
         ):
-            self._logger.error(
+            self._logger.warning(
                 f"Failed to send UTE response. Send result: {send_result}"
             )
             return
@@ -1695,14 +1680,14 @@ class Gateway:
             esp3 = erp1.to_esp3()
             send_result = await self.send_esp3_packet(esp3)
         except Exception as e:
-            self._logger.error(f"Failed to send 4BS teach-in response: {e}")
+            self._logger.warning(f"Failed to send 4BS teach-in response: {e}")
             return
 
         if (
             send_result.response is None
             or send_result.response.return_code != ResponseCode.OK
         ):
-            self._logger.error(
+            self._logger.warning(
                 f"Failed to send 4BS teach-in response. Send result: {send_result}"
             )
             return
