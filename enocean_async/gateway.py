@@ -394,7 +394,7 @@ class Gateway:
                 f"Successfully connected to EnOcean module on {self.__port} at baudrate {self.__baudrate}"
             )
         except Exception as e:
-            self._logger.error(
+            self._logger.warning(
                 f"Failed to connect to EnOcean module on {self.__port} at baudrate {self.__baudrate}: {e}."
             )
             self.__disconnect()
@@ -406,7 +406,7 @@ class Gateway:
         try:
             await self.fetch_base_id()
         except Exception as e:
-            self._logger.error(
+            self._logger.warning(
                 f"Failed to fetch base ID from EnOcean module on {self.__port}: {e}. Connection will be closed."
             )
             self.__disconnect()
@@ -418,7 +418,7 @@ class Gateway:
         try:
             await self.fetch_version_info()
         except Exception as e:
-            self._logger.error(
+            self._logger.warning(
                 f"Failed to fetch version info from EnOcean module on {self.__port}: {e}. Connection will be closed."
             )
             self.__disconnect()
@@ -847,7 +847,7 @@ class Gateway:
                 self._logger.info("Reconnect successful")
                 return
             except Exception:
-                self._logger.warning(
+                self._logger.debug(
                     f"Reconnection attempt #{attempt} failed, retrying in {delay:.0f}s."
                 )
 
