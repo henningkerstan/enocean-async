@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.14.0] — 2026-05-16
+
+### Breaking changes
+- **`stop()` is now `async`**: callers must `await gateway.stop()`. This was necessary to correctly await the reconnect task and background tasks before returning.
+
+### Bug fixes
+- **`stop()` now properly awaits the reconnect task**: previously `stop()` only called `task.cancel()` without awaiting, so the reconnect task could complete `start()` (opening the serial port) after `stop()` returned, leaving the port open. `stop()` now cancels the task and awaits it, then re-asserts `__stopped = True` to handle the case where `start()` ran to completion inside the reconnect task before the cancellation arrived.
+- **`stop()` now properly awaits background tasks**: teach-in response tasks were cancelled but not awaited, so they could still attempt to write to the transport after it was closed. `stop()` now uses `asyncio.gather(..., return_exceptions=True)` to wait for all background tasks to finish before closing the transport.
+- **Double reconnect task on `start()` failure during reconnect**: when `start()` failed during a reconnect attempt and closed the transport, `connection_lost` fired with `__stopped = False` and spawned a second `__try_to_reconnect` task alongside the one already running. Fixed by introducing `__disconnect()` which sets `__stopped = True` before closing the transport, preventing `connection_lost` from treating a deliberate close as an unexpected disconnect.
+- **`stop()` now cancels an in-flight `__send_future`**: if `send_esp3_packet()` was awaiting a response when `stop()` was called, the future was left pending until the 500 ms timeout. `stop()` now cancels it immediately.
+- **`fetch_base_id()` and `fetch_version_info()` now raise on failure**: both methods previously returned `None` on timeout, bad response code, or short response data, while `start()` only checked for exceptions — so a silent `None` return would let `start()` complete with no base ID or version info set. Both methods now raise `ConnectionError` in all failure cases; return types narrowed from `… | None` to `BaseAddress` and `VersionInfo` respectively.
+
+### Internal / maintenance
+- **Exponential backoff in reconnect**: `__try_to_reconnect` previously waited a fixed 5 s between all 720 attempts (1 hour cap). It now uses exponential backoff starting at 2 s, doubling each failure up to a 300 s maximum, and retries indefinitely.
+- **Log level corrections**: `start()` failure logs downgraded from `error` to `warning` (transient during reconnect); individual reconnect attempt failures downgraded from `warning` to `debug`; failed UTE/4BS teach-in response sends downgraded from `error` to `warning`; "cannot send: not connected" downgraded from `error` to `warning`.
+- **Removed log-before-raise pattern**: redundant `logger.warning/error` calls immediately before `raise ValueError` removed from `send_command()` and `add_device()` — the exception is the error signal.
+
 ## [0.13.5] — 2026-04-19
 
 ### New features
