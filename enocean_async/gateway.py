@@ -831,23 +831,27 @@ class Gateway:
         self.__reconnect_task = asyncio.create_task(self.__try_to_reconnect())
 
     async def __try_to_reconnect(self) -> None:
-        for attempt in range(1, 721):
-            await asyncio.sleep(5)
+        """Attempt to reconnect with exponential backoff until successful or stop() is called."""
+        delay = 2.0
+        max_delay = 300.0
+        attempt = 1
+        while True:
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, max_delay)
+
             try:
                 self._logger.info(
-                    f"Trying to reconnect to EnOcean Module (attempt #{attempt}/720)"
+                    f"Trying to reconnect to EnOcean module (attempt #{attempt}, next delay {delay:.0f}s)"
                 )
                 await self.start()
                 self._logger.info("Reconnect successful")
                 return
             except Exception:
                 self._logger.warning(
-                    f"Reconnection attempt #{attempt}/720 failed, retrying again in 5s."
+                    f"Reconnection attempt #{attempt} failed, retrying in {delay:.0f}s."
                 )
 
-        self._logger.error(
-            "Could not reconnect to EnOcean module after 720 attempts (1 hour). Stopping auto-reconnect."
-        )
+            attempt += 1
 
     # ------------------------------------------------------------------
     # device registry
