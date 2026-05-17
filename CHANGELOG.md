@@ -5,6 +5,10 @@
 ### Breaking changes
 - **`is_eurid()`, `is_base_address()`, `is_broadcast()` converted to properties**: callers must drop the parentheses (`addr.is_eurid` instead of `addr.is_eurid()`).
 
+### New features
+- **Identification log on startup**: `Gateway.__init__` now emits an `INFO` log line `"enocean-async vX.Y.Z Gateway init on <port>."` as its very first log message, making the library version immediately visible in application logs.
+- **Gateway `default_sender` config**: a new gateway config key `"default_sender"` (options: `"auto"`, `"0"`–`"127"`, `"eurid"`; default: `"auto"`) controls which sender slot is used when a device is registered via `add_device()` without an explicit `sender` argument, and as the backfill sender in `send_command()` when `device.sender` is unset. `"auto"` preserves the previous behaviour (BaseID+0). Set via `gateway.set_gateway_config("default_sender", "1")`. A matching `default_sender` entity is exposed in `gateway_entities` for UI configuration.
+
 ## [0.14.0] — 2026-05-16
 
 ### Breaking changes

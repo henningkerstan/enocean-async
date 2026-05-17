@@ -132,6 +132,14 @@ _GATEWAY_ENTITIES: list[Entity] = [
         ),
         category=EntityCategory.CONFIG,
     ),
+    Entity(
+        id="default_sender",
+        config_spec=EnumOptions(
+            options=("auto",) + tuple(str(i) for i in range(0, 128)) + ("eurid",),
+            default="auto",
+        ),
+        category=EntityCategory.CONFIG,
+    ),
 ]
 
 
@@ -240,6 +248,7 @@ class Gateway:
         self.config: dict[str, Any] = {
             "learning_timeout": "30",
             "learning_sender": "auto",
+            "default_sender": "auto",
         }
 
         # logging
@@ -723,18 +732,21 @@ class Gateway:
                         sender = self.__next_available_sender()
                     except RuntimeError:
                         self._logger.warning(
-                            f"LEARN_TELEGRAM for {destination}: no free sender slots; falling back to base ID."
+                            f"LEARN_TELEGRAM for {destination}: no free sender slots; falling back to default sender."
                         )
-                        sender = self.base_id
+                        sender = self.__resolve_default_sender()
                     if sender is not None:
                         device.sender = sender
                         device.config["sender_slot"] = _sender_to_slot_string(
                             sender, self.__base_id
                         )
                 else:
-                    sender = self.base_id
+                    sender = self.__resolve_default_sender()
                     if sender is not None:
                         device.sender = sender
+                        device.config["sender_slot"] = _sender_to_slot_string(
+                            sender, self.__base_id
+                        )
             if sender is None:
                 raise ValueError(
                     "Could not determine sender address; pass sender= explicitly or connect first"
@@ -760,17 +772,17 @@ class Gateway:
                 f"Command '{command.action}' is not supported for EEP {eep_id}"
             )
 
-        # Resolve sender: explicit > device sender > gateway base ID
+        # Resolve sender: explicit > device sender > default sender
         if sender is None:
             if device.sender:
                 sender = device.sender
             else:
-                sender = self.base_id
+                sender = self.__resolve_default_sender()
                 if sender is not None:
                     # Backfill: device was registered before base ID was available
                     device.sender = sender
                     self._logger.debug(
-                        f"Device {destination} did not have a sender configured; using base ID {sender}."
+                        f"Device {destination} did not have a sender configured; using default sender {sender}."
                     )
         if sender is None:
             raise ValueError(
@@ -872,7 +884,7 @@ class Gateway:
         eep = device_type.eep
 
         if sender is None:
-            sender = self.__base_id
+            sender = self.__resolve_default_sender()
             if sender is None:
                 self._logger.debug(
                     f"No sender provided when adding device {address} and base ID not yet fetched; "
@@ -880,7 +892,7 @@ class Gateway:
                 )
             else:
                 self._logger.debug(
-                    f"No sender provided when adding device {address}; using base ID {sender} as sender."
+                    f"No sender provided when adding device {address}; using default sender {sender}."
                 )
 
         device = Device(
@@ -981,6 +993,18 @@ class Gateway:
             except ValueError:
                 pass
         return None
+
+    def __resolve_default_sender(self) -> SenderAddress | None:
+        """Resolve the gateway ``default_sender`` config value to a concrete sender address.
+
+        ``"auto"`` maps to BaseID+0 (same as the historical hardcoded default).
+        Returns ``None`` when the base ID is not yet available.
+        """
+        value = self.config.get("default_sender", "auto")
+        if value == "auto":
+            return self.__base_id
+        resolved = self.__resolve_sender_slot(value)
+        return resolved if resolved is not None else self.__base_id
 
     def __on_observation(self, observation: Observation) -> None:
         """Internal callback forwarding observer Observations to registered callbacks."""
