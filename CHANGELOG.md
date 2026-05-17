@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.15.0] — 2026-05-17
+
+### Breaking changes
+- **`is_eurid()`, `is_base_address()`, `is_broadcast()` converted to properties**: callers must drop the parentheses (`addr.is_eurid` instead of `addr.is_eurid()`).
+
 ## [0.14.0] — 2026-05-16
 
 ### Breaking changes

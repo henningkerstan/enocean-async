@@ -237,9 +237,9 @@ class ERP1Telegram:
             )
 
         # determine if sender is EURID or Base ID
-        if s.is_eurid():
+        if s.is_eurid:
             sender = EURID(int(s))
-        elif s.is_base_address():
+        elif s.is_base_address:
             sender = BaseAddress(int(s))
         else:
             raise ERP1ParseError(f"Invalid sender address: {s}")
@@ -253,7 +253,7 @@ class ERP1Telegram:
         d = Address(destination_bytes) if destination_bytes else None
 
         destination = None
-        if d is not None and d.is_broadcast():
+        if d is not None and d.is_broadcast:
             destination = BroadcastAddress()
         elif d is not None and d.is_eurid():
             destination = EURID(int(d))

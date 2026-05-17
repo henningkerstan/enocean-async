@@ -26,7 +26,7 @@ class EEPHandler:
             rssi=telegram.rssi,
         )
 
-        if telegram.destination is not None and not telegram.destination.is_broadcast():
+        if telegram.destination is not None and not telegram.destination.is_broadcast:
             msg.destination = telegram.destination
 
         # determine the command/telegram type based on the EEP's cmd_size and cmd_offset, if applicable

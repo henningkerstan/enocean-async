@@ -12,13 +12,20 @@ def test_known_values():
 
 
 def test_is_eurid():
-    assert Address(0).is_eurid()
-    assert Address("FF:7F:FF:FF").is_eurid()
-    assert Address("FF:80:00:00").is_eurid() == False
-    assert BroadcastAddress().is_eurid() == False
+    assert Address(0).is_eurid
+    assert Address("FF:7F:FF:FF").is_eurid
+    assert Address("FF:80:00:00").is_eurid == False
+    assert BroadcastAddress().is_eurid == False
 
 
 def test_broadcast():
     assert str(BroadcastAddress()) == "FF:FF:FF:FF"
-    assert BroadcastAddress().is_broadcast()
-    assert BroadcastAddress().is_base_address() == False
+    assert BroadcastAddress().is_broadcast
+    assert BroadcastAddress().is_base_address == False
+
+def test_is_base_address():
+    assert Address("FF:80:00:00").is_base_address
+    assert Address("FF:FF:FF:FE").is_base_address
+    assert Address("FF:7F:FF:FF").is_base_address == False
+    assert Address("00:00:00:00").is_base_address == False
+    assert BroadcastAddress().is_base_address == False

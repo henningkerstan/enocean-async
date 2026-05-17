@@ -1557,7 +1557,7 @@ class Gateway:
             eep_id = sender_device.eep
             device_config = sender_device.config
         else:
-            if erp1.destination is None or erp1.destination.is_broadcast():
+            if erp1.destination is None or erp1.destination.is_broadcast:
                 msg = (
                     f"Failed to decode ERP1 telegram to EEP message: sender {erp1.sender} "
                     "is unknown and destination is not specified."

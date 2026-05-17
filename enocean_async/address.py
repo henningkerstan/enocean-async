@@ -28,14 +28,17 @@ class Address:
             )
         self._address = value
 
+    @property
     def is_eurid(self) -> bool:
         """Return ``True`` if this address is in the EURID range (00:00:00:00–FF:7F:FF:FF)."""
         return 0x00000000 <= self._address <= 0xFF7FFFFF
 
+    @property
     def is_base_address(self) -> bool:
         """Return ``True`` if this address is in the base address range (FF:80:00:00–FF:FF:FF:FE)."""
         return 0xFF800000 <= self._address <= 0xFFFFFFFE
 
+    @property
     def is_broadcast(self) -> bool:
         """Return ``True`` if this is the broadcast address (FF:FF:FF:FF)."""
         return self._address == 0xFFFFFFFF
