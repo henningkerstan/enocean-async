@@ -202,6 +202,11 @@ class Gateway:
 
     def __init__(self, port: str, baudrate: int = 57600):
         """Create an instance of an EnOcean gateway that connects to the supplied port at supplied baudrate (optional) and processes incoming ESP3 packets."""
+        # logging
+        self._logger = logging.getLogger(__name__)
+        from enocean_async import __version__
+
+        self._logger.info(f"enocean-async v{__version__} Gateway init on {port}.")
 
         # serial connection, transport and protocol parameters
         self.__port: str = port
@@ -250,9 +255,6 @@ class Gateway:
             "learning_sender": "auto",
             "default_sender": "auto",
         }
-
-        # logging
-        self._logger = logging.getLogger(__name__)
 
         # gateway device counters (ERP1 only; not reset on reconnect)
         self.__erp1_received: int = 0
