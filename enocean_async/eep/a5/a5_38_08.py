@@ -8,7 +8,11 @@ from ...semantics.entity import (
     NumberRange,
 )
 from ...semantics.instructable import Instructable
-from ...semantics.instructions.central_command import CentralDim, CentralSwitch
+from ...semantics.instructions.central_command import (
+    CentralDim,
+    CentralDimOff,
+    CentralSwitch,
+)
 from ...semantics.instructions.cover import (
     CoverClose,
     CoverOpen,
@@ -23,31 +27,50 @@ from ..message import EEPMessageType, RawEEPMessage, ValueWithContext
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram
 
 
+def _edim_to_value(scaled_pct: float, config: dict) -> ValueWithContext:
+    min_b: float = config.get("min_brightness", 0.0)
+    max_b: float = config.get("max_brightness", 100.0)
+    span = max_b - min_b
+    dim_value = 0.0 if span == 0 else (scaled_pct - min_b) / span * 100.0
+    return ValueWithContext(name="Dimming value", value=round(dim_value, 1), unit="%")
+
+
 def _resolve_edim(raw: dict, _scaled: dict, config: dict) -> ValueWithContext | None:
-    """Convert EDIM raw value to a percentage, applying inverse brightness scaling.
-
-    Forward (send): scaled_pct = min_b + (max_b - min_b) * dim_value / 100
-    Inverse (receive): dim_value = (scaled_pct - min_b) / (max_b - min_b) * 100
-
-    EDIMR=0 (absolute): raw 0–255 → scaled_pct 0–100 → dim_value via inverse scaling
-    EDIMR=1 (relative): raw 0–100 → scaled_pct 0–100 → dim_value via inverse scaling
-    """
+    """EDIMR=0 (absolute): raw 0–255 → 0–100 %; EDIMR=1 (relative): raw 0–100 → 0–100 %."""
     edim = raw.get("EDIM")
     edimr = raw.get("EDIMR")
     if edim is None or edimr is None:
         return None
-    if edimr == 1:
-        scaled_pct = float(edim)
-    else:
-        scaled_pct = edim * 100.0 / 255.0
-    min_b: float = config.get("min_brightness", 0.0)
-    max_b: float = config.get("max_brightness", 100.0)
-    span = max_b - min_b
-    if span == 0:
-        dim_value = 0.0
-    else:
-        dim_value = (scaled_pct - min_b) / span * 100.0
-    return ValueWithContext(name="Dimming value", value=round(dim_value, 1), unit="%")
+    scaled_pct = float(edim) if edimr == 1 else edim * 100.0 / 255.0
+    return _edim_to_value(scaled_pct, config)
+
+
+def _resolve_eltako_edim(
+    raw: dict, _scaled: dict, config: dict
+) -> ValueWithContext | None:
+    """Eltako: EDIM is always 0–100 %; EDIMR is repurposed as lock bit, not a range selector."""
+    edim = raw.get("EDIM")
+    if edim is None:
+        return None
+    return _edim_to_value(float(edim), config)
+
+
+def _resolve_eltako_switch_state(
+    raw: dict, _scaled: dict, _config: dict
+) -> ValueWithContext | None:
+    sw = raw.get("SW")
+    if sw is None:
+        return None
+    return ValueWithContext(name="Dimmer on/off", value=bool(sw), unit=None)
+
+
+def _resolve_eltako_dimmer_output(
+    raw: dict, _scaled: dict, _config: dict
+) -> ValueWithContext | None:
+    edim = raw.get("EDIM")
+    if edim is None:
+        return None
+    return ValueWithContext(name="Device brightness", value=float(edim), unit="%")
 
 
 def _encode_central_switch(action: CentralSwitch) -> RawEEPMessage:
@@ -88,7 +111,7 @@ def _encode_central_dim(action: CentralDim, config: dict) -> RawEEPMessage:
     use_relative = (
         action.use_relative
         if action.use_relative is not None
-        else config.get("dimming_mode", "relative") == "relative"
+        else config.get("dimming_range", "relative") == "relative"
     )
     if use_relative:
         msg.raw["EDIM"] = max(0, min(100, round(scaled_pct)))
@@ -108,6 +131,60 @@ def _encode_central_dim(action: CentralDim, config: dict) -> RawEEPMessage:
     msg.raw["STR"] = int(store)
     msg.raw["SW"] = int(action.switch_on)
     msg.raw["LRNB"] = 1  # data telegram (not teach-in)
+    return msg
+
+
+def _encode_eltako_central_dim(action: CentralDim, config: dict) -> RawEEPMessage:
+    # Eltako FUD protocol (ORG=0x07 heritage):
+    #   EDIM always 0–100 % (no absolute 0–255 range)
+    #   EDIMR = DB0_Bit2 = "lock" flag — always 0 (unlocked)
+    #   RMP=0x00 → use device's hardware-configured speed
+    #   RMP=0x01–0xFF → software-controlled speed (1=fastest, 255=slowest)
+    msg = RawEEPMessage(
+        sender=None,
+        message_type=EEPMessageType(id=2, description="Dimming"),
+    )
+    min_b: float = config.get("min_brightness", 0.0)
+    max_b: float = config.get("max_brightness", 100.0)
+    scaled_pct = (
+        0.0
+        if action.dim_value <= 0
+        else min_b + (max_b - min_b) * action.dim_value / 100.0
+    )
+    msg.raw["EDIM"] = max(0, min(100, round(scaled_pct)))
+    use_hardware = config.get("ramp_mode", "software") == "hardware"
+    msg.raw["RMP"] = (
+        0x00
+        if use_hardware
+        else max(
+            1,
+            min(
+                255,
+                action.ramp_time
+                if action.ramp_time is not None
+                else int(config.get("ramp_time", 1)),
+            ),
+        )
+    )
+    msg.raw["EDIMR"] = 0  # lock=0 (unlocked)
+    msg.raw["STR"] = 0  # not used in Eltako protocol
+    msg.raw["SW"] = 1
+    msg.raw["LRNB"] = 1
+    return msg
+
+
+def _encode_eltako_dim_off(_action: CentralDimOff) -> RawEEPMessage:
+    """Encode Eltako dimmer-off: 0x02, 0x00, 0x00, 0x08 (DB2/DB1 are wildcards per spec)."""
+    msg = RawEEPMessage(
+        sender=None,
+        message_type=EEPMessageType(id=2, description="Dimming"),
+    )
+    msg.raw["EDIM"] = 0
+    msg.raw["RMP"] = 0
+    msg.raw["EDIMR"] = 0
+    msg.raw["STR"] = 0
+    msg.raw["SW"] = 0
+    msg.raw["LRNB"] = 1
     return msg
 
 
@@ -211,9 +288,33 @@ _DIMMER_ENTITY = Entity(
     actions=frozenset({Instructable.CENTRAL_DIM, Instructable.CENTRAL_SWITCH}),
 )
 
-_DIM_MODE_SELECT = Entity(
-    id="dimming_mode",
+_ELTAKO_DIMMER_ENTITY = Entity(
+    id="light",
+    observables=frozenset({Observable.OUTPUT_VALUE}),
+    actions=frozenset({Instructable.CENTRAL_DIM, Instructable.CENTRAL_DIM_OFF}),
+)
+
+_ELTAKO_DIMMER_STATE = Entity(
+    id="dimmer_state",
+    observables=frozenset({Observable.SWITCH_STATE}),
+    category=EntityCategory.DIAGNOSTIC,
+)
+
+_ELTAKO_DIMMER_OUTPUT = Entity(
+    id="dimmer_output",
+    observables=frozenset({Observable.DIMMER_OUTPUT}),
+    category=EntityCategory.DIAGNOSTIC,
+)
+
+_DIM_RANGE_SELECT = Entity(
+    id="dimming_range",
     config_spec=EnumOptions(options=("relative", "absolute"), default="relative"),
+    category=EntityCategory.CONFIG,
+)
+
+_RAMP_MODE_SELECT = Entity(
+    id="ramp_mode",
+    config_spec=EnumOptions(options=("hardware", "software"), default="software"),
     category=EntityCategory.CONFIG,
 )
 
@@ -238,6 +339,13 @@ _RAMP_TIME = Entity(
     config_spec=NumberRange(
         min_value=0.0, max_value=255.0, step=1.0, unit="s", default=0.0
     ),
+    category=EntityCategory.CONFIG,
+)
+
+# Eltako: RMP=0 means "use device's hardware speed"; 1=fastest, 255=slowest.
+_ELTAKO_RAMP_TIME = Entity(
+    id="ramp_time",
+    config_spec=NumberRange(min_value=1.0, max_value=255.0, step=1.0, default=1.0),
     category=EntityCategory.CONFIG,
 )
 
@@ -591,7 +699,7 @@ EEP_A5_38_08 = EEPSpecification(
     entities=[
         _DIMMER_ENTITY,
         _COVER_ENTITY,
-        _DIM_MODE_SELECT,
+        _DIM_RANGE_SELECT,
         _MIN_BRIGHTNESS,
         _MAX_BRIGHTNESS,
         _RAMP_TIME,
@@ -626,18 +734,31 @@ EEP_A5_38_08_ELTAKO = EEPSpecification(
     cmd_offset=EEP_A5_38_08.cmd_offset,
     telegrams=EEP_A5_38_08.telegrams,
     entities=[
-        _DIMMER_ENTITY,
-        _COVER_ENTITY,
-        _DIM_MODE_SELECT,
+        _ELTAKO_DIMMER_ENTITY,
+        _RAMP_MODE_SELECT,
         _MIN_BRIGHTNESS,
         _MAX_BRIGHTNESS,
-        _RAMP_TIME,
-        _STORE,
+        _ELTAKO_RAMP_TIME,
         _LEARN_TELEGRAM_ENTITY,
+        _ELTAKO_DIMMER_STATE,
+        _ELTAKO_DIMMER_OUTPUT,
     ],
-    observers=EEP_A5_38_08.observers,
-    semantic_resolvers=EEP_A5_38_08.semantic_resolvers,
-    encoders=EEP_A5_38_08.encoders,
+    observers=[
+        *EEP_A5_38_08.observers,
+        scalar_factory(Observable.SWITCH_STATE, entity_id="dimmer_state"),
+        scalar_factory(Observable.DIMMER_OUTPUT, entity_id="dimmer_output"),
+    ],
+    semantic_resolvers={
+        **EEP_A5_38_08.semantic_resolvers,
+        Observable.OUTPUT_VALUE: _resolve_eltako_edim,
+        Observable.SWITCH_STATE: _resolve_eltako_switch_state,
+        Observable.DIMMER_OUTPUT: _resolve_eltako_dimmer_output,
+    },
+    encoders={
+        **EEP_A5_38_08.encoders,
+        Instructable.CENTRAL_DIM: _encode_eltako_central_dim,
+        Instructable.CENTRAL_DIM_OFF: lambda a, _: _encode_eltako_dim_off(a),
+    },
     uses_addressed_sending=False,
     learn_telegram_payload=bytes([0xE0, 0x40, 0x0D, 0x80]),
 )

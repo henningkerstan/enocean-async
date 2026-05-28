@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.16.0] — 2026-05-28
+
+### Breaking changes
+- **`A5-38-08` config key `dimming_mode` replaced by `dimming_range`**: the generic EEP profile now uses `dimming_range` (`"relative"` / `"absolute"`) to reflect that the choice is purely about the EDIM encoding. Any device config persisting `"dimming_mode"` for a generic `A5-38-08` device must be migrated to `"dimming_range"`.
+- **`A5-38-08.ELTAKO` config key `dimming_mode` replaced by `ramp_mode`**: the Eltako profile now uses `ramp_mode` (`"hardware"` / `"software"`) to reflect that the choice controls who owns the ramp speed — the device's own hardware setting or the telegram's RMP field. Any device config persisting `"dimming_mode"` for an Eltako device must be migrated to `"ramp_mode"`.
+
+### Bug fixes
+- **Eltako FUD/FLD dimmers always dimmed at hardware speed**: `RMP=0x00` was sent by default (via `ramp_time=0`), but for Eltako devices `RMP=0x00` means "use the device's internally configured ramp speed", not "immediate". The Eltako-specific encoder now defaults to `ramp_time=1` (fastest software-controlled speed) with a valid range of 1–255. `RMP=0x00` is only sent in `ramp_mode="hardware"`.
+- **`dim_value=0` incorrectly mapped to `min_brightness` for Eltako**: when `min_brightness > 0`, `CentralDim(dim_value=0)` was encoding `EDIM=min_brightness` rather than `EDIM=0`. Turning off via a dim-to-zero command now always sends `EDIM=0` regardless of the `min_brightness` setting.
+
+### New features
+- **`CentralDimOff` instruction for Eltako dimmers**: a new instruction that sends the exact Eltako switch-off telegram (`0x02, 0x00, 0x00, 0x08`). Per the Eltako protocol, `DB2`/`DB1` are wildcards when `SW=0`; the device always uses its own hardware-configured ramp speed for switch-off regardless of RMP. `CentralDimOff` is exposed in `_ELTAKO_DIMMER_ENTITY`'s actions alongside `CentralDim`, replacing `CentralSwitch` for Eltako.
+- **Two new diagnostic entities for `A5-38-08.ELTAKO`**:
+  - `dimmer_state` — binary sensor reporting the `SW` bit from received dimming telegrams (`Observable.SWITCH_STATE`).
+  - `dimmer_output` — scalar sensor reporting the raw `EDIM` value (0–100 %) as received from the device, before inverse brightness scaling (`Observable.DIMMER_OUTPUT`).
+- **New `Observable.DIMMER_OUTPUT`**: raw device brightness percentage (0–100 %) distinct from `OUTPUT_VALUE`, which is scaled by `min_brightness`/`max_brightness`.
+
+### Internal / maintenance
+- **Separate Eltako dim encoder**: `EEP_A5_38_08_ELTAKO` now uses a dedicated `_encode_eltako_central_dim` instead of the generic one. Eltako specifics: EDIM always 0–100 %, EDIMR always 0 (repurposed as lock bit in Eltako protocol), `SW` always 1 for `CentralDim`.
+- **Separate Eltako EDIM resolver**: `_resolve_eltako_edim` always treats EDIM as 0–100 % without branching on EDIMR. The shared `_edim_to_value` helper is used by both generic and Eltako resolvers.
+
 ## [0.15.0] — 2026-05-17
 
 ### Breaking changes

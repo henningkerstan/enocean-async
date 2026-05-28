@@ -23,7 +23,11 @@ from .semantics.entity import (
 from .semantics.instructable import Instructable
 from .semantics.instruction import Instruction
 from .semantics.instructions import INSTRUCTION_FOR
-from .semantics.instructions.central_command import CentralDim, CentralSwitch
+from .semantics.instructions.central_command import (
+    CentralDim,
+    CentralDimOff,
+    CentralSwitch,
+)
 from .semantics.instructions.cover import (
     CoverClose,
     CoverOpen,
@@ -82,6 +86,7 @@ __all__ = [
     "CoverSetPositionAndAngle",
     "CoverStop",
     "CentralDim",
+    "CentralDimOff",
     "CentralSwitch",
     "QueryActuatorMeasurement",
     "QueryActuatorStatus",

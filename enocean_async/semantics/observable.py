@@ -69,6 +69,7 @@ class Observable(str, Enum):
     # Switch / dimmer actuator
     SWITCH_STATE = ("switch_state", None, _B)
     OUTPUT_VALUE = ("output_value", "%", _S)
+    DIMMER_OUTPUT = ("dimmer_output", "%", _S)
     ERROR_LEVEL = ("error_level", None, _B)
     PILOT_WIRE_MODE = (
         "pilot_wire_mode",

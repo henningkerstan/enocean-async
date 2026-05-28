@@ -21,6 +21,7 @@ class Instructable(StrEnum):
     # Central command — lighting (A5-38-08 CMD 0x01, 0x02)
     CENTRAL_SWITCH = "central_switch"
     CENTRAL_DIM = "central_dim"
+    CENTRAL_DIM_OFF = "central_dim_off"
 
     # Fan control (D2-20-02)
     SET_FAN_SPEED = "set_fan_speed"

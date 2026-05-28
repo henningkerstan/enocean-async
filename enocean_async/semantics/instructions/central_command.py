@@ -28,6 +28,13 @@ class CentralSwitch(Instruction):
 
 
 @dataclass
+class CentralDimOff(Instruction):
+    """Switch a dimmer off via a dim-type telegram (SW=0). Device uses its own ramp speed."""
+
+    action: ClassVar[Instructable] = Instructable.CENTRAL_DIM_OFF
+
+
+@dataclass
 class CentralDim(Instruction):
     """Dim a light to a specific value."""
 
@@ -39,8 +46,8 @@ class CentralDim(Instruction):
     use_relative: bool | None = None
     """If True, encode as EDIMR=1 (relative, raw 0–100 maps directly).
     If False, encode as EDIMR=0 (absolute, raw 0–255 maps to 0–100 %).
-    None (default) → use device config ``"dimming_mode"``: ``"relative"`` → True, ``"absolute"`` → False
-    (defaults to ``"relative"`` if not set)."""
+    None (default) → use device config ``"ramp_mode"`` (Eltako, ``"hardware"``/``"software"``) or
+    ``"dimming_range"`` (generic, ``"relative"``/``"absolute"``); defaults to ``"relative"`` if neither is set."""
 
     ramp_time: int | None = None
     """RMP field: ramping time in seconds (0 = immediately).

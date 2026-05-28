@@ -1,6 +1,6 @@
 from ..instructable import Instructable
 from ..instruction import Instruction
-from .central_command import CentralDim, CentralSwitch
+from .central_command import CentralDim, CentralDimOff, CentralSwitch
 from .cover import (
     CoverClose,
     CoverOpen,
@@ -22,6 +22,7 @@ INSTRUCTION_FOR: dict[Instructable, type[Instruction]] = {
         CoverSetPositionAndAngle,
         CoverStop,
         CentralDim,
+        CentralDimOff,
         CentralSwitch,
         SetFanSpeed,
         QueryActuatorMeasurement,
@@ -48,6 +49,7 @@ __all__ = [
     "CoverSetPositionAndAngle",
     "CoverStop",
     "CentralDim",
+    "CentralDimOff",
     "CentralSwitch",
     "SetFanSpeed",
     "QueryActuatorMeasurement",

@@ -1,6 +1,6 @@
 from .instructable import Instructable
 from .instruction import Instruction
-from .instructions.central_command import CentralDim, CentralSwitch
+from .instructions.central_command import CentralDim, CentralDimOff, CentralSwitch
 from .instructions.cover import (
     CoverQueryPositionAndAngle,
     CoverSetPositionAndAngle,
@@ -24,6 +24,7 @@ __all__ = [
     "Instruction",
     "CoverObserver",
     "CentralDim",
+    "CentralDimOff",
     "CentralSwitch",
     "Observation",
     "ObservationCallback",
