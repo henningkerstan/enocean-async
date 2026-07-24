@@ -22,8 +22,12 @@ class CoverObserver(Observer):
     """Observer that emits position and angle updates for blinds/cover devices."""
 
     message_type_id: int = 4
-    """Message type ID to listen to (4 for D2-05-00 'Reply position and angle',
+    """Message type ID to listen to (4 for D2-05 'Reply position and angle',
     7 for A5-38-08 CMD=7 incoming status)."""
+
+    channel: int | None = None
+    """0-indexed CHN this observer is scoped to (D2-05-01, 4 channels). ``None`` (default)
+    means a single-channel device: no CHN filtering, entity id is ``"cover"``."""
 
     _previous_position: int | None = field(default=None, init=False, repr=False)
     """Track previous position to derive cover state from movement."""
@@ -39,6 +43,10 @@ class CoverObserver(Observer):
     _stopped: bool = field(default=False, init=False, repr=False)
     """Set to True by stop() to prevent watchdog callbacks from firing after teardown."""
 
+    @property
+    def _entity_id(self) -> str:
+        return "cover" if self.channel is None else f"ch{self.channel + 1}_cover"
+
     def _decode_impl(self, message: EEPMessage) -> None:
         if not message.decoded:
             return
@@ -47,6 +55,9 @@ class CoverObserver(Observer):
             message.message_type is None
             or message.message_type.id != self.message_type_id
         ):
+            return
+
+        if self.channel is not None and message.raw.get("CHN") != self.channel:
             return
 
         current_time = time()
@@ -85,7 +96,7 @@ class CoverObserver(Observer):
             self._emit(
                 Observation(
                     device=self.device_address,
-                    entity="cover",
+                    entity=self._entity_id,
                     values=values,
                     timestamp=current_time,
                     source=ObservationSource.TELEGRAM,
@@ -112,7 +123,7 @@ class CoverObserver(Observer):
         self._emit(
             Observation(
                 device=self.device_address,
-                entity="cover",
+                entity=self._entity_id,
                 values={Observable.COVER_STATE: "stopped"},
                 timestamp=time(),
                 source=ObservationSource.TIMER,
@@ -147,15 +158,22 @@ class CoverObserver(Observer):
             return "stopped"  # No change in position, state remains the same
 
 
-def cover_factory(message_type_id: int = 4) -> ObserverFactory:
+def cover_factory(
+    message_type_id: int = 4, channel: int | None = None
+) -> ObserverFactory:
     """Return an ``ObserverFactory`` that creates a ``CoverObserver``.
 
     Args:
-        message_type_id: Message type to listen to.  Use ``4`` for D2-05-00
+        message_type_id: Message type to listen to.  Use ``4`` for D2-05
             (``Reply position and angle``) and ``7`` for A5-38-08 CMD=7 status.
+        channel: 0-indexed CHN this observer is scoped to (D2-05-01, 4 channels).
+            ``None`` (default) for single-channel devices.
     """
     return ObserverFactory(
         factory=lambda addr, cb: CoverObserver(
-            device_address=addr, on_observation=cb, message_type_id=message_type_id
+            device_address=addr,
+            on_observation=cb,
+            message_type_id=message_type_id,
+            channel=channel,
         ),
     )

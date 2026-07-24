@@ -5,6 +5,7 @@ from .cover import (
     CoverClose,
     CoverOpen,
     CoverQueryPositionAndAngle,
+    CoverSetParameters,
     CoverSetPositionAndAngle,
     CoverStop,
 )
@@ -19,6 +20,7 @@ INSTRUCTION_FOR: dict[Instructable, type[Instruction]] = {
         CoverClose,
         CoverOpen,
         CoverQueryPositionAndAngle,
+        CoverSetParameters,
         CoverSetPositionAndAngle,
         CoverStop,
         CentralDim,
@@ -46,6 +48,7 @@ __all__ = [
     "CoverClose",
     "CoverOpen",
     "CoverQueryPositionAndAngle",
+    "CoverSetParameters",
     "CoverSetPositionAndAngle",
     "CoverStop",
     "CentralDim",

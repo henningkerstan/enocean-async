@@ -32,6 +32,7 @@ from .semantics.instructions.cover import (
     CoverClose,
     CoverOpen,
     CoverQueryPositionAndAngle,
+    CoverSetParameters,
     CoverSetPositionAndAngle,
     CoverStop,
 )
@@ -83,6 +84,7 @@ __all__ = [
     "CoverClose",
     "CoverOpen",
     "CoverQueryPositionAndAngle",
+    "CoverSetParameters",
     "CoverSetPositionAndAngle",
     "CoverStop",
     "CentralDim",

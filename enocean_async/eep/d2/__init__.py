@@ -25,7 +25,7 @@ from .d2_01 import (
     EEP_D2_01_15,
     EEP_D2_01_16,
 )
-from .d2_05_00 import EEP_D2_05_00
+from .d2_05 import EEP_D2_05_00, EEP_D2_05_01, EEP_D2_05_02
 from .d2_20_02 import EEP_D2_20_02
 
 __all__ = [
@@ -53,5 +53,7 @@ __all__ = [
     "EEP_D2_01_15",
     "EEP_D2_01_16",
     "EEP_D2_05_00",
+    "EEP_D2_05_01",
+    "EEP_D2_05_02",
     "EEP_D2_20_02",
 ]

@@ -111,6 +111,8 @@ from .d2 import (
     EEP_D2_01_15,
     EEP_D2_01_16,
     EEP_D2_05_00,
+    EEP_D2_05_01,
+    EEP_D2_05_02,
     EEP_D2_20_02,
 )
 from .device_type import _MANUFACTURER_TYPES, DeviceType
@@ -228,6 +230,8 @@ EEP_SPECIFICATIONS: dict[EEP, EEPSpecification] = {
     EEP_D2_01_15.eep: EEP_D2_01_15,
     EEP_D2_01_16.eep: EEP_D2_01_16,
     EEP_D2_05_00.eep: EEP_D2_05_00,
+    EEP_D2_05_01.eep: EEP_D2_05_01,
+    EEP_D2_05_02.eep: EEP_D2_05_02,
     EEP_D2_20_02.eep: EEP_D2_20_02,
 }
 """A simple in-memory database of supported EEP profiles, indexed by EEP. 
