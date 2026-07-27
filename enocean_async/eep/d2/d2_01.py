@@ -23,6 +23,7 @@ from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
 from ..message import EEPMessageType, RawEEPMessage, ValueWithContext
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram, Entity
+from ._util import channel_from_entity_id
 
 # ---------------------------------------------------------------------------
 # Command registry — single source of truth for CMD / ECID IDs and names
@@ -594,7 +595,7 @@ def _encode_set_output(action: SetSwitchOutput) -> RawEEPMessage:
         message_type=EEPMessageType(id=0x01, description=_EEP_D2_01_Commands[0x1].name),
     )
     msg.raw["DV"] = action.dim_value
-    io_val = int(action.entity_id) if action.entity_id.isdigit() else 0x1E
+    io_val = channel_from_entity_id(action.entity_id, default=0x1E)
     msg.raw["I/O"] = io_val
     msg.raw["OV"] = action.output_value
     return msg
@@ -605,7 +606,7 @@ def _encode_query_status(action: QueryActuatorStatus) -> RawEEPMessage:
         sender=None,
         message_type=EEPMessageType(id=0x03, description=_EEP_D2_01_Commands[0x3].name),
     )
-    io_val = int(action.entity_id) if action.entity_id.isdigit() else 0x1E
+    io_val = channel_from_entity_id(action.entity_id, default=0x1E)
     msg.raw["I/O"] = io_val
     return msg
 
@@ -615,7 +616,7 @@ def _encode_query_measurement(action: QueryActuatorMeasurement) -> RawEEPMessage
         sender=None,
         message_type=EEPMessageType(id=0x06, description=_EEP_D2_01_Commands[0x6].name),
     )
-    io_val = int(action.entity_id) if action.entity_id.isdigit() else 0x1E
+    io_val = channel_from_entity_id(action.entity_id, default=0x1E)
     msg.raw["I/O"] = io_val
     msg.raw["qu"] = int(action.query_power)
     return msg

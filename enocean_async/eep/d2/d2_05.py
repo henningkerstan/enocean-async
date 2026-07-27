@@ -24,6 +24,7 @@ from ...semantics.observers.cover import cover_factory
 from ..id import EEP
 from ..message import EEPMessageType, RawEEPMessage
 from ..profile import EEPDataField, EEPSpecification, EEPTelegram, Entity
+from ._util import channel_from_entity_id
 
 # ---------------------------------------------------------------------------
 # Shared field definitions
@@ -96,7 +97,7 @@ def _encode_set_position_and_angle(action: CoverSetPositionAndAngle) -> RawEEPMe
     msg.raw["ANG"] = 127 if action.angle is None else max(0, min(100, action.angle))
     msg.raw["REPO"] = action.repositioning_mode
     msg.raw["LOCK"] = action.lock_mode
-    chn_val = int(action.entity_id) if action.entity_id.isdigit() else 15
+    chn_val = channel_from_entity_id(action.entity_id, default=15)
     msg.raw["CHN"] = chn_val
     return msg
 
@@ -106,7 +107,7 @@ def _encode_stop(action: CoverStop) -> RawEEPMessage:
         sender=None,
         message_type=EEPMessageType(id=2, description="Stop"),
     )
-    chn_val = int(action.entity_id) if action.entity_id.isdigit() else 15
+    chn_val = channel_from_entity_id(action.entity_id, default=15)
     msg.raw["CHN"] = chn_val
     return msg
 
@@ -132,7 +133,7 @@ def _encode_query_position_and_angle(
         sender=None,
         message_type=EEPMessageType(id=3, description="Query position and angle"),
     )
-    chn_val = int(action.entity_id) if action.entity_id.isdigit() else 15
+    chn_val = channel_from_entity_id(action.entity_id, default=15)
     msg.raw["CHN"] = chn_val
     return msg
 
@@ -157,7 +158,7 @@ def _encode_set_parameters(action: CoverSetParameters) -> RawEEPMessage:
     msg.raw["ROT"] = rot_val
 
     msg.raw["AA"] = action.alarm_action
-    chn_val = int(action.entity_id) if action.entity_id.isdigit() else 15
+    chn_val = channel_from_entity_id(action.entity_id, default=15)
     msg.raw["CHN"] = chn_val
     return msg
 
