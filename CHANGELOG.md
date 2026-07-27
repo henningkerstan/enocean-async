@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.16.1-dev0] — 2026-07-27
+
+### New features
+- **`D2-05-01` support (4-channel blinds control)**: previously only `D2-05-00` (1 channel) was implemented. Multi-channel devices get one `chN_cover` entity per channel (`ch1_cover`…`ch4_cover`), each backed by its own `CoverObserver` instance with independent position/cover-state/watchdog tracking and CHN-based filtering, so channels never interfere with each other.
+- **`D2-05-02` support (1 channel, reduced command set)**: same wire format as `D2-05-00` for CMD 1–4, without CMD 5 (Set parameters) or alarm-mode support, per the EEP spec's family table.
+- **CMD 5 "Set parameters" support for `D2-05-00`/`D2-05-01`**: new `CoverSetParameters` instruction (`Instructable.COVER_SET_PARAMETERS`) configures an actuator's vertical run time, rotation time, and alarm action.
+- `enocean_async/eep/d2/d2_05_00.py` consolidated into `enocean_async/eep/d2/d2_05.py`, covering all three TYPE variants via a shared `_spec()` factory — matching the file-per-family convention already used by `d2_01.py`.
+
+### Bug fixes
+- **Multi-channel commands could silently target "all channels" instead of the intended one**: `SetSwitchOutput`/`QueryActuatorStatus`/`QueryActuatorMeasurement` (`D2-01`) and the `Cover*` instructions (`D2-05`) only recognized a bare digit string (e.g. `"2"`) as `entity_id`, requiring the raw channel index rather than the actual entity catalog id. Passing the catalog id (`"ch2_switch_state"`, `"ch2_cover"`, as returned by the entity list) failed the digit check and fell back to "all channels"/"all output channels" , causing every channel to react to a single-channel command. Fixed with a shared `channel_from_entity_id()` helper (`enocean_async/eep/d2/_util.py`) that correctly parses the `"ch<N>_<suffix>"` catalog id format.
+
 ## [0.16.0] — 2026-05-28
 
 ### Breaking changes
