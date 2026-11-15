@@ -72,9 +72,9 @@ class EnOceanSerialProtocol2(asyncio.Protocol):
 
     def __process_packet(self, packet: ESP2Packet) -> None:
         """Hand a received radio telegram or answer of the module to the gateway as ESP3 packet."""
-        if packet.header_sequence not in (
-            ESP2HeaderSequence.RRT,
-            ESP2HeaderSequence.RMT,
+        if (
+            not packet.is_received_radio_telegram
+            and packet.header_sequence != ESP2HeaderSequence.RCT
         ):
             self.__logger.debug(
                 f"Received ESP2 packet which is neither a received radio telegram nor an answer of the module; ignoring packet: {packet}"

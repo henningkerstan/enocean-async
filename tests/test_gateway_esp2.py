@@ -63,7 +63,7 @@ class FakeESP2Module:
                 code = ESP2MessageCode.INF_SW_VER
                 payload = bytes.fromhex("020100000204020400")
         return ESP2Packet(
-            ESP2HeaderSequence.RMT, code, payload[:4], payload[4:8], payload[8]
+            ESP2HeaderSequence.RCT, code, payload[:4], payload[4:8], payload[8]
         )
 
 

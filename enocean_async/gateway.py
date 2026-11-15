@@ -2037,12 +2037,19 @@ class Gateway:
             )
             return
 
+        # use the manufacturer-specific EEP if it is supported, otherwise fall back to the generic EEP (as for UTE teach-in)
+        eep = teach_in_telegram.eep
+        if eep is not None and eep not in EEP_SPECIFICATIONS:
+            generic_eep = EEP([eep.rorg, eep.func, eep.type])
+            if generic_eep in EEP_SPECIFICATIONS:
+                eep = generic_eep
+
         existing = self.__devices.get(erp1.sender)
         if existing is not None:
             self._logger.info(
                 f"4BS re-teach-in from {erp1.sender}: device already registered; checking if EEP matches."
             )
-            if existing.eep == teach_in_telegram.eep:
+            if existing.eep == eep:
                 self._logger.info(
                     f"4BS re-teach-in from {erp1.sender}: received EEP {teach_in_telegram.eep} matches existing registration ({existing.eep}); ignoring."
                 )
@@ -2052,10 +2059,9 @@ class Gateway:
                 f"4BS re-teach-in from {erp1.sender}: device previously registered with different EEP {existing.eep}; taught-in EEP is {teach_in_telegram.eep} - checking if that is available."
             )
 
-        eep = teach_in_telegram.eep
         if eep is None or eep not in EEP_SPECIFICATIONS:
             self._logger.info(
-                f"4BS teach-in from {erp1.sender}: EEP {eep} not supported; ignoring."
+                f"4BS teach-in from {erp1.sender}: EEP {teach_in_telegram.eep} not supported; ignoring."
             )
             return
 

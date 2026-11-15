@@ -143,6 +143,22 @@ def test_4bs_translates_to_erp1():
     assert erp1.telegram_data == bytes.fromhex("02640009")
 
 
+@pytest.mark.parametrize(
+    "header_sequence",
+    [
+        ESP2HeaderSequence.RRT,
+        ESP2HeaderSequence.RRT_KNOWN_ID,
+        ESP2HeaderSequence.RRT_ID_LEARNED,
+        ESP2HeaderSequence.RRT_ID_DELETED,
+    ],
+)
+def test_every_kind_of_received_radio_telegram_translates(header_sequence):
+    packet = ESP2Packet(header_sequence, ESP2ORG.ORG_RPS, b"\x70\x00\x00\x00", SENDER)
+
+    assert packet.is_received_radio_telegram
+    assert ERP1Telegram.from_esp3(packet.to_esp3()).rorg == RORG.RORG_RPS
+
+
 def test_unsupported_org_is_not_translated():
     with pytest.raises(ValueError):
         make_packet(0x0A, bytes(4)).to_esp3()
@@ -161,7 +177,7 @@ def test_command_packet_is_not_translated():
 def make_answer(code: int, payload: bytes = b"") -> ESP2Packet:
     payload = payload.ljust(9, b"\x00")
     return ESP2Packet(
-        ESP2HeaderSequence.RMT, code, payload[:4], payload[4:8], payload[8]
+        ESP2HeaderSequence.RCT, code, payload[:4], payload[4:8], payload[8]
     )
 
 
@@ -315,6 +331,16 @@ def test_protocol_resyncs_after_corrupted_packet(protocol, gateway):
     protocol.data_received(corrupted + RPS_RELEASE)
 
     assert [packet.data[1] for packet in gateway.packets] == [0x00]
+
+
+def test_protocol_emits_telegrams_from_learned_transmitters(protocol, gateway):
+    packet = ESP2Packet(
+        ESP2HeaderSequence.RRT_KNOWN_ID, ESP2ORG.ORG_RPS, b"\x70\x00\x00\x00", SENDER
+    )
+    protocol.data_received(packet.to_bytes())
+
+    assert len(gateway.packets) == 1
+    assert gateway.packets[0].packet_type == ESP3PacketType.RADIO_ERP1
 
 
 def test_protocol_ignores_packets_from_host_to_module(protocol, gateway):

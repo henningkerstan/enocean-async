@@ -15,6 +15,8 @@ the command or answer data instead of data bytes, ID and status.
 
 This module also translates between ESP2 packets and ESP3 packets, so that everything above the
 serial layer can keep working with ESP3 packets only.
+
+ESP2 is specified in the serial interface chapter of the EnOcean TCM 300 / TCM 320 user manual.
 """
 
 from dataclasses import dataclass
@@ -38,16 +40,36 @@ class ESP2HeaderSequence(IntEnum):
     """Direction and kind of an ESP2 packet (H_SEQ, upper 3 bits of the third byte)."""
 
     RRT = 0
-    """Receive radio telegram: a telegram received over the air (module -> host)."""
+    """Receive radio telegram: a telegram received over the air from a transmitter the module has not learned (module -> host)."""
+
+    RRT_KNOWN_ID = 1
+    """Receive radio telegram from a transmitter the module has learned (module -> host)."""
+
+    RRT_ID_LEARNED = 2
+    """Receive radio telegram which made the module learn its transmitter (module -> host)."""
 
     TRT = 3
     """Transmit radio telegram: a telegram to be sent over the air (host -> module)."""
 
-    RMT = 4
-    """Receive message telegram: an answer of the module to the host (module -> host)."""
+    RCT = 4
+    """Receive command telegram: an answer of the module to the host (module -> host)."""
 
     TCT = 5
     """Transmit command telegram: a command for the module itself (host -> module)."""
+
+    RRT_ID_DELETED = 6
+    """Receive radio telegram which made the module delete its transmitter (module -> host)."""
+
+
+RECEIVED_RADIO_TELEGRAM = frozenset(
+    {
+        ESP2HeaderSequence.RRT,
+        ESP2HeaderSequence.RRT_KNOWN_ID,
+        ESP2HeaderSequence.RRT_ID_LEARNED,
+        ESP2HeaderSequence.RRT_ID_DELETED,
+    }
+)
+"""All header sequences which mark a telegram received over the air."""
 
 
 class ESP2ORG(IntEnum):
@@ -69,13 +91,34 @@ class ESP2CommandCode(IntEnum):
 
 
 class ESP2MessageCode(IntEnum):
-    """Answers of the module (ORG byte of an RMT packet)."""
+    """Answers of the module (ORG byte of an RCT packet)."""
+
+    ERR_SYNTAX_H_SEQ = 0x08
+    """Syntax error: unknown header sequence"""
+
+    ERR_SYNTAX_LENGTH = 0x09
+    """Syntax error: wrong length"""
+
+    ERR_SYNTAX_CHKSUM = 0x0A
+    """Syntax error: wrong checksum"""
+
+    ERR_SYNTAX_ORG = 0x0B
+    """Syntax error: unknown ORG"""
+
+    ERR = 0x19
+    """The command could not be executed"""
+
+    ERR_IDRANGE = 0x1A
+    """The base ID to be set is outside the allowed range"""
 
     ERR_TX_IDRANGE = 0x22
     """The sender of a transmit request is a base address outside the ID range of the module"""
 
     OK = 0x58
     """The command or transmit request was accepted"""
+
+    INF_RX_SENSITIVITY = 0x88
+    """Receiver sensitivity"""
 
     INF_SW_VER = 0x8C
     """Software version: 4 bytes application version followed by 4 bytes API version"""
@@ -157,6 +200,11 @@ class ESP2Packet:
         )
 
     @property
+    def is_received_radio_telegram(self) -> bool:
+        """Whether this packet is a telegram received over the air."""
+        return self.header_sequence in RECEIVED_RADIO_TELEGRAM
+
+    @property
     def payload(self) -> bytes:
         """The 9 bytes after ORG; for commands and answers these are not data, ID and status."""
         return self.data + self.sender + bytes([self.status])
@@ -205,13 +253,16 @@ class ESP2Packet:
 
         - A radio telegram (RRT, TRT) becomes a RADIO_ERP1 packet. ESP2 carries neither signal
           strength nor a destination address, so the resulting packet has no optional data.
-        - An answer of the module (RMT) becomes a RESPONSE packet. An answer this library does
+        - An answer of the module (RCT) becomes a RESPONSE packet. An answer this library does
           not know is reported with return code ERROR.
         """
-        if self.header_sequence == ESP2HeaderSequence.RMT:
+        if self.header_sequence == ESP2HeaderSequence.RCT:
             return self.__answer_to_esp3()
 
-        if self.header_sequence not in (ESP2HeaderSequence.RRT, ESP2HeaderSequence.TRT):
+        if (
+            not self.is_received_radio_telegram
+            and self.header_sequence != ESP2HeaderSequence.TRT
+        ):
             raise ValueError(
                 f"ESP2 packet with H_SEQ {self.header_sequence} has no ESP3 equivalent"
             )
@@ -228,7 +279,7 @@ class ESP2Packet:
         )
 
     def __answer_to_esp3(self) -> ESP3Packet:
-        """Translate an answer of the module (RMT) into an ESP3 RESPONSE packet."""
+        """Translate an answer of the module (RCT) into an ESP3 RESPONSE packet."""
         match self.org:
             case ESP2MessageCode.OK:
                 data = bytes([ResponseCode.OK])
