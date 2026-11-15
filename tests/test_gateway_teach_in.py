@@ -54,6 +54,9 @@ class FakeESP3Module:
     def close(self) -> None:
         pass
 
+    async def wait_closed(self) -> None:
+        pass
+
     def receive(self, telegram: ERP1Telegram) -> None:
         """Simulate a telegram received over the air."""
         self.protocol.data_received(telegram.to_esp3().to_bytes())

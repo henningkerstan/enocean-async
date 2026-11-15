@@ -36,6 +36,9 @@ class FakeESP2Module:
         self.baudrate: int | None = None
         self.written: list[bytes] = []
         self.closed = False
+        self.port_released = asyncio.Event()
+        self.port_released.set()
+        self.waiting_for_release = asyncio.Event()
 
     def write(self, data: bytes) -> None:
         self.written.append(data)
@@ -46,6 +49,10 @@ class FakeESP2Module:
 
     def close(self) -> None:
         self.closed = True
+
+    async def wait_closed(self) -> None:
+        self.waiting_for_release.set()
+        await self.port_released.wait()
 
     def receive(self, data: bytes) -> None:
         """Simulate bytes arriving from the module."""
@@ -194,3 +201,57 @@ async def test_send_telegram_esp2_cannot_carry_raises_and_sends_nothing(
 async def test_change_base_id_is_not_supported(gateway):
     with pytest.raises(BaseIDChangeError):
         await gateway.change_base_id(BaseAddress("FF:80:12:00"), safety_flag=0x7B)
+
+
+async def test_stop_waits_until_the_port_is_released(module: FakeESP2Module):
+    gateway = Gateway("/dev/null", protocol=SerialProtocol.ESP2)
+    await gateway.start(auto_reconnect=False)
+    module.port_released.clear()
+
+    stop = asyncio.ensure_future(gateway.stop())
+    await module.waiting_for_release.wait()
+
+    assert module.closed
+    assert not stop.done()
+
+    module.port_released.set()
+    await stop
+
+
+async def test_failed_start_waits_until_the_port_is_released(
+    module: FakeESP2Module, monkeypatch: pytest.MonkeyPatch
+):
+    def write(data: bytes) -> None:
+        raise OSError("module does not take data")
+
+    monkeypatch.setattr(module, "write", write)
+    module.port_released.clear()
+    gateway = Gateway("/dev/null", protocol=SerialProtocol.ESP2)
+
+    start = asyncio.ensure_future(gateway.start(auto_reconnect=False))
+    await module.waiting_for_release.wait()
+
+    assert module.closed
+    assert not start.done()
+
+    module.port_released.set()
+    with pytest.raises(ConnectionError):
+        await start
+
+
+async def test_stop_gives_up_on_a_port_that_is_not_released(
+    module: FakeESP2Module, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr("enocean_async.gateway._PORT_RELEASE_TIMEOUT", 0)
+    gateway = Gateway("/dev/null", protocol=SerialProtocol.ESP2)
+    await gateway.start(auto_reconnect=False)
+    module.port_released.clear()
+
+    await gateway.stop()
+
+    assert module.closed
+    assert module.waiting_for_release.is_set()
+
+    # let the shielded wait finish
+    module.port_released.set()
+    await asyncio.sleep(0)

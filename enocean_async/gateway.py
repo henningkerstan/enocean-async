@@ -45,6 +45,9 @@ from .semantics.observers.metadata import MetaDataObserver
 
 type RSSI = int
 
+_PORT_RELEASE_TIMEOUT = 1.0
+"""Seconds to wait for the serial port to be released after closing the connection. A port whose pending output cannot be sent is only released by the operating system much later."""
+
 _METADATA_ENTITIES = [
     Entity(
         id="rssi",
@@ -404,6 +407,24 @@ class Gateway:
                 f"Serial connection to EnOcean module on {self.__port} closed"
             )
 
+    async def __disconnect_and_wait(self) -> None:
+        """Close the serial connection and wait until the serial port is released.
+
+        The transport closes the port in the background. Without waiting, opening the same port again right away (e.g. to try another serial protocol) can find it still in use.
+        """
+        transport = self.__transport
+        self.__disconnect()
+        if transport is None:
+            return
+        try:
+            async with asyncio.timeout(_PORT_RELEASE_TIMEOUT):
+                # shielded, so that giving up does not cancel the transport's own close
+                await asyncio.shield(transport.wait_closed())
+        except TimeoutError:
+            self._logger.debug(
+                f"Serial port {self.__port} was not released within {_PORT_RELEASE_TIMEOUT} s."
+            )
+
     async def start(self, auto_reconnect: bool = True) -> None:
         """Open the serial connection to the EnOcean module and start processing incoming packets.
 
@@ -446,7 +467,7 @@ class Gateway:
             self._logger.warning(
                 f"Failed to fetch base ID from EnOcean module on {self.__port}: {e}. Connection will be closed."
             )
-            self.__disconnect()
+            await self.__disconnect_and_wait()
             raise ConnectionError(
                 f"Failed to fetch base ID from EnOcean module on {self.__port}: {e}"
             )
@@ -458,7 +479,7 @@ class Gateway:
             self._logger.warning(
                 f"Failed to fetch version info from EnOcean module on {self.__port}: {e}. Connection will be closed."
             )
-            self.__disconnect()
+            await self.__disconnect_and_wait()
             raise ConnectionError(
                 f"Failed to fetch version info from EnOcean module on {self.__port}: {e}"
             )
@@ -468,7 +489,7 @@ class Gateway:
         )
 
     async def stop(self) -> None:
-        """Stop the gateway. This closes the serial connection to the EnOcean module and stops all background tasks."""
+        """Stop the gateway. This closes the serial connection to the EnOcean module, waits until the serial port is released and stops all background tasks."""
         self.__stopped = True
         self.stop_learning()
 
@@ -494,7 +515,7 @@ class Gateway:
         if self.__send_future is not None and not self.__send_future.done():
             self.__send_future.cancel()
 
-        self.__disconnect()
+        await self.__disconnect_and_wait()
 
     def is_valid_sender(self, sender: SenderAddress) -> bool:
         """Return ``True`` if *sender* is a valid sender for this gateway.
