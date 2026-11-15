@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
 import serialx
 
+from ..esp3.packet import ESP3Packet
 from .packet import PACKET_LENGTH, SYNC_BYTES, ESP2HeaderSequence, ESP2Packet
 
 
@@ -16,8 +17,9 @@ class EnOceanSerialProtocol2(asyncio.Protocol):
     """
     Minimal asynchronous EnOcean Serial Protocol Version 2 (ESP2).
     - Parses ESP2 frames
-    - Translates received radio telegrams into ESP3 RADIO_ERP1 packets and emits them, so the
-      gateway processes them exactly like packets coming from an ESP3 module
+    - Translates received radio telegrams and answers of the module into ESP3 packets and emits
+      them, so the gateway processes them exactly like packets coming from an ESP3 module
+    - Translates ESP3 packets to be sent into ESP2 frames
     """
 
     def __init__(self, gateway: "Gateway"):
@@ -60,11 +62,22 @@ class EnOceanSerialProtocol2(asyncio.Protocol):
 
             self.__process_packet(packet)
 
+    def serialize(self, packet: ESP3Packet) -> bytes:
+        """Serialize an ESP3 packet for an ESP2 module.
+
+        Raises:
+            ValueError: If the packet cannot be expressed in ESP2.
+        """
+        return ESP2Packet.from_esp3(packet).to_bytes()
+
     def __process_packet(self, packet: ESP2Packet) -> None:
-        """Hand a received radio telegram to the gateway as ESP3 RADIO_ERP1 packet."""
-        if packet.header_sequence != ESP2HeaderSequence.RRT:
+        """Hand a received radio telegram or answer of the module to the gateway as ESP3 packet."""
+        if packet.header_sequence not in (
+            ESP2HeaderSequence.RRT,
+            ESP2HeaderSequence.RMT,
+        ):
             self.__logger.debug(
-                f"Received ESP2 packet which is not a received radio telegram; ignoring packet: {packet}"
+                f"Received ESP2 packet which is neither a received radio telegram nor an answer of the module; ignoring packet: {packet}"
             )
             return
 

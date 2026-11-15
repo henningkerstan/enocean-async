@@ -28,10 +28,12 @@ from .protocol.erp1.ute import (
     UTEQueryRequestType,
     UTEResponseType,
 )
+from .protocol.esp2.protocol import EnOceanSerialProtocol2
 from .protocol.esp3.common_command import CommonCommandTelegram
 from .protocol.esp3.packet import ESP3Packet, ESP3PacketType
 from .protocol.esp3.protocol import EnOceanSerialProtocol3
 from .protocol.esp3.response import ResponseCode, ResponseTelegram
+from .protocol.serial_protocol import SerialProtocol
 from .protocol.version import VersionIdentifier, VersionInfo
 from .semantics.device_spec import DeviceSpec
 from .semantics.entity import Entity, EntityCategory, EnumOptions
@@ -198,10 +200,23 @@ class BaseIDChangeError(Exception):
 
 
 class Gateway:
-    """EnOcean gateway that connects to a serial port and processes incoming ESP3 packets."""
+    """EnOcean gateway that connects to a serial port and processes incoming ESP3 packets.
 
-    def __init__(self, port: str, baudrate: int = 57600):
-        """Create an instance of an EnOcean gateway that connects to the supplied port at supplied baudrate (optional) and processes incoming ESP3 packets."""
+    A module which speaks ESP2 can be connected as well: its packets are translated to and from ESP3 at the serial layer, so everything else works on ESP3 packets."""
+
+    def __init__(
+        self,
+        port: str,
+        baudrate: int | None = None,
+        protocol: SerialProtocol = SerialProtocol.ESP3,
+    ):
+        """Create an instance of an EnOcean gateway that connects to the supplied port and processes incoming packets.
+
+        Args:
+            port: The serial port of the EnOcean module.
+            baudrate: The baudrate of the serial connection. Defaults to the baudrate the serial protocol specifies (57600 for ESP3, 9600 for ESP2).
+            protocol: The serial protocol the EnOcean module speaks. Defaults to ESP3.
+        """
         # logging
         self._logger = logging.getLogger(__name__)
         from enocean_async import __version__
@@ -210,9 +225,14 @@ class Gateway:
 
         # serial connection, transport and protocol parameters
         self.__port: str = port
-        self.__baudrate: int = baudrate
+        self.__serial_protocol: SerialProtocol = SerialProtocol(protocol)
+        self.__baudrate: int = (
+            baudrate
+            if baudrate is not None
+            else self.__serial_protocol.default_baudrate
+        )
         self.__transport: serialx.SerialTransport | None = None
-        self.__protocol: EnOceanSerialProtocol3 | None = None
+        self.__protocol: EnOceanSerialProtocol2 | EnOceanSerialProtocol3 | None = None
 
         # cached information about the connected module (to avoid unnecessary requests for information that doesn't change)
         self.__version_info: VersionInfo | None = None
@@ -348,13 +368,13 @@ class Gateway:
         ``start()`` to receive the initial state.
         """
         self.__observation_callbacks.append(cb)
-        if self.__version_info is not None:
+        if (device_address := self.device_address) is not None:
             try:
                 loop = asyncio.get_running_loop()
                 loop.call_soon(
                     cb,
                     Observation(
-                        device=self.__version_info.eurid,
+                        device=device_address,
                         entity="connection_status",
                         values={Observable.CONNECTION_STATUS: self.__connection_status},
                         timestamp=time.time(),
@@ -369,6 +389,12 @@ class Gateway:
     # ------------------------------------------------------------------
     # start and stop
     # ------------------------------------------------------------------
+    def __create_protocol(self) -> EnOceanSerialProtocol2 | EnOceanSerialProtocol3:
+        """Create the serial protocol instance matching the module's serial protocol."""
+        if self.__serial_protocol is SerialProtocol.ESP2:
+            return EnOceanSerialProtocol2(self)
+        return EnOceanSerialProtocol3(self)
+
     def __disconnect(self) -> None:
         self.__stopped = True
         if self.__transport is not None:
@@ -396,7 +422,7 @@ class Gateway:
                 self.__protocol,
             ) = await serialx.create_serial_connection(
                 loop,
-                lambda: EnOceanSerialProtocol3(self),
+                self.__create_protocol,
                 self.__port,
                 baudrate=self.__baudrate,
             )
@@ -451,7 +477,7 @@ class Gateway:
             self.__reconnect_task.cancel()
             try:
                 await self.__reconnect_task
-            except (asyncio.CancelledError, Exception):
+            except asyncio.CancelledError, Exception:
                 pass
             self.__reconnect_task = None
 
@@ -473,11 +499,11 @@ class Gateway:
     def is_valid_sender(self, sender: SenderAddress) -> bool:
         """Return ``True`` if *sender* is a valid sender for this gateway.
 
-        Valid senders are the gateway's EURID and any ``BaseAddress`` in the
-        range ``base_id … base_id+127``. Returns ``False`` if the gateway's
-        base ID or EURID is not yet cached (before ``start()``).
+        Valid senders are the gateway's EURID (if the module has one) and any
+        ``BaseAddress`` in the range ``base_id … base_id+127``. Returns ``False``
+        if the gateway's base ID or EURID is not yet cached (before ``start()``).
         """
-        if sender == self.eurid:
+        if self.eurid is not None and sender == self.eurid:
             return True
         if isinstance(sender, BaseAddress) and self.base_id is not None:
             offset = int(sender) - int(self.base_id)
@@ -498,10 +524,10 @@ class Gateway:
         to override automatic allocation (the gateway EURID is a technically valid
         but poor choice as a learning sender).
 
-        Returns an empty dict if the gateway's base ID or EURID is not yet cached
-        (before ``start()``).
+        Returns an empty dict if the gateway's base ID or version info is not yet
+        cached (before ``start()``). A module which does not report its EURID (ESP2) has no EURID key.
         """
-        if self.base_id is None or self.eurid is None:
+        if self.base_id is None or self.__version_info is None:
             return {}
         base_number = int(self.base_id)
 
@@ -511,9 +537,11 @@ class Gateway:
             if device.sender is not None:
                 occupied.setdefault(device.sender, []).append(device.address)
 
-        senders: list[SenderAddress] = [self.eurid, self.base_id] + [
+        senders: list[SenderAddress] = [self.base_id] + [
             BaseAddress(base_number + i) for i in range(1, 128)
         ]
+        if self.eurid is not None:
+            senders.insert(0, self.eurid)
         return {s: occupied.get(s, []) for s in senders}
 
     async def start_learning(
@@ -640,13 +668,19 @@ class Gateway:
         """Send an ESP3 packet to the EnOcean module and wait up to 500ms for a response (as per ESP3 specification).
 
         This method is thread-safe and can be called from multiple coroutines concurrently; the send operations will be serialized using an internal lock, and each call will wait for its corresponding response before allowing the next send operation to proceed. The method returns a SendResult object containing the received response (if any) and the duration in milliseconds between sending the request and receiving the response.
+
+        Raises:
+            ValueError: If the packet cannot be expressed in the serial protocol of the connected module (e.g. a VLD telegram for an ESP2 module).
         """
 
-        if not self.__transport:
+        if not self.__transport or not self.__protocol:
             self._logger.warning(
                 "Cannot send: gateway is not connected to an EnOcean module."
             )
             return SendResult(None, None)
+
+        # serialize first: a packet the module's serial protocol cannot express raises here, before anything is sent
+        frame = self.__protocol.serialize(packet)
 
         async with self.__send_lock:
             self.__send_future = asyncio.get_running_loop().create_future()
@@ -658,7 +692,7 @@ class Gateway:
                 start = time.perf_counter()
 
                 # send the frame
-                self.__transport.write(packet.to_bytes())
+                self.__transport.write(frame)
                 if packet.packet_type == ESP3PacketType.RADIO_ERP1:
                     self.__cache_sent_erp1(packet.data[:-1])
                 self.__emit(self.__esp3_send_callbacks, packet)
@@ -1015,8 +1049,9 @@ class Gateway:
     def __emit_gateway_observation(
         self, entity: str, observable: Observable, value: object
     ) -> None:
-        """Emit a gateway-device observation if the base ID is known."""
-        if self.__version_info is None:
+        """Emit a gateway-device observation if the address of the gateway device is known."""
+        device_address = self.device_address
+        if device_address is None:
             return
         if observable is Observable.CONNECTION_STATUS:
             self.__connection_status = str(value)
@@ -1028,7 +1063,7 @@ class Gateway:
         self.__emit(
             self.__observation_callbacks,
             Observation(
-                device=self.__version_info.eurid,
+                device=device_address,
                 entity=entity,
                 values={observable: value},
                 timestamp=time.time(),
@@ -1108,11 +1143,12 @@ class Gateway:
         already assigned to ``for_device`` (if provided) are included.
 
         Returns ``[("auto", None, [])]`` before ``start()`` (base ID not yet known).
+        A module which does not report its EURID (ESP2) has no ``"eurid"`` slot.
         """
         result: list[tuple[str, SenderAddress | None, list[EURID]]] = [
             ("auto", None, [])
         ]
-        if self.base_id is None or self.eurid is None:
+        if self.base_id is None or self.__version_info is None:
             return result
 
         # Build occupancy map: sender address int → list of EURIDs
@@ -1141,9 +1177,10 @@ class Gateway:
                 result.append((str(i), addr, devices))
 
         # Gateway EURID — technically a valid sender but an unusual choice
-        eurid_devices = occupied.get(int(self.eurid), [])
-        if for_device is None or not eurid_devices or for_device in eurid_devices:
-            result.append(("eurid", self.eurid, eurid_devices))
+        if self.eurid is not None:
+            eurid_devices = occupied.get(int(self.eurid), [])
+            if for_device is None or not eurid_devices or for_device in eurid_devices:
+                result.append(("eurid", self.eurid, eurid_devices))
 
         return result
 
@@ -1247,6 +1284,11 @@ class Gateway:
                 "Invalid safety flag. To change the base ID, you must provide a safety flag of 0x7B to confirm that you understand the consequences of this action."
             )
 
+        if self.__serial_protocol is SerialProtocol.ESP2:
+            raise BaseIDChangeError(
+                "Changing the base ID is not supported for ESP2 modules."
+            )
+
         if self.__transport is None:
             raise ConnectionError("Not connected to EnOcean module")
 
@@ -1324,6 +1366,23 @@ class Gateway:
             raise ConnectionError(
                 f"fetch_version_info: module returned error code {response.return_code.name}."
             )
+        if self.__serial_protocol is SerialProtocol.ESP2:
+            # an ESP2 module reports its application and API version only, not its EURID
+            if len(response.response_data) < 8:
+                raise ConnectionError(
+                    f"fetch_version_info: response data too short ({len(response.response_data)} bytes)."
+                )
+
+            self.__version_info = VersionInfo(
+                app_version=VersionIdentifier(*response.response_data[0:4]),
+                api_version=VersionIdentifier(*response.response_data[4:8]),
+                eurid=None,
+                device_version=0,
+                app_description="",
+            )
+
+            return self.__version_info
+
         if len(response.response_data) < 32:
             raise ConnectionError(
                 f"fetch_version_info: response data too short ({len(response.response_data)} bytes)."
@@ -1358,8 +1417,25 @@ class Gateway:
 
     @property
     def eurid(self) -> EURID | None:
-        """The cached EURID of the connected EnOcean module, or ``None`` before ``start()``."""
+        """The cached EURID of the connected EnOcean module, or ``None`` before ``start()``. Always ``None`` for a module which does not report its EURID (ESP2)."""
         return self.__version_info.eurid if self.__version_info else None
+
+    @property
+    def device_address(self) -> SenderAddress | None:
+        """The address that identifies the gateway itself, e.g. as ``device`` of its own observations, or ``None`` before ``start()``.
+
+        This is the EURID of the connected EnOcean module or, for a module which does not report its EURID (ESP2), its base ID.
+        """
+        if self.__version_info is None:
+            return None
+        if self.__version_info.eurid is not None:
+            return self.__version_info.eurid
+        return self.__base_id
+
+    @property
+    def serial_protocol(self) -> SerialProtocol:
+        """The serial protocol the connected EnOcean module speaks."""
+        return self.__serial_protocol
 
     # ------------------------------------------------------------------
     # Internal packet processing

@@ -1,5 +1,5 @@
 # enocean-async
-A light-weight, asynchronous, fully typed Python library for communicating with EnOcean devices over a USB gateway. Based on [serialx](https://pypi.org/project/serialx/) and the [EnOcean Serial Protocol Version 3 (ESP3)](https://www.enocean.com/wp-content/uploads/Knowledge-Base/EnOceanSerialProtocol3-1.pdf).
+A light-weight, asynchronous, fully typed Python library for communicating with EnOcean devices over a USB gateway. Based on [serialx](https://pypi.org/project/serialx/) and the [EnOcean Serial Protocol Version 3 (ESP3)](https://www.enocean.com/wp-content/uploads/Knowledge-Base/EnOceanSerialProtocol3-1.pdf). Modules which speak the older ESP2 are supported as well, see [ESP2 modules](#esp2-modules).
 
 > **Note:** The API may still change (even significantly!). Feedback and contributions are welcome.
 
@@ -122,8 +122,28 @@ The slot is allocated at teach-in time (or at `add_device()` time if `sender=Non
 - **`DeviceSpec.gateway_entities`**: for sender-addressed devices that need an inbound teach-in from the device (no fixed teach-in payload), `device_spec()` populates this list with `learning_toggle` and `learning_remaining` so integrations can surface them on the device's config page (observed/commanded via the gateway's EURID).
 
 
+## ESP2 modules
+Modules of the first EnOcean generation speak the EnOcean Serial Protocol Version 2 (ESP2), for example the Eltako FAM-USB. Select the protocol when creating the gateway:
+
+```python
+from enocean_async import Gateway, SerialProtocol
+
+gateway = Gateway("/dev/ttyUSB1", protocol=SerialProtocol.ESP2)
+```
+
+ESP2 frames are translated to and from ESP3 packets at the serial layer, so callbacks, devices, observations and instructions work as with an ESP3 module. The baudrate defaults to 9600; pass `baudrate=` for a module which uses a different one. The Eltako FAM-USB exposes two serial ports; the second one carries the data.
+
+Limitations of ESP2:
+- Only RPS, 1BS and 4BS telegrams can be received and sent. Sending any other telegram (e.g. VLD or UTE) raises `ValueError`.
+- No signal strength (RSSI), destination address or security level.
+- The module does not report its EURID: `gateway.eurid` is `None`, and the gateway device is identified by its base ID (`gateway.device_address`).
+- The base ID cannot be changed.
+- The sender of a telegram must be in the base ID range of the module (base ID … base ID+127). Observed with the Eltako FAM-USB: another base address is refused with an error, and any other address is replaced by the module's own EURID.
+
+
 ## What works
 - Full receive pipeline: raw serial bytes → ESP3 → ERP1 → EEP decode → observers → `Observation` callbacks
+- ESP2 modules (e.g. Eltako FAM-USB): receiving and sending RPS, 1BS and 4BS telegrams, base ID and firmware version retrieval (see [ESP2 modules](#esp2-modules))
 - Full send pipeline: typed `Instruction` → `EEPHandler.encode()` → ERP1 → ESP3 → serial
 - Device registration with per-device EEP and observer instantiation
 - Learning mode: UTE and 4BS-with-profile teach-in (auto-response, device registration, sender pool allocation); 4BS re-teach-in with EEP change supported; focused learning mode (single-EURID restriction)

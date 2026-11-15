@@ -103,6 +103,10 @@ class EnOceanSerialProtocol3(asyncio.Protocol):
                 # Remove processed bytes
                 del self.__buffer[:total_len]
 
+    def serialize(self, packet: ESP3Packet) -> bytes:
+        """Serialize an ESP3 packet for an ESP3 module."""
+        return packet.to_bytes()
+
     def connection_lost(self, exception: Exception | None) -> None:
         self.__gateway.connection_lost(exception)
 

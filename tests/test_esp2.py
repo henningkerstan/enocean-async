@@ -2,17 +2,21 @@
 
 import pytest
 
-from enocean_async.address import EURID
+from enocean_async.address import EURID, BaseAddress
 from enocean_async.protocol.erp1.rorg import RORG
 from enocean_async.protocol.erp1.telegram import ERP1Telegram
 from enocean_async.protocol.esp2.packet import (
     ESP2ORG,
+    ESP2CommandCode,
     ESP2HeaderSequence,
+    ESP2MessageCode,
     ESP2Packet,
     checksum,
 )
 from enocean_async.protocol.esp2.protocol import EnOceanSerialProtocol2
+from enocean_async.protocol.esp3.common_command import CommonCommandTelegram
 from enocean_async.protocol.esp3.packet import ESP3Packet, ESP3PacketType
+from enocean_async.protocol.esp3.response import ResponseCode, ResponseTelegram
 
 SENDER = bytes.fromhex("01234567")
 
@@ -144,10 +148,63 @@ def test_unsupported_org_is_not_translated():
         make_packet(0x0A, bytes(4)).to_esp3()
 
 
-def test_non_radio_packet_is_not_translated():
-    packet = ESP2Packet(4, ESP2ORG.ORG_RPS, bytes(4), SENDER)
+def test_command_packet_is_not_translated():
     with pytest.raises(ValueError):
-        packet.to_esp3()
+        ESP2Packet.command(ESP2CommandCode.RD_IDBASE).to_esp3()
+
+
+# ---------------------------------------------------------------------------
+# Answers of the module -> ESP3 RESPONSE
+# ---------------------------------------------------------------------------
+
+
+def make_answer(code: int, payload: bytes = b"") -> ESP2Packet:
+    payload = payload.ljust(9, b"\x00")
+    return ESP2Packet(
+        ESP2HeaderSequence.RMT, code, payload[:4], payload[4:8], payload[8]
+    )
+
+
+def test_ok_answer_translates_to_ok_response():
+    response = ResponseTelegram.from_esp3_packet(
+        make_answer(ESP2MessageCode.OK).to_esp3()
+    )
+
+    assert response.return_code == ResponseCode.OK
+    assert response.response_data == b""
+
+
+def test_base_id_answer_translates_to_response_with_base_id():
+    # the answer of an ESP2 module to RD_IDBASE
+    packet = ESP2Packet.from_bytes(bytes.fromhex("a55a8b98ff8012800000000000" + "34"))
+    response = ResponseTelegram.from_esp3_packet(packet.to_esp3())
+
+    assert response.return_code == ResponseCode.OK
+    assert response.response_data == bytes.fromhex("ff801280")
+    assert response.optional_data == b""
+
+
+def test_version_answer_translates_to_response_with_versions():
+    packet = make_answer(ESP2MessageCode.INF_SW_VER, bytes.fromhex("0201000002040204"))
+    response = ResponseTelegram.from_esp3_packet(packet.to_esp3())
+
+    assert response.return_code == ResponseCode.OK
+    assert response.response_data == bytes.fromhex("0201000002040204")
+
+
+def test_id_range_error_translates_to_error_response():
+    # the answer of an ESP2 module to a transmit request with a sender outside its ID range
+    packet = ESP2Packet.from_bytes(bytes.fromhex("a55a8b22000000000000000000" + "ad"))
+    response = ResponseTelegram.from_esp3_packet(packet.to_esp3())
+
+    assert packet.org == ESP2MessageCode.ERR_TX_IDRANGE
+    assert response.return_code == ResponseCode.ERROR
+
+
+def test_unknown_answer_translates_to_error_response():
+    response = ResponseTelegram.from_esp3_packet(make_answer(0x19).to_esp3())
+
+    assert response.return_code == ResponseCode.ERROR
 
 
 # ---------------------------------------------------------------------------
@@ -192,9 +249,30 @@ def test_from_esp3_rejects_telegram_types_esp2_cannot_carry():
         ESP2Packet.from_esp3(vld)
 
 
-def test_from_esp3_rejects_non_radio_packets():
+def test_from_esp3_translates_read_base_id_command():
+    packet = ESP2Packet.from_esp3(CommonCommandTelegram.CO_RD_IDBASE().to_esp3_packet())
+
+    assert packet.to_bytes() == bytes.fromhex("a55aab58000000000000000000" + "03")
+
+
+def test_from_esp3_translates_read_version_command():
+    packet = ESP2Packet.from_esp3(
+        CommonCommandTelegram.CO_RD_VERSION().to_esp3_packet()
+    )
+
+    assert packet.to_bytes() == bytes.fromhex("a55aab4b000000000000000000" + "f6")
+
+
+def test_from_esp3_rejects_commands_without_esp2_equivalent():
+    write_base_id = CommonCommandTelegram.CO_WR_IDBASE(BaseAddress("FF:80:12:80"))
+
     with pytest.raises(ValueError):
-        ESP2Packet.from_esp3(ESP3Packet(ESP3PacketType.COMMON_COMMAND, b"\x08", b""))
+        ESP2Packet.from_esp3(write_base_id.to_esp3_packet())
+
+
+def test_from_esp3_rejects_other_packet_types():
+    with pytest.raises(ValueError):
+        ESP2Packet.from_esp3(ESP3Packet(ESP3PacketType.EVENT, b"\x01", b""))
 
 
 # ---------------------------------------------------------------------------
@@ -239,13 +317,44 @@ def test_protocol_resyncs_after_corrupted_packet(protocol, gateway):
     assert [packet.data[1] for packet in gateway.packets] == [0x00]
 
 
-def test_protocol_ignores_packets_that_are_not_received_radio_telegrams(
-    protocol, gateway
-):
+def test_protocol_ignores_packets_from_host_to_module(protocol, gateway):
     transmit = ESP2Packet(ESP2HeaderSequence.TRT, ESP2ORG.ORG_RPS, bytes(4), SENDER)
-    protocol.data_received(transmit.to_bytes() + RPS_PRESS)
+    command = ESP2Packet.command(ESP2CommandCode.RD_IDBASE)
+    protocol.data_received(transmit.to_bytes() + command.to_bytes() + RPS_PRESS)
 
     assert len(gateway.packets) == 1
+
+
+def test_protocol_emits_answers_of_the_module_as_responses(protocol, gateway):
+    protocol.data_received(make_answer(ESP2MessageCode.OK).to_bytes())
+
+    assert len(gateway.packets) == 1
+    assert gateway.packets[0].packet_type == ESP3PacketType.RESPONSE
+    assert gateway.packets[0].data == bytes([ResponseCode.OK])
+
+
+def test_protocol_serializes_radio_telegram_as_transmit_request(protocol):
+    esp3 = ERP1Telegram(
+        rorg=RORG.RORG_RPS,
+        telegram_data=b"\x70",
+        sender=BaseAddress("FF:80:12:80"),
+        status=0x30,
+    ).to_esp3()
+
+    assert protocol.serialize(esp3) == bytes.fromhex(
+        "a55a6b0570000000ff80128030" + "21"
+    )
+
+
+def test_protocol_refuses_to_serialize_what_esp2_cannot_carry(protocol):
+    vld = ERP1Telegram(
+        rorg=RORG.RORG_VLD,
+        telegram_data=bytes.fromhex("0100"),
+        sender=BaseAddress("FF:80:12:80"),
+    ).to_esp3()
+
+    with pytest.raises(ValueError):
+        protocol.serialize(vld)
 
 
 def test_protocol_ignores_unsupported_org(protocol, gateway):

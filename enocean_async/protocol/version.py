@@ -19,6 +19,7 @@ class VersionIdentifier:
 class VersionInfo:
     app_version: VersionIdentifier
     api_version: VersionIdentifier
-    eurid: EURID
+    eurid: EURID | None
+    """The EURID of the module; ``None`` for a module which does not report it (ESP2)."""
     device_version: int
     app_description: str
