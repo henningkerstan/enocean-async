@@ -342,9 +342,11 @@ Radio signal → Device
 
 ### 1. Serial / ESP3 Layer / ERP1 Layer
 
-**Files:** `protocol/esp3/`, `protocol/erp1/`, `protocol/version.py`
+**Files:** `protocol/esp3/`, `protocol/esp2/`, `protocol/serial_protocol.py`, `protocol/erp1/`, `protocol/version.py`
 
 `EnOceanSerialProtocol3` (an `asyncio.Protocol`) reassembles byte streams into `ESP3Packet` objects. The gateway routes packets by type: `RADIO_ERP1` → ERP1 processing; `RESPONSE` → matched to a pending `send_esp3_packet()` future.
+
+`EnOceanSerialProtocol2` does the same for a module which speaks ESP2 (`Gateway(..., protocol=SerialProtocol.ESP2)`). It reassembles the 14-byte `ESP2Packet` frames and translates them into `ESP3Packet` objects before handing them to the gateway: a received radio telegram becomes `RADIO_ERP1`, an answer of the module becomes `RESPONSE`. Both protocol classes offer `serialize()` for the send direction; the ESP2 one translates `RADIO_ERP1` packets and the read-base-ID/read-version common commands into ESP2 frames and raises `ValueError` for anything ESP2 cannot express. This keeps the gateway and all layers above it working on ESP3 packets only. The two places where the gateway itself distinguishes the protocols are the version info (an ESP2 module does not report its EURID, so the gateway device is identified by its base ID, see `Gateway.device_address`) and changing the base ID (not supported for ESP2).
 
 `ERP1Telegram` provides bit-addressable access to the payload (`bitstring_raw_value`, `set_bitstring_raw_value`) used by both the decode and encode paths.
 
