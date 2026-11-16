@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from .address import EURID, SenderAddress
+from .address import EURID, BaseAddress, SenderAddress
 from .eep.device_type import DeviceType
 from .eep.id import EEP
 from .semantics.observers.observer import Observer
@@ -11,7 +11,7 @@ from .semantics.observers.observer import Observer
 class Device:
     """Representation of an EnOcean device."""
 
-    address: EURID
+    address: EURID | BaseAddress
     device_type: DeviceType
     name: str
     sender: SenderAddress | None = None

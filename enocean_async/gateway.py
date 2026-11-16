@@ -938,13 +938,15 @@ class Gateway:
     # ------------------------------------------------------------------
     def add_device(
         self,
-        address: EURID,
+        address: EURID | BaseAddress,
         device_type: DeviceType,
         sender: SenderAddress | None = None,
         name: str | None = None,
         config: dict[str, Any] | None = None,
     ) -> None:
         """Register a device with its DeviceType (EEP + optional manufacturer/model).
+
+        The address is the device's own EURID or, for a device another gateway speaks for (e.g. an actuator on a wired bus whose telegrams the bus gateway sends), a base address of that gateway.
 
         This allows the gateway to recognize incoming messages from this device and decode them according to the registered EEP (if a handler for that EEP is found).
 
