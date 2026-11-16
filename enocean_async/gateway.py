@@ -345,6 +345,7 @@ class Gateway:
 
         The callback receives a ``TaughtInDevice`` (fields: ``address``, ``eep``).
         It fires for UTE and 4BS-with-profile teach-ins that carry a complete EEP.
+        It also fires if a 4BS re-teach-in changed the EEP of a registered device.
         """
         self.__device_taught_in_callbacks.append(cb)
 
@@ -2162,6 +2163,7 @@ class Gateway:
                     )
                 )
             )
+            self.__emit(self.__device_taught_in_callbacks, erp1.sender, eep)
             return
 
         if not spec.uses_addressed_sending:

@@ -154,6 +154,16 @@ async def test_repeated_teach_in_with_generic_fallback_registers_once(
     assert taught_in == [(SENSOR, EEP("A5-04-02"))]
 
 
+async def test_re_teach_in_with_another_eep_is_reported(module, gateway, taught_in):
+    module.receive(teach_in_query(0x04, 0x02, Manufacturer.ELTAKO))
+    await settle()
+    module.receive(teach_in_query(0x02, 0x05, Manufacturer.ELTAKO))
+    await settle()
+
+    assert taught_in == [(SENSOR, EEP("A5-04-02")), (SENSOR, EEP("A5-02-05"))]
+    assert gateway.device_spec(SENSOR).device_type.eep == EEP("A5-02-05")
+
+
 async def test_unsupported_eep_is_ignored(module, taught_in):
     module.receive(teach_in_query(0x3F, 0x7F, Manufacturer.THERMOKON))
     await settle()
