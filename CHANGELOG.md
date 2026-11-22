@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.17.1-dev0] — 2026-11-22
 
 ### New features
 - **A device may have a base address**: `Gateway.add_device()` and `Device.address` are now documented and typed to take a `BaseAddress` as well as an `EURID`, and a test covers decoding such a device. This is the case for a device another gateway speaks for, e.g. an actuator on a wired bus whose telegrams the bus gateway sends under its base address range.
