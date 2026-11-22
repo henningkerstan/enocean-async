@@ -21,6 +21,10 @@
 - **4BS teach-in ignored devices whose manufacturer-specific EEP is not implemented**: a 4BS teach-in telegram carries the manufacturer ID, and the gateway looked up the EEP for exactly that manufacturer (e.g. `A5-04-02.ELTAKO`). If only the generic EEP (`A5-04-02`) is implemented, the device was rejected as "not supported". The gateway now falls back to the generic EEP, as it already does for UTE teach-in. The teach-in response still echoes the EEP and manufacturer ID of the query.
 - **Multi-channel commands could silently target "all channels" instead of the intended one**: `SetSwitchOutput`/`QueryActuatorStatus`/`QueryActuatorMeasurement` (`D2-01`) and the `Cover*` instructions (`D2-05`) only recognized a bare digit string (e.g. `"2"`) as `entity_id`, requiring the raw channel index rather than the actual entity catalog id. Passing the catalog id (`"ch2_switch_state"`, `"ch2_cover"`, as returned by the entity list) failed the digit check and fell back to "all channels"/"all output channels" , causing every channel to react to a single-channel command. Fixed with a shared `channel_from_entity_id()` helper (`enocean_async/eep/d2/_util.py`) that correctly parses the `"ch<N>_<suffix>"` catalog id format.
 
+### Internal / maintenance
+- `examples/serial_monitor.py` now awaits `gateway.stop()` on Ctrl+C; before, the gateway was never actually stopped.
+- README: the send-pipeline example used instruction names which no longer exist (`SetCoverPosition`, `StopCover`) and a wrong `SetSwitchOutput` argument.
+
 ## [0.16.0] — 2026-05-28
 
 ### Breaking changes

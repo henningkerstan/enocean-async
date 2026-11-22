@@ -30,11 +30,11 @@ gateway.add_esp3_received_callback(lambda pkt: ...)
 Instructions are sent to devices using typed `Instruction` subclasses:
 
 ```python
-from enocean_async import SetCoverPosition, StopCover, SetSwitchOutput
+from enocean_async import CoverSetPositionAndAngle, CoverStop, SetSwitchOutput
 
-await gateway.send_command(destination=device_eurid, command=SetCoverPosition(position=75))
-await gateway.send_command(destination=device_eurid, command=StopCover())
-await gateway.send_command(destination=device_eurid, command=SetSwitchOutput(state="on"))
+await gateway.send_command(destination=device_eurid, command=CoverSetPositionAndAngle(position=75))
+await gateway.send_command(destination=device_eurid, command=CoverStop())
+await gateway.send_command(destination=device_eurid, command=SetSwitchOutput(output_value=100))
 ```
 
 ### Device management
@@ -101,7 +101,7 @@ See [TEACHIN.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/
 - Auto-reconnect: when the serial connection is lost, the gateway retries for up to 1 hour
 - **Gateway device**: the gateway itself is observable via `gateway.gateway_entities`. Available entities:
   - `connection_status` — `"connected"` / `"disconnected"` / `"reconnecting"`
-  - `telegrams_received` / `telegrams_sent` — counters (never reset on reconnect)
+  - `telegrams_received` / `telegrams_sent` — counters (never reset on reconnect); `telegrams_sent` counts radio telegrams actually written to the module
   - `learning_active` — `True` while a learning session is open
   - `learning_remaining` — seconds remaining in the current learning window (counts down per second)
   - `learning_toggle` — trigger; accepts `ToggleLearning()` / `ToggleLearning(for_device=eurid)`
@@ -118,8 +118,8 @@ Every outbound telegram carries a sender address. The gateway selects it as foll
 | Destination-addressed (`uses_addressed_sending=True`, e.g. D2-01, D2-05) | BaseID+0 (the base ID itself) | Device is addressed by EURID in the destination field; the sender is irrelevant to routing |
 | Sender-addressed (`uses_addressed_sending=False`, e.g. A5-38-08, A5-7F-3F Eltako) | Next free BaseID+n slot (1–127) | Device filters incoming telegrams by the sender address it learned at teach-in time |
 
-The slot is allocated at teach-in time (or at `add_device()` time if `sender=None`) and stored in `device.sender`. The `sender_slot` config entity reflects this as `"0"`–`"127"` or `"eurid"`. `"auto"` means no sender has been assigned yet — the first `send_command()` or `TeachIn()` that needs one will allocate the next free slot from the pool and backfill `device.sender` and `device.config["sender_slot"]`.
-- **`DeviceSpec.gateway_entities`**: for sender-addressed devices that need an inbound teach-in from the device (no fixed teach-in payload), `device_spec()` populates this list with `learning_toggle` and `learning_remaining` so integrations can surface them on the device's config page (observed/commanded via the gateway's EURID).
+The slot is allocated at teach-in time (or at `add_device()` time if `sender=None`) and stored in `device.sender`. The `sender_slot` config entity reflects this as `"0"`–`"127"` or `"eurid"` (not available on ESP2 modules). `"auto"` means no sender has been assigned yet — the first `send_command()` or `TeachIn()` that needs one will allocate the next free slot from the pool and backfill `device.sender` and `device.config["sender_slot"]`.
+- **`DeviceSpec.gateway_entities`**: for sender-addressed devices that need an inbound teach-in from the device (no fixed teach-in payload), `device_spec()` populates this list with `learning_toggle` and `learning_remaining` so integrations can surface them on the device's config page (observed/commanded via `gateway.device_address`).
 
 
 ## ESP2 modules

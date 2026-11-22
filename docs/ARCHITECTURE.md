@@ -64,6 +64,7 @@ Entity(id="temperature", observables=frozenset({TEMPERATURE}))
 Entity(id="humidity",    observables=frozenset({HUMIDITY}))
 
 # D2-05: one cover entity, multiple observables (all describe the same physical thing)
+# (D2-05-01 has four channels: one such entity per channel, ch1_cover … ch4_cover)
 Entity(
     id="cover",
     observables=frozenset({COVER_STATE, POSITION, ANGLE}),
