@@ -254,6 +254,6 @@ This library has one dependency:
 
 
 ## Copyright & license
-Copyright 2026 Henning Kerstan
+Copyright 2026 Henning Kerstan and contributors
 
 Licensed under the Apache License, Version 2.0 (the "License"). See [LICENSE](./LICENSE) file for details.
