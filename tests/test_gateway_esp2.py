@@ -14,6 +14,7 @@ from enocean_async import (
     Observable,
     Observation,
     SerialProtocol,
+    SetSwitchOutput,
 )
 from enocean_async.eep import device_type_for_eep
 from enocean_async.gateway import BaseIDChangeError
@@ -274,6 +275,41 @@ async def test_send_telegram_esp2_cannot_carry_raises_and_sends_nothing(
         await gateway.send_esp3_packet(telegram.to_esp3())
 
     assert len(module.written) == written_before
+
+
+def _sent_counts(observations: list[Observation]) -> list[int]:
+    return [
+        observation.values[Observable.TELEGRAMS_SENT]
+        for observation in observations
+        if Observable.TELEGRAMS_SENT in observation.values
+    ]
+
+
+async def test_command_esp2_cannot_carry_is_not_counted_as_sent(gateway, module):
+    observations: list[Observation] = []
+    gateway.add_observation_callback(observations.append)
+    switch = EURID("01:23:45:67")
+    gateway.add_device(switch, device_type_for_eep(EEP("D2-01-00")))
+    written_before = len(module.written)
+
+    with pytest.raises(ValueError, match="cannot be sent via ESP2"):
+        await gateway.send_command(switch, SetSwitchOutput(output_value=100))
+    await asyncio.sleep(0)  # callbacks are dispatched via the event loop
+
+    assert len(module.written) == written_before
+    assert _sent_counts(observations) == []
+
+
+async def test_command_is_counted_once_as_sent(gateway):
+    observations: list[Observation] = []
+    gateway.add_observation_callback(observations.append)
+    address = EURID("01:23:45:67")
+    gateway.add_device(address, device_type_for_eep(EEP("A5-38-08")))
+
+    await gateway.send_command(address, CentralSwitch(switch_on=True))
+    await asyncio.sleep(0)  # callbacks are dispatched via the event loop
+
+    assert _sent_counts(observations) == [1]
 
 
 async def test_change_base_id_is_not_supported(gateway):

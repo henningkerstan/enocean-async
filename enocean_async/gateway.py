@@ -735,6 +735,11 @@ class Gateway:
                 self.__transport.write(frame)
                 if packet.packet_type == ESP3PacketType.RADIO_ERP1:
                     self.__cache_sent_erp1(packet.data[:-1])
+                    # counted only once actually written: a packet which cannot be serialized or a missing connection must not count
+                    self.__erp1_sent += 1
+                    self.__emit_gateway_observation(
+                        "telegrams_sent", Observable.TELEGRAMS_SENT, self.__erp1_sent
+                    )
                 self.__emit(self.__esp3_send_callbacks, packet)
 
                 try:
@@ -833,15 +838,12 @@ class Gateway:
                 sender=sender,
                 destination=None,
             )
+            result = await self.send_esp3_packet(erp1.to_esp3())
             self._logger.info(
                 f"Sent learn telegram {spec.learn_telegram_payload.hex()} "
                 f"to {destination} from sender {sender}."
             )
-            self.__erp1_sent += 1
-            self.__emit_gateway_observation(
-                "telegrams_sent", Observable.TELEGRAMS_SENT, self.__erp1_sent
-            )
-            return await self.send_esp3_packet(erp1.to_esp3())
+            return result
 
         if command.action not in spec.encoders:
             raise ValueError(
@@ -872,10 +874,6 @@ class Gateway:
             message.destination = destination
 
         erp1 = self.__eep_handlers[eep_id].encode(message)
-        self.__erp1_sent += 1
-        self.__emit_gateway_observation(
-            "telegrams_sent", Observable.TELEGRAMS_SENT, self.__erp1_sent
-        )
         return await self.send_esp3_packet(erp1.to_esp3())
 
     def connection_made(self) -> None:
