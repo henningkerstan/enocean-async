@@ -1,6 +1,9 @@
 # Changelog
 
-## [0.16.1-dev0] — 2026-07-27
+## [0.17.0] — 2026-11-22
+
+### Breaking changes
+- **`VersionInfo.eurid` and `Gateway.eurid` can be `None` after `start()`**: their type changed from `EURID` to `EURID | None`, because a module which speaks ESP2 does not report its EURID. For ESP3 modules both are set as before. Code which uses `gateway.eurid` to identify the gateway device — e.g. as a device ID in an integration — should use the new `Gateway.device_address` instead: it is the EURID for ESP3 modules and the base ID for ESP2 modules, and it is the `device` of the gateway's own observations. Type checkers will flag uses which assume `eurid` is always set.
 
 ### New features
 - **`D2-05-01` support (4-channel blinds control)**: previously only `D2-05-00` (1 channel) was implemented. Multi-channel devices get one `chN_cover` entity per channel (`ch1_cover`…`ch4_cover`), each backed by its own `CoverObserver` instance with independent position/cover-state/watchdog tracking and CHN-based filtering, so channels never interfere with each other.

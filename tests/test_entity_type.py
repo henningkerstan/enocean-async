@@ -104,7 +104,9 @@ class TestEntityTypeActuators:
 
     def test_dim_gives_dimmer(self):
         e = Entity(
-            id="light", observables=frozenset(), actions=frozenset({Instructable.DIM})
+            id="light",
+            observables=frozenset(),
+            actions=frozenset({Instructable.CENTRAL_DIM}),
         )
         assert e.entity_type == EntityType.DIMMER
 
