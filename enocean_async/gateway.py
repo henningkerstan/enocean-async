@@ -74,14 +74,28 @@ _GATEWAY_SOURCE_OBSERVABLES = frozenset(
     }
 )
 
-_SENDER_SLOT_ENTITY = Entity(
-    id="sender_slot",
-    config_spec=EnumOptions(
-        options=("auto",) + tuple(str(i) for i in range(0, 128)) + ("eurid",),
-        default="auto",
-    ),
-    category=EntityCategory.CONFIG,
-)
+_SENDER_CONFIG_KEYS = frozenset({"learning_sender", "default_sender"})
+"""Gateway config keys whose value is a sender slot string."""
+
+
+def _sender_options(with_eurid: bool) -> EnumOptions:
+    """Sender slot choices: ``"auto"``, ``"0"``–``"127"`` and, for a module which reports its EURID, ``"eurid"``."""
+    options = ("auto",) + tuple(str(i) for i in range(0, 128))
+    if with_eurid:
+        options += ("eurid",)
+    return EnumOptions(options=options, default="auto")
+
+
+def _sender_slot_entity(with_eurid: bool) -> Entity:
+    return Entity(
+        id="sender_slot",
+        config_spec=_sender_options(with_eurid),
+        category=EntityCategory.CONFIG,
+    )
+
+
+_SENDER_SLOT_ENTITY = _sender_slot_entity(with_eurid=True)
+_SENDER_SLOT_ENTITY_NO_EURID = _sender_slot_entity(with_eurid=False)
 
 _LEARNING_TOGGLE_ENTITY = Entity(
     id="learning_toggle",
@@ -93,7 +107,25 @@ _LEARNING_REMAINING_ENTITY = Entity(
     observables=frozenset({Observable.LEARNING_REMAINING}),
 )
 
-_GATEWAY_ENTITIES: list[Entity] = [
+
+def _gateway_entities(with_eurid: bool) -> list[Entity]:
+    """Entities of the gateway device; the sender choices offer ``"eurid"`` only if the module reports its EURID."""
+    return [
+        *_GATEWAY_BASE_ENTITIES,
+        Entity(
+            id="learning_sender",
+            config_spec=_sender_options(with_eurid),
+            category=EntityCategory.CONFIG,
+        ),
+        Entity(
+            id="default_sender",
+            config_spec=_sender_options(with_eurid),
+            category=EntityCategory.CONFIG,
+        ),
+    ]
+
+
+_GATEWAY_BASE_ENTITIES: list[Entity] = [
     Entity(
         id="connection_status",
         observables=frozenset({Observable.CONNECTION_STATUS}),
@@ -129,23 +161,10 @@ _GATEWAY_ENTITIES: list[Entity] = [
         config_spec=EnumOptions(options=("30", "60", "120", "300"), default="30"),
         category=EntityCategory.CONFIG,
     ),
-    Entity(
-        id="learning_sender",
-        config_spec=EnumOptions(
-            options=("auto",) + tuple(str(i) for i in range(0, 128)) + ("eurid",),
-            default="auto",
-        ),
-        category=EntityCategory.CONFIG,
-    ),
-    Entity(
-        id="default_sender",
-        config_spec=EnumOptions(
-            options=("auto",) + tuple(str(i) for i in range(0, 128)) + ("eurid",),
-            default="auto",
-        ),
-        category=EntityCategory.CONFIG,
-    ),
 ]
+
+_GATEWAY_ENTITIES = _gateway_entities(with_eurid=True)
+_GATEWAY_ENTITIES_NO_EURID = _gateway_entities(with_eurid=False)
 
 
 @dataclass
@@ -1021,6 +1040,7 @@ class Gateway:
         if device is None:
             raise ValueError(f"Unknown device {address}")
         if entity_id == "sender_slot":
+            self.__check_sender_slot_value(entity_id, value)
             new_sender = self.__resolve_sender_slot(value)
             if new_sender is not None and new_sender != self.base_id:
                 for other in self.__devices.values():
@@ -1033,6 +1053,22 @@ class Gateway:
                 f"Device {address}: sender_slot changed to {value!r} → sender={new_sender}"
             )
         device.config[entity_id] = value
+
+    @property
+    def __has_eurid_sender(self) -> bool:
+        """Whether the module can send with its EURID. An ESP2 module does not report its EURID, so it has no ``"eurid"`` sender slot."""
+        return self.__serial_protocol is not SerialProtocol.ESP2
+
+    def __check_sender_slot_value(self, key: str, value: str) -> None:
+        """Reject the ``"eurid"`` sender slot for a module which has no EURID sender.
+
+        Raises:
+            ValueError: If *value* is ``"eurid"`` and the module does not report its EURID (ESP2).
+        """
+        if value == "eurid" and not self.__has_eurid_sender:
+            raise ValueError(
+                f"{key!r} cannot be 'eurid': an {self.__serial_protocol.upper()} module does not report its EURID. Use 'auto' or a base ID offset ('0'–'127')."
+            )
 
     def __resolve_sender_slot(self, value: str) -> SenderAddress | None:
         """Resolve a ``sender_slot`` string to a concrete sender address.
@@ -1099,8 +1135,13 @@ class Gateway:
 
     @property
     def gateway_entities(self) -> list[Entity]:
-        """Entities exposed by the gateway device itself."""
-        return _GATEWAY_ENTITIES
+        """Entities exposed by the gateway device itself.
+
+        For a module which does not report its EURID (ESP2), the sender choices have no ``"eurid"`` option.
+        """
+        return (
+            _GATEWAY_ENTITIES if self.__has_eurid_sender else _GATEWAY_ENTITIES_NO_EURID
+        )
 
     def set_gateway_config(self, key: str, value: str) -> None:
         """Update a gateway config value and emit an observation for the affected entity.
@@ -1108,7 +1149,12 @@ class Gateway:
         Args:
             key: Config key (e.g. ``"learning_timeout"``, ``"learning_sender"``).
             value: New value string.
+
+        Raises:
+            ValueError: If a sender config (``"learning_sender"``, ``"default_sender"``) is set to ``"eurid"`` for a module which does not report its EURID (ESP2).
         """
+        if key in _SENDER_CONFIG_KEYS:
+            self.__check_sender_slot_value(key, value)
         self.config[key] = value
 
     async def gateway_command(self, command: Instruction) -> None:
@@ -1129,6 +1175,7 @@ class Gateway:
                 if sender_cfg == "auto":
                     sender = None
                 elif sender_cfg == "eurid":
+                    self.__check_sender_slot_value("learning_sender", sender_cfg)
                     if self.eurid is None:
                         raise ValueError(
                             "Cannot start learning: gateway EURID not yet available."
@@ -1231,7 +1278,12 @@ class Gateway:
         spec = EEP_SPECIFICATIONS.get(device.eep)
         if spec is None:
             return None
-        extra_device = list(_METADATA_ENTITIES) + [_SENDER_SLOT_ENTITY]
+        sender_slot_entity = (
+            _SENDER_SLOT_ENTITY
+            if self.__has_eurid_sender
+            else _SENDER_SLOT_ENTITY_NO_EURID
+        )
+        extra_device = list(_METADATA_ENTITIES) + [sender_slot_entity]
         extra_gateway: list[Entity] = []
         if not spec.uses_addressed_sending and spec.learn_telegram_payload is None:
             extra_gateway = [_LEARNING_TOGGLE_ENTITY, _LEARNING_REMAINING_ENTITY]

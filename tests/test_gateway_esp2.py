@@ -5,13 +5,17 @@ import asyncio
 import pytest
 
 from enocean_async import (
+    EEP,
     EURID,
     BaseAddress,
+    CentralSwitch,
     Gateway,
+    LearningToggle,
     Observable,
     Observation,
     SerialProtocol,
 )
+from enocean_async.eep import device_type_for_eep
 from enocean_async.gateway import BaseIDChangeError
 from enocean_async.protocol.erp1.rorg import RORG
 from enocean_async.protocol.erp1.telegram import ERP1Telegram
@@ -156,6 +160,80 @@ async def test_sender_slots_contain_base_addresses_only(gateway):
     assert len(slots) == 128
     assert all(isinstance(sender, BaseAddress) for sender in slots)
     assert all(value != "eurid" for value, _, _ in gateway.learning_sender_options())
+
+
+def _sender_choices(entities, entity_id: str) -> tuple[str, ...]:
+    (entity,) = [entity for entity in entities if entity.id == entity_id]
+    return entity.config_spec.options
+
+
+@pytest.mark.parametrize(
+    ("protocol", "offers_eurid"),
+    [(SerialProtocol.ESP2, False), (SerialProtocol.ESP3, True)],
+)
+def test_sender_choices_offer_eurid_only_for_a_module_with_eurid(
+    protocol, offers_eurid
+):
+    # known from the protocol alone, i.e. already before start()
+    gateway = Gateway("/dev/null", protocol=protocol)
+    gateway.add_device(EURID("01:23:45:67"), device_type_for_eep(EEP("A5-02-05")))
+    device_entities = gateway.device_spec(EURID("01:23:45:67")).entities
+
+    for choices in (
+        _sender_choices(gateway.gateway_entities, "learning_sender"),
+        _sender_choices(gateway.gateway_entities, "default_sender"),
+        _sender_choices(device_entities, "sender_slot"),
+    ):
+        assert ("eurid" in choices) is offers_eurid
+        assert choices[:2] == ("auto", "0") and choices[128] == "127"
+
+
+@pytest.mark.parametrize("key", ["learning_sender", "default_sender"])
+async def test_gateway_sender_config_rejects_eurid(gateway, key):
+    with pytest.raises(ValueError, match="does not report its EURID"):
+        gateway.set_gateway_config(key, "eurid")
+    assert gateway.config[key] == "auto"
+
+    gateway.set_gateway_config(key, "5")
+    assert gateway.config[key] == "5"
+
+
+async def test_device_sender_slot_rejects_eurid(gateway):
+    address = EURID("01:23:45:67")
+    gateway.add_device(address, device_type_for_eep(EEP("A5-02-05")))
+    gateway.set_device_config(address, "sender_slot", "3")
+
+    with pytest.raises(ValueError, match="does not report its EURID"):
+        gateway.set_device_config(address, "sender_slot", "eurid")
+
+    # the previous slot is kept
+    assert gateway.sender_slots[BaseAddress(int(BASE_ID) + 3)] == [address]
+
+
+async def test_learning_with_eurid_sender_config_is_rejected(gateway):
+    # e.g. a config restored from an ESP3 setup, bypassing set_gateway_config()
+    gateway.config["learning_sender"] = "eurid"
+
+    with pytest.raises(ValueError, match="does not report its EURID"):
+        await gateway.gateway_command(LearningToggle())
+
+
+async def test_eurid_default_sender_config_falls_back_to_base_id(module):
+    # e.g. a config restored from an ESP3 setup, bypassing set_gateway_config()
+    gateway = Gateway("/dev/null", protocol=SerialProtocol.ESP2)
+    gateway.config["default_sender"] = "eurid"
+    address = EURID("01:23:45:67")
+    # registered before start(): no base ID yet, so the device gets no sender of its own
+    gateway.add_device(address, device_type_for_eep(EEP("A5-38-08")))
+    await gateway.start(auto_reconnect=False)
+
+    result = await gateway.send_command(address, CentralSwitch(switch_on=True))
+    await gateway.stop()
+
+    sent = ESP2Packet.from_bytes(module.written[-1])
+    assert sent.header_sequence == ESP2HeaderSequence.TRT
+    assert sent.sender == bytes(BASE_ID.bytelist)
+    assert result.response.return_code == ResponseCode.OK
 
 
 async def test_received_radio_telegram_reaches_erp1_callback(gateway, module):
