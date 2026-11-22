@@ -137,7 +137,7 @@ async def main(port: str, protocol: SerialProtocol) -> None:
     print("Running... Press Ctrl+C to exit.")
     await stop_event.wait()
     print("Shutting down...")
-    gateway.stop()
+    await gateway.stop()
 
 
 if __name__ == "__main__":
