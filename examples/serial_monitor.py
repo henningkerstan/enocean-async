@@ -10,6 +10,7 @@ from enocean_async import (
     Gateway,
     Observation,
     ObservationSource,
+    SerialProtocol,
 )
 from enocean_async.eep import device_type_for_eep
 
@@ -48,7 +49,7 @@ def on_state_change(state_change: Observation) -> None:
         print(f"╰─ {STATECHANGEMARK} {state_change}")
 
 
-async def main(port: str) -> None:
+async def main(port: str, protocol: SerialProtocol) -> None:
     # set up main loop with exit handler
     loop = asyncio.get_running_loop()
     stop_event = asyncio.Event()
@@ -65,8 +66,8 @@ async def main(port: str) -> None:
     )
     logging.basicConfig(level=logging.DEBUG, handlers=[handler])
 
-    print(f"Setting up EnOcean Gateway for module on {port}...")
-    gateway = Gateway(port)
+    print(f"Setting up EnOcean Gateway for {protocol.upper()} module on {port}...")
+    gateway = Gateway(port, protocol=protocol)
 
     # callback registration
     gateway.add_esp3_received_callback(
@@ -98,9 +99,12 @@ async def main(port: str) -> None:
     print(
         f"Base ID: {gateway.base_id} (remaining write cycles: {gateway.base_id_remaining_write_cycles})"
     )
-    print(
-        f"Valid sender addresses: {gateway.eurid} and {gateway.base_id}-{BaseAddress(int(gateway.base_id) + 127)}"
-    )
+    base_id_range = f"{gateway.base_id}-{BaseAddress(int(gateway.base_id) + 127)}"
+    if gateway.eurid is None:
+        # an ESP2 module does not report its EURID
+        print(f"Valid sender addresses: {base_id_range}")
+    else:
+        print(f"Valid sender addresses: {gateway.eurid} and {base_id_range}")
 
     version_info = gateway.version_info
 
@@ -139,8 +143,10 @@ async def main(port: str) -> None:
 if __name__ == "__main__":
     first_arg = sys.argv[1] if len(sys.argv) > 1 else None
     if first_arg is None:
-        print("Usage: python serial_monitor <serial_port>")
+        print("Usage: python serial_monitor <serial_port> [esp3|esp2]")
         print("Example: python serial_monitor /dev/tty.usbserial-XYZ")
+        print("Example: python serial_monitor /dev/tty.usbserial-XYZ esp2")
         sys.exit(1)
 
-    asyncio.run(main(first_arg))
+    second_arg = sys.argv[2] if len(sys.argv) > 2 else SerialProtocol.ESP3
+    asyncio.run(main(first_arg, SerialProtocol(second_arg)))

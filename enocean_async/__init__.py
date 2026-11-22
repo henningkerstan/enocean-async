@@ -11,6 +11,7 @@ from .eep import DEVICE_TYPES, EEP_SPECIFICATIONS, DeviceType, device_type_for_e
 from .eep.id import EEP
 from .eep.manufacturer import Manufacturer
 from .gateway import DeviceTaughtInCallback, Gateway
+from .protocol.serial_protocol import SerialProtocol
 from .semantics.device_spec import DeviceSpec
 from .semantics.entity import (
     BoolOption,
@@ -52,6 +53,7 @@ __all__ = [
     # Gateway
     "Gateway",
     "DeviceTaughtInCallback",
+    "SerialProtocol",
     # Addresses
     "BaseAddress",
     "BroadcastAddress",
