@@ -3,17 +3,14 @@ import logging
 import math
 from typing import Callable
 
-_logger = logging.getLogger(__name__)
-
 from ..semantics.entity import Entity  # noqa: F401  (re-exported for EEP files)
 from ..semantics.instructable import Instructable
 from ..semantics.observable import Observable
 from ..semantics.observer_factory import ObserverFactory  # noqa: F401  (re-exported)
-from ..semantics.types import (  # noqa: F401  (re-exported)
-    InstructionEncoder,
-    SemanticResolver,
-)
+from ..semantics.types import InstructionEncoder, SemanticResolver  # noqa: F401  (re-exported)
 from .id import EEP
+
+_logger = logging.getLogger(__name__)
 
 type TelegramRawValues = dict[str, int]
 type ScaleFunction = Callable[[TelegramRawValues], float]

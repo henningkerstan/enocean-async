@@ -6,12 +6,12 @@ import logging
 from time import time
 from typing import TYPE_CHECKING
 
-_logger = logging.getLogger(__name__)
-
 from ..observable import Observable
 from ..observation import Observation, ObservationSource
 from ..observer_factory import ObserverFactory
 from .observer import Observer
+
+_logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from ...eep.message import EEPMessage

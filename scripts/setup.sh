@@ -17,11 +17,10 @@ python3 -m pip install --upgrade pip
 echo "Installing required packages"
 
 if [ -f "pyproject.toml" ]; then
-    pip install -e .
+    pip install -e ".[dev]"
 fi
 
-echo "Installing pre-commit & setting up git hooks"
-pip install pre-commit
+echo "Setting up git hooks"
 pre-commit install
 
 echo "Setup complete. To activate the virtual environment at a later time, run 'source $VENV_DIR/bin/activate'. To deactivate, run 'deactivate'."

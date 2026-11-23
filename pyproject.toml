@@ -19,6 +19,15 @@ dependencies = [
   "serialx>=1.2.2"
 ]
 
+[project.optional-dependencies]
+dev = [
+  "bump-my-version",
+  "pre-commit",
+  "pytest",
+  "pytest-asyncio",
+  "ruff==0.17.6",  # keep in sync with required-version in [tool.ruff]
+]
+
 [project.urls]
 Homepage = "https://github.com/henningkerstan/enocean-async"
 Issues = "https://github.com/henningkerstan/enocean-async/issues"
@@ -48,10 +57,10 @@ warn_unused_configs = true
 
 [tool.ruff]
 target-version="py314"
-required-version = ">=0.13.0"
+required-version = ">=0.17.0"
 
 [tool.ruff.lint]
-select = ["I"]
+select = ["I", "E402"]
 
 [tool.ruff.lint.isort]
 force-sort-within-sections = true

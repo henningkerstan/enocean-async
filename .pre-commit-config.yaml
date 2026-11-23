@@ -1,15 +1,18 @@
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.0
-    hooks:
-      - id: ruff-check
-        args:
-          - --fix
-      - id: ruff-format
-        files: ^((enocean_async)/.+)?[^/]+\.(py|pyi)$
-
+  # ruff runs from .venv, so its version is set in one place: the "dev" extra in pyproject.toml
   - repo: local
     hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: .venv/bin/ruff check --force-exclude --fix
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: ruff format
+        entry: .venv/bin/ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        files: ^((enocean_async)/.+)?[^/]+\.(py|pyi)$
       - id: generate-supported-devices
         name: Generate SUPPORTED_DEVICES.md
         entry: .venv/bin/python scripts/generate_list_of_devices.py

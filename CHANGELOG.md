@@ -8,6 +8,9 @@
 ### Bug fixes
 - **4BS re-teach-in with another EEP was not reported**: if a registered device was taught in again with a different EEP, the gateway updated its registration but did not call the device-taught-in callbacks, so an integration kept the old device type. The callbacks are now called for such a re-teach-in as well. A re-teach-in with the same EEP is still ignored.
 
+### Internal / maintenance
+- Dev tools (ruff, pytest, pytest-asyncio, pre-commit, bump-my-version) are now declared as the `dev` extra in `pyproject.toml` and installed by `scripts/setup.sh`. Ruff is pinned to 0.17.6, and pre-commit and CI both use this version: an unpinned newer ruff in CI sorted imports differently than the local one. Ruff now also checks E402 (imports not at the top of a module).
+
 ## [0.17.0] — 2026-11-22
 
 ### Breaking changes
