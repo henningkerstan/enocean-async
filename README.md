@@ -69,7 +69,7 @@ gateway.set_device_config(eurid, "ramp_time", 5)
 
 Config values are automatically applied in the send path (encoders) and the receive path (semantic resolvers).
 
-`EURID`, `BaseAddress`, and `Address` all accept an `int`, a colon-separated hex string (`"01:23:45:67"`), or a 4-byte sequence (`bytes`, `bytearray`, `list[int]`). Use `int(addr)` and `str(addr)` for numeric/string conversion.
+`DeviceAddress` (`EURID | BaseAddress`) is the type of a device address throughout the gateway API: usually the device's own EURID, or a base address of another gateway which sends on behalf of the device (e.g. an actuator on a wired bus). `EURID`, `BaseAddress`, and `Address` all accept an `int`, a colon-separated hex string (`"01:23:45:67"`), or a 4-byte sequence (`bytes`, `bytearray`, `list[int]`). Use `int(addr)` and `str(addr)` for numeric/string conversion.
 
 ### Learning / teach-in
 ```python

@@ -5,7 +5,7 @@ An async implementation of the EnOcean Serial Protocol Version 3.
 __version__ = "0.17.1-dev0"
 __date__ = "2026-11-22"
 
-from .address import EURID, BaseAddress, BroadcastAddress, SenderAddress
+from .address import EURID, BaseAddress, BroadcastAddress, DeviceAddress, SenderAddress
 from .device import Device
 from .eep import DEVICE_TYPES, EEP_SPECIFICATIONS, DeviceType, device_type_for_eep
 from .eep.id import EEP
@@ -57,6 +57,7 @@ __all__ = [
     # Addresses
     "BaseAddress",
     "BroadcastAddress",
+    "DeviceAddress",
     "EURID",
     "SenderAddress",
     # Device / EEP

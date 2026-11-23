@@ -8,7 +8,7 @@ import serialx
 
 from enocean_async.semantics.instructions.learning import LearningToggle
 
-from .address import EURID, BaseAddress, SenderAddress
+from .address import EURID, BaseAddress, DeviceAddress, SenderAddress
 from .device import Device
 from .eep import EEP_SPECIFICATIONS, device_type_for_eep
 from .eep.device_type import DeviceType
@@ -193,12 +193,12 @@ type ERP1Callback = Callable[[ERP1Telegram], None]
 type EEPMessageCallback = Callable[[EEPMessage], None]
 type UTECallback = Callable[[UTEMessage], None]
 type ResponseCallback = Callable[[ResponseTelegram], None]
-type NewDeviceCallback = Callable[[EURID], None]
+type NewDeviceCallback = Callable[[DeviceAddress], None]
 type ParsingFailedCallback = Callable[[str], None]
 type TeachInCallback = Callable[[FourBSTeachInTelegram], None]
 
 
-type DeviceTaughtInCallback = Callable[[EURID, EEP], None]
+type DeviceTaughtInCallback = Callable[[DeviceAddress, EEP], None]
 
 
 @dataclass
@@ -264,7 +264,7 @@ class Gateway:
         # device and EEP management
         self.__known_senders: set[SenderAddress] = set()
         self.__eep_handlers: dict[EEP, EEPHandler] = {}
-        self.__devices: dict[EURID, Device] = {}
+        self.__devices: dict[DeviceAddress, Device] = {}
         self.__observation_callbacks: list[ObservationCallback] = []
 
         # callbacks
@@ -289,7 +289,7 @@ class Gateway:
         self.__learning_tick_handle: asyncio.TimerHandle | None = None
         self.__sender_id_for_learning: SenderAddress | None = None
         self.__allow_teach_out: bool = False
-        self.__focus_device: EURID | None = None
+        self.__focus_device: DeviceAddress | None = None
 
         # gateway config (in-memory; integration re-applies at startup)
         self.config: dict[str, Any] = {
@@ -552,7 +552,7 @@ class Gateway:
         return False
 
     @property
-    def sender_slots(self) -> dict[SenderAddress, list[EURID]]:
+    def sender_slots(self) -> dict[SenderAddress, list[DeviceAddress]]:
         """Return every valid sender address mapped to the list of devices using it.
 
         Keys are the gateway EURID and BaseID+0…+127.
@@ -573,7 +573,7 @@ class Gateway:
         base_number = int(self.base_id)
 
         # Group registered devices by their assigned sender address
-        occupied: dict[SenderAddress, list[EURID]] = {}
+        occupied: dict[SenderAddress, list[DeviceAddress]] = {}
         for device in self.__devices.values():
             if device.sender is not None:
                 occupied.setdefault(device.sender, []).append(device.address)
@@ -590,7 +590,7 @@ class Gateway:
         timeout: int = 30,
         allow_teach_out: bool = False,
         sender_id: SenderAddress | None = None,
-        for_device: EURID | None = None,
+        for_device: DeviceAddress | None = None,
     ) -> None:
         """Start learning mode for pairing new EnOcean devices.
 
@@ -768,7 +768,7 @@ class Gateway:
 
     async def send_command(
         self,
-        destination: EURID,
+        destination: DeviceAddress,
         command: Instruction,
         sender: SenderAddress | None = None,
     ) -> SendResult:
@@ -939,7 +939,7 @@ class Gateway:
     # ------------------------------------------------------------------
     def add_device(
         self,
-        address: EURID | BaseAddress,
+        address: DeviceAddress,
         device_type: DeviceType,
         sender: SenderAddress | None = None,
         name: str | None = None,
@@ -1028,7 +1028,9 @@ class Gateway:
             f"Initialized device {address} with {len(device.capabilities)} capabilities"
         )
 
-    def set_device_config(self, address: EURID, entity_id: str, value: Any) -> None:
+    def set_device_config(
+        self, address: DeviceAddress, entity_id: str, value: Any
+    ) -> None:
         """Update a single per-device config value (e.g. ``"min_brightness"``, ``"max_brightness"``).
 
         For ``entity_id == "sender_slot"``, also updates ``device.sender`` and validates
@@ -1196,8 +1198,8 @@ class Gateway:
             raise ValueError(f"Gateway command '{command.action}' is not supported.")
 
     def learning_sender_options(
-        self, for_device: EURID | None = None
-    ) -> list[tuple[str, SenderAddress | None, list[EURID]]]:
+        self, for_device: DeviceAddress | None = None
+    ) -> list[tuple[str, SenderAddress | None, list[DeviceAddress]]]:
         """Return sender slot options for the ``learning_sender`` config entity.
 
         Each entry is ``(value, address, devices)`` where:
@@ -1214,14 +1216,14 @@ class Gateway:
         Returns ``[("auto", None, [])]`` before ``start()`` (base ID not yet known).
         A module which does not report its EURID (ESP2) has no ``"eurid"`` slot.
         """
-        result: list[tuple[str, SenderAddress | None, list[EURID]]] = [
+        result: list[tuple[str, SenderAddress | None, list[DeviceAddress]]] = [
             ("auto", None, [])
         ]
         if self.base_id is None or self.__version_info is None:
             return result
 
         # Build occupancy map: sender address int → list of EURIDs
-        occupied: dict[int, list[EURID]] = {}
+        occupied: dict[int, list[DeviceAddress]] = {}
         for device in self.__devices.values():
             if device.sender is not None:
                 occupied.setdefault(int(device.sender), []).append(device.address)
@@ -1253,7 +1255,7 @@ class Gateway:
 
         return result
 
-    def remove_device(self, address: EURID) -> None:
+    def remove_device(self, address: DeviceAddress) -> None:
         """Deregister a device by its sender address (EURID). This removes the device from the registry of known devices, so that incoming messages from this address will no longer be recognized as coming from a known device and will not be decoded as EEP messages."""
         if address in self.__devices:
             for observer in self.__devices[address].capabilities:
@@ -1266,7 +1268,7 @@ class Gateway:
                 f"Tried to remove device with address {address}, but it was not found in the registry of known devices."
             )
 
-    def device_spec(self, address: EURID) -> DeviceSpec | None:
+    def device_spec(self, address: DeviceAddress) -> DeviceSpec | None:
         """Return a DeviceSpec for a registered device, or None if not found.
 
         The DeviceSpec describes what observables and commands the device supports,
@@ -1295,11 +1297,11 @@ class Gateway:
         )
 
     @property
-    def device_specs(self) -> dict[EURID, DeviceSpec]:
+    def device_specs(self) -> dict[DeviceAddress, DeviceSpec]:
         """Return a DeviceSpec for every registered device, keyed by address.
         Devices whose EEP is not in the registry are silently skipped.
         """
-        result: dict[EURID, DeviceSpec] = {}
+        result: dict[DeviceAddress, DeviceSpec] = {}
         for address in self.__devices:
             ds = self.device_spec(address)
             if ds is not None:
@@ -1932,7 +1934,7 @@ class Gateway:
     def __handle_ute_teach_in(
         self,
         ute: UTEMessage,
-        device_address: EURID,
+        device_address: DeviceAddress,
         response_expected: bool,
     ) -> None:
         generic_eep = EEP([ute.eep.rorg, ute.eep.func, ute.eep.type])
@@ -2002,7 +2004,7 @@ class Gateway:
     def __handle_ute_teach_out(
         self,
         ute: UTEMessage,
-        device_address: EURID,
+        device_address: DeviceAddress,
         response_expected: bool,
     ) -> None:
         if not self.__allow_teach_out:
@@ -2097,7 +2099,7 @@ class Gateway:
 
         if teach_in_telegram.learn_status != FourBSLearnStatus.QUERY:
             self._logger.debug(
-                f"Received 4BS learn telegram which is not QUERY; ignoring telegram."
+                "Received 4BS learn telegram which is not QUERY; ignoring telegram."
             )
             return
 

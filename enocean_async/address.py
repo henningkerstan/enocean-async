@@ -1,6 +1,9 @@
 type SenderAddress = EURID | BaseAddress
 """Addresses that can be used as the sender of a telegram. This includes both EURIDs (device addresses) and Base IDs, hence ranges from 00:00:00:00 to FF:FF:FF:FE."""
 
+type DeviceAddress = EURID | BaseAddress
+"""Address under which a device sends its telegrams: usually its own EURID or, for a device another gateway speaks for (e.g. an actuator on a wired bus), a base address of that gateway."""
+
 
 class Address:
     """EnOcean four byte (32 bit) address to identify devices, usually denoted as a colon-separated string (e.g., 00:00:00:00)."""

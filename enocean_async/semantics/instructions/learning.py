@@ -9,7 +9,7 @@ from ..instructable import Instructable
 from ..instruction import Instruction
 
 if TYPE_CHECKING:
-    from ...address import EURID
+    from ...address import DeviceAddress
 
 
 @dataclass
@@ -22,11 +22,11 @@ class LearningToggle(Instruction):
     When issued while learning is active, stops the session immediately.
 
     When ``for_device`` is set, the gateway enters focused learning mode:
-    only teach-in telegrams from that specific EURID are accepted during
+    only teach-in telegrams from that specific device address are accepted during
     the learning window.
     """
 
     action: ClassVar[Instructable] = Instructable.LEARNING_TOGGLE
 
-    for_device: EURID | None = field(default=None, kw_only=True)
-    """If set, only accept teach-in from this EURID during the learning window."""
+    for_device: DeviceAddress | None = field(default=None, kw_only=True)
+    """If set, only accept teach-in from this device address during the learning window."""
