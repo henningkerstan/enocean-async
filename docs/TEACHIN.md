@@ -38,7 +38,7 @@ Both teach-in and teach-out require an active learning session.
 
 ### Relationship to `NewDeviceCallback`
 
-- `NewDeviceCallback(eurid)` — fires on the first telegram received from any unknown EURID, before any EEP is known.
+- `NewDeviceCallback(eurid)` — fires on the first telegram received from any unknown EURID, before any EEP is known. Only the last `MAX_KNOWN_SENDERS` (4096) unregistered senders are remembered; one that was forgotten fires it again.
 - `DeviceTaughtInCallback(address, eep)` — fires only after a successful teach-in, once the device has been registered with its EEP. This is the pairing signal.
 
 For UTE and 4BS-with-profile, both callbacks fire for the same device: `NewDeviceCallback` first (on the teach-in telegram itself), then `DeviceTaughtInCallback` once registration is confirmed.
