@@ -345,6 +345,7 @@ class Gateway:
 
         The callback receives a ``TaughtInDevice`` (fields: ``address``, ``eep``).
         It fires for UTE and 4BS-with-profile teach-ins that carry a complete EEP.
+        It also fires if a 4BS re-teach-in changed the EEP of a registered device.
         """
         self.__device_taught_in_callbacks.append(cb)
 
@@ -938,13 +939,15 @@ class Gateway:
     # ------------------------------------------------------------------
     def add_device(
         self,
-        address: EURID,
+        address: EURID | BaseAddress,
         device_type: DeviceType,
         sender: SenderAddress | None = None,
         name: str | None = None,
         config: dict[str, Any] | None = None,
     ) -> None:
         """Register a device with its DeviceType (EEP + optional manufacturer/model).
+
+        The address is the device's own EURID or, for a device another gateway speaks for (e.g. an actuator on a wired bus whose telegrams the bus gateway sends), a base address of that gateway.
 
         This allows the gateway to recognize incoming messages from this device and decode them according to the registered EEP (if a handler for that EEP is found).
 
@@ -2160,6 +2163,7 @@ class Gateway:
                     )
                 )
             )
+            self.__emit(self.__device_taught_in_callbacks, erp1.sender, eep)
             return
 
         if not spec.uses_addressed_sending:

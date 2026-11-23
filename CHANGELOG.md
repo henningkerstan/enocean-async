@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### New features
+- **A device may have a base address**: `Gateway.add_device()` and `Device.address` are now documented and typed to take a `BaseAddress` as well as an `EURID`, and a test covers decoding such a device. This is the case for a device another gateway speaks for, e.g. an actuator on a wired bus whose telegrams the bus gateway sends under its base address range.
+
+### Bug fixes
+- **4BS re-teach-in with another EEP was not reported**: if a registered device was taught in again with a different EEP, the gateway updated its registration but did not call the device-taught-in callbacks, so an integration kept the old device type. The callbacks are now called for such a re-teach-in as well. A re-teach-in with the same EEP is still ignored.
+
 ## [0.17.0] — 2026-11-22
 
 ### Breaking changes

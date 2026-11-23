@@ -21,6 +21,7 @@ from enocean_async.gateway import BaseIDChangeError
 from enocean_async.protocol.erp1.rorg import RORG
 from enocean_async.protocol.erp1.telegram import ERP1Telegram
 from enocean_async.protocol.esp2.packet import (
+    ESP2ORG,
     ESP2CommandCode,
     ESP2HeaderSequence,
     ESP2MessageCode,
@@ -369,3 +370,56 @@ async def test_stop_gives_up_on_a_port_that_is_not_released(
     # let the shielded wait finish
     module.port_released.set()
     await asyncio.sleep(0)
+
+
+async def let_callbacks_run() -> None:
+    """Callbacks are dispatched via the event loop; decoded values take several turns."""
+    for _ in range(5):
+        await asyncio.sleep(0)
+
+
+def received_4bs(sender: EURID | BaseAddress, data: bytes) -> bytes:
+    """A 4BS telegram as the module reports it when received over the air."""
+    return ESP2Packet(
+        ESP2HeaderSequence.RRT, ESP2ORG.ORG_4BS, data, bytes(sender.bytelist), 0x00
+    ).to_bytes()
+
+
+@pytest.mark.parametrize(
+    "address",
+    [
+        pytest.param(EURID("01:23:45:67"), id="own_eurid"),
+        pytest.param(BaseAddress("FF:AA:00:02"), id="base_address_of_another_gateway"),
+    ],
+)
+async def test_telegram_of_registered_device_is_decoded(
+    gateway: Gateway, module: FakeESP2Module, address: EURID | BaseAddress
+):
+    observations: list[Observation] = []
+    gateway.add_device(address=address, device_type=device_type_for_eep(EEP("A5-04-02")))
+    gateway.add_observation_callback(observations.append)
+
+    module.receive(received_4bs(address, bytes([0x00, 125, 125, 0x0A])))
+    await let_callbacks_run()
+
+    decoded = {
+        observation.entity: observation.values
+        for observation in observations
+        if observation.device == address
+    }
+    assert decoded["temperature"] == {Observable.TEMPERATURE: 20.0}
+    assert decoded["humidity"] == {Observable.HUMIDITY: 50.0}
+
+
+async def test_telegram_of_unregistered_base_address_is_not_decoded(
+    gateway: Gateway, module: FakeESP2Module
+):
+    observations: list[Observation] = []
+    gateway.add_observation_callback(observations.append)
+
+    module.receive(
+        received_4bs(BaseAddress("FF:AA:00:02"), bytes([0x00, 125, 125, 0x0A]))
+    )
+    await let_callbacks_run()
+
+    assert not [o for o in observations if o.entity in ("temperature", "humidity")]
