@@ -16,6 +16,7 @@ These entries represent known physical products.
 | Hoppe Holding AG | SecuSignal | F6-10-00 | Wireless window handle | `window_state` | — |
 | Jung | ENO | F6-02-01 | Wireless wall switch | `a0`, `a1`, `b0`, `b1` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | NodOn | PIR-2-1-01 | A5-07-03 | Motion sensor | `supply_voltage`, `illumination`, `motion` | — |
+| NodOn | SDO-2-1-05 | D5-00-01 | Single channel contact sensor | `contact` | — |
 | NodOn | SIN-2-1-01 | D2-01-0F | Single channel relay switch | `ch1_switch_state`, `ch1_error_level`, `query_status` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | NodOn | SIN-2-2-01 | D2-01-12 | Dual channel relay switch | `ch1_switch_state`, `ch1_error_level`, `ch2_switch_state`, `ch2_error_level`, `query_status` | `set_switch_output`, `query_actuator_status`, `query_actuator_measurement` |
 | NodOn | SIN-2-RS-01 | D2-05-00 | Roller shutter controller | `cover` (angle, cover_state, position), `query_position`, `repositioning_mode` | `cover_set_position_and_angle`, `cover_stop`, `cover_open`, `cover_close`, `cover_query_position_and_angle`, `cover_set_parameters` |
