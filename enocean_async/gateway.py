@@ -1028,6 +1028,34 @@ class Gateway:
             f"Initialized device {address} with {len(device.capabilities)} capabilities"
         )
 
+    def __change_device_type(self, device: Device, device_type: DeviceType) -> Device:
+        """Register a device again with another device type, e.g. after a re-teach-in with another EEP.
+
+        The observers and config defaults depend on the EEP, so the device is set up anew as by
+        ``add_device()``. It keeps its name, its sender and the config values which the new EEP
+        also has.
+        """
+        new_spec = EEP_SPECIFICATIONS.get(device_type.eep)
+        config_ids = (
+            {e.id for e in new_spec.entities if e.config_spec is not None}
+            if new_spec is not None
+            else set()
+        )
+        kept_config = {k: v for k, v in device.config.items() if k in config_ids}
+
+        for observer in device.capabilities:
+            observer.stop()
+        del self.__devices[device.address]
+
+        self.add_device(
+            device.address,
+            device_type,
+            sender=device.sender,
+            name=device.name,
+            config=kept_config or None,
+        )
+        return self.__devices[device.address]
+
     def set_device_config(
         self, address: DeviceAddress, entity_id: str, value: Any
     ) -> None:
@@ -2144,12 +2172,7 @@ class Gateway:
         spec = EEP_SPECIFICATIONS[eep]
 
         if existing is not None:
-            existing.device_type = device_type_for_eep(eep)
-            if eep not in self.__eep_handlers:
-                self.__eep_handlers[eep] = EEPHandler(spec)
-                self._logger.info(
-                    f"Loaded EEP handler for previously unused EEP {eep} due to re-teach-in."
-                )
+            existing = self.__change_device_type(existing, device_type_for_eep(eep))
             self._logger.info(
                 f"4BS re-teach-in from {erp1.sender}: updated EEP of existing device registration to {eep}."
             )

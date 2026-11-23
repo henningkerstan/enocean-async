@@ -8,6 +8,7 @@
 
 ### Bug fixes
 - **4BS re-teach-in with another EEP was not reported**: if a registered device was taught in again with a different EEP, the gateway updated its registration but did not call the device-taught-in callbacks, so an integration kept the old device type. The callbacks are now called for such a re-teach-in as well. A re-teach-in with the same EEP is still ignored.
+- **4BS re-teach-in with another EEP kept the observers of the old EEP**: the gateway updated the device type, but the device was still decoded into observations by the observers of its previous EEP, with that EEP's config defaults. E.g. after a re-teach-in from `A5-02-05` to `A5-04-02`, humidity was never reported. The device is now set up anew for the new EEP; it keeps its name, its sender and the config values the new EEP also has.
 
 ### Internal / maintenance
 - Dev tools (ruff, pytest, pytest-asyncio, pre-commit, bump-my-version) are now declared as the `dev` extra in `pyproject.toml` and installed by `scripts/setup.sh`. Ruff is pinned to 0.17.6, and pre-commit and CI both use this version: an unpinned newer ruff in CI sorted imports differently than the local one. Ruff now also checks E402 (imports not at the top of a module).

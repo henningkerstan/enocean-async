@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from enocean_async import EEP, EURID, BaseAddress, Gateway
+from enocean_async import EEP, EURID, BaseAddress, Gateway, Observable, Observation
 from enocean_async.eep.manufacturer import Manufacturer
 from enocean_async.protocol.erp1.rorg import RORG
 from enocean_async.protocol.erp1.telegram import ERP1Telegram
@@ -162,6 +162,42 @@ async def test_re_teach_in_with_another_eep_is_reported(module, gateway, taught_
 
     assert taught_in == [(SENSOR, EEP("A5-04-02")), (SENSOR, EEP("A5-02-05"))]
     assert gateway.device_spec(SENSOR).device_type.eep == EEP("A5-02-05")
+
+
+async def test_re_teach_in_with_another_eep_decodes_with_the_new_eep(module, gateway):
+    """After a re-teach-in, telegrams are observed as the new EEP defines them, not the old one."""
+    observations: list[Observation] = []
+    gateway.add_observation_callback(observations.append)
+
+    module.receive(teach_in_query(0x02, 0x05, Manufacturer.ELTAKO))  # temperature only
+    await settle()
+    module.receive(teach_in_query(0x04, 0x02, Manufacturer.ELTAKO))  # + humidity
+    await settle()
+    observations.clear()
+
+    # A5-04-02 data telegram: 50 % humidity, 20 °C
+    module.receive(ERP1Telegram(RORG.RORG_4BS, bytes([0x00, 125, 125, 0x0A]), SENSOR))
+    await settle()
+
+    decoded = {o.entity: o.values for o in observations if o.device == SENSOR}
+    assert decoded["humidity"] == {Observable.HUMIDITY: 50.0}
+    assert decoded["temperature"] == {Observable.TEMPERATURE: 20.0}
+
+
+def sender_of(gateway: Gateway, address: EURID):
+    return next(s for s, devices in gateway.sender_slots.items() if address in devices)
+
+
+async def test_re_teach_in_keeps_the_sender(module, gateway):
+    module.receive(teach_in_query(0x02, 0x05, Manufacturer.ELTAKO))
+    await settle()
+    sender = sender_of(gateway, SENSOR)
+
+    module.receive(teach_in_query(0x04, 0x02, Manufacturer.ELTAKO))
+    await settle()
+
+    assert gateway.device_spec(SENSOR).device_type.eep == EEP("A5-04-02")
+    assert sender_of(gateway, SENSOR) == sender
 
 
 async def test_unsupported_eep_is_ignored(module, taught_in):
