@@ -3,18 +3,20 @@
 ## [0.17.1-dev0] — 2026-11-22
 
 ### New features
-- **`D5-00-01` support (single input contact, 1BS)**, e.g. the NodOn SDO-2-1-05 door/window contact sensor: reports `contact_state` (`"Open"` / `"Closed"`). Contributed by dakonu.
-- **A device may have a base address**: `Gateway.add_device()` and `Device.address` are now documented and typed to take a `BaseAddress` as well as an `EURID`, and a test covers decoding such a device. This is the case for a device another gateway speaks for, e.g. an actuator on a wired bus whose telegrams the bus gateway sends under its base address range.
+- **`D5-00-01` support (single input contact, 1BS)**, e.g. the NodOn SDO-2-1-05 door/window contact sensor: reports `contact_state` (`"Open"` / `"Closed"`). Contributed by dakonu (#5).
+- **A device may have a base address**: `Gateway.add_device()` and `Device.address` are now documented and typed to take a `BaseAddress` as well as an `EURID`, and a test covers decoding such a device. This is the case for a device another gateway speaks for, e.g. an actuator on a wired bus whose telegrams the bus gateway sends under its base address range. Contributed by eltakoal (#7).
 - **`DeviceAddress` type**: `EURID | BaseAddress`, exported from the package. All gateway methods and callbacks which take or return the address of a device use it: `add_device()`, `remove_device()`, `device_spec()`, `device_specs`, `set_device_config()`, `send_command(destination=...)`, `start_learning(for_device=...)`, `ToggleLearning(for_device=...)`, `sender_slots`, `learning_sender_options()`, the new-device and device-taught-in callbacks, and `Observation.device`. Previously most of them were typed `EURID` only, although a device may send under a base address (see above). No change in behaviour.
 
 ### Bug fixes
-- **4BS re-teach-in with another EEP was not reported**: if a registered device was taught in again with a different EEP, the gateway updated its registration but did not call the device-taught-in callbacks, so an integration kept the old device type. The callbacks are now called for such a re-teach-in as well. A re-teach-in with the same EEP is still ignored.
+- **4BS re-teach-in with another EEP was not reported**: if a registered device was taught in again with a different EEP, the gateway updated its registration but did not call the device-taught-in callbacks, so an integration kept the old device type. The callbacks are now called for such a re-teach-in as well. A re-teach-in with the same EEP is still ignored. Contributed by eltakoal (#7).
 - **4BS re-teach-in with another EEP kept the observers of the old EEP**: the gateway updated the device type, but the device was still decoded into observations by the observers of its previous EEP, with that EEP's config defaults. E.g. after a re-teach-in from `A5-02-05` to `A5-04-02`, humidity was never reported. The device is now set up anew for the new EEP; it keeps its name, its sender and the config values the new EEP also has.
 
 ### Internal / maintenance
 - Dev tools (ruff, pytest, pytest-asyncio, pre-commit, bump-my-version) are now declared as the `dev` extra in `pyproject.toml` and installed by `scripts/setup.sh`. Ruff is pinned to 0.17.6, and pre-commit and CI both use this version: an unpinned newer ruff in CI sorted imports differently than the local one. Ruff now also checks E402 (imports not at the top of a module).
 
 ## [0.17.0] — 2026-11-22
+
+ESP2 support and the related changes in this release were contributed by eltakoal (#6).
 
 ### Breaking changes
 - **`VersionInfo.eurid` and `Gateway.eurid` can be `None` after `start()`**: their type changed from `EURID` to `EURID | None`, because a module which speaks ESP2 does not report its EURID. For ESP3 modules both are set as before. Code which uses `gateway.eurid` to identify the gateway device — e.g. as a device ID in an integration — should use the new `Gateway.device_address` instead: it is the EURID for ESP3 modules and the base ID for ESP2 modules, and it is the `device` of the gateway's own observations. Type checkers will flag uses which assume `eurid` is always set.
