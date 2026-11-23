@@ -3,6 +3,7 @@
 ## [0.17.1-dev0] — 2026-11-22
 
 ### New features
+- **`D5-00-01` support (single input contact, 1BS)**, e.g. the NodOn SDO-2-1-05 door/window contact sensor: reports `contact_state` (`"Open"` / `"Closed"`). Contributed by dakonu.
 - **A device may have a base address**: `Gateway.add_device()` and `Device.address` are now documented and typed to take a `BaseAddress` as well as an `EURID`, and a test covers decoding such a device. This is the case for a device another gateway speaks for, e.g. an actuator on a wired bus whose telegrams the bus gateway sends under its base address range.
 - **`DeviceAddress` type**: `EURID | BaseAddress`, exported from the package. All gateway methods and callbacks which take or return the address of a device use it: `add_device()`, `remove_device()`, `device_spec()`, `device_specs`, `set_device_config()`, `send_command(destination=...)`, `start_learning(for_device=...)`, `ToggleLearning(for_device=...)`, `sender_slots`, `learning_sender_options()`, the new-device and device-taught-in callbacks, and `Observation.device`. Previously most of them were typed `EURID` only, although a device may send under a base address (see above). No change in behaviour.
 

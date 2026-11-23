@@ -1,5 +1,4 @@
-"""D5-00: Contacts and Switches, Single Input Contact
-"""
+"""D5-00: Contacts and Switches, Single Input Contact"""
 
 from ...semantics.observable import Observable
 from ...semantics.observers.scalar import scalar_factory
@@ -20,5 +19,10 @@ EEP_D5_00_01 = SimpleProfileSpecification(
         )
     ],
     observers=[scalar_factory(Observable.CONTACT_STATE)],
-    entities=[Entity(id=Observable.CONTACT_STATE.value, observables=frozenset({Observable.CONTACT_STATE}))],
+    entities=[
+        Entity(
+            id=Observable.CONTACT_STATE.value,
+            observables=frozenset({Observable.CONTACT_STATE}),
+        )
+    ],
 )

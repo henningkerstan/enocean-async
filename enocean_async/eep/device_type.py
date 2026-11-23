@@ -93,6 +93,7 @@ _MANUFACTURER_TYPES: list[DeviceType] = [
     DeviceType(Manufacturer.JUNG, "ENO", EEP("F6-02-01"), "Wireless wall switch"),
     # NodOn
     _NodOn("PIR-2-1-01", EEP("A5-07-03"), "Motion sensor"),
+    _NodOn("SDO-2-1-05", EEP("D5-00-01"), "Door/window contact sensor"),
     _NodOn("SIN-2-1-01", EEP("D2-01-0F"), "Single channel relay switch"),
     _NodOn("SIN-2-2-01", EEP("D2-01-12"), "Dual channel relay switch"),
     _NodOn("SIN-2-RS-01", EEP("D2-05-00"), "Roller shutter controller"),
