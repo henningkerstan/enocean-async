@@ -3,7 +3,7 @@ from enum import IntEnum
 from time import time
 from typing import Any, Callable
 
-from ..address import SenderAddress
+from ..address import DeviceAddress
 from .observable import Observable
 
 
@@ -37,7 +37,7 @@ class Observation:
     The unit for any value is defined by ``Observable.unit`` and is not repeated here.
     """
 
-    device: SenderAddress
+    device: DeviceAddress
     """Address of the device that produced this observation."""
 
     entity: str
