@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### New features
+- **A device may have a base address**: `Gateway.add_device()` and `Device.address` are now documented and typed to take a `BaseAddress` as well as an `EURID`, and a test covers decoding such a device. This is the case for a device another gateway speaks for, e.g. an actuator on a wired bus whose telegrams the bus gateway sends under its base address range.
+
+### Bug fixes
+- **4BS re-teach-in with another EEP was not reported**: if a registered device was taught in again with a different EEP, the gateway updated its registration but did not call the device-taught-in callbacks, so an integration kept the old device type. The callbacks are now called for such a re-teach-in as well. A re-teach-in with the same EEP is still ignored.
+
 ## [0.17.0] — 2026-11-22
 
 ### Breaking changes
@@ -14,13 +22,11 @@
 - **`Gateway.device_address`**: the address that identifies the gateway itself, e.g. as `device` of its own observations — the EURID of the module or, for a module which does not report its EURID (ESP2), its base ID. `Gateway.eurid` and `VersionInfo.eurid` are `None` for such a module, and it has no `"eurid"` sender slot: the `sender_slot`, `learning_sender` and `default_sender` choices omit `"eurid"`, and setting it raises `ValueError`.
 - `Gateway(port, baudrate=None, protocol=SerialProtocol.ESP3)`: the baudrate now defaults to the one the serial protocol specifies (57600 for ESP3 as before, 9600 for ESP2). New `Gateway.serial_protocol` property; `SerialProtocol` is exported from the package.
 - `examples/serial_monitor.py` takes the serial protocol as optional second argument (`esp3` or `esp2`).
-- **A device may have a base address**: `Gateway.add_device()` and `Device.address` are now documented and typed to take a `BaseAddress` as well as an `EURID`, and a test covers decoding such a device. This is the case for a device another gateway speaks for, e.g. an actuator on a wired bus whose telegrams the bus gateway sends under its base address range.
 
 ### Bug fixes
 - **`telegrams_sent` counted telegrams which were never sent**: `send_command()` incremented the counter before sending, so a command which failed — e.g. a VLD command for an ESP2 module, or any command while disconnected — was still counted. The counter now increments in `send_esp3_packet()` once a radio telegram has actually been written to the module. As a consequence, teach-in responses and radio telegrams sent directly via `send_esp3_packet()` are now counted as well, matching `telegrams_received`, which counts every received telegram.
 - **Serial port could still be in use right after `stop()` or a failed `start()`**: the serial connection is closed in the background, so opening the same port again right away — e.g. to try another serial protocol — could fail with "Device or resource busy". `stop()` and a failed `start()` now wait until the port is released, for at most one second: a port whose pending output cannot be sent is only released by the operating system much later.
 - **4BS teach-in ignored devices whose manufacturer-specific EEP is not implemented**: a 4BS teach-in telegram carries the manufacturer ID, and the gateway looked up the EEP for exactly that manufacturer (e.g. `A5-04-02.ELTAKO`). If only the generic EEP (`A5-04-02`) is implemented, the device was rejected as "not supported". The gateway now falls back to the generic EEP, as it already does for UTE teach-in. The teach-in response still echoes the EEP and manufacturer ID of the query.
-- **4BS re-teach-in with another EEP was not reported**: if a registered device was taught in again with a different EEP, the gateway updated its registration but did not call the device-taught-in callbacks, so an integration kept the old device type. The callbacks are now called for such a re-teach-in as well. A re-teach-in with the same EEP is still ignored.
 - **Multi-channel commands could silently target "all channels" instead of the intended one**: `SetSwitchOutput`/`QueryActuatorStatus`/`QueryActuatorMeasurement` (`D2-01`) and the `Cover*` instructions (`D2-05`) only recognized a bare digit string (e.g. `"2"`) as `entity_id`, requiring the raw channel index rather than the actual entity catalog id. Passing the catalog id (`"ch2_switch_state"`, `"ch2_cover"`, as returned by the entity list) failed the digit check and fell back to "all channels"/"all output channels" , causing every channel to react to a single-channel command. Fixed with a shared `channel_from_entity_id()` helper (`enocean_async/eep/d2/_util.py`) that correctly parses the `"ch<N>_<suffix>"` catalog id format.
 
 ### Internal / maintenance
