@@ -159,7 +159,9 @@ class Entity:
     """The actions this entity accepts via ``Gateway.send_command()``. Empty for read-only entities."""
 
     config_spec: EnumOptions | NumberRange | None = None
-    """For a configuration entity: its valid values and default. ``None`` for all other entities."""
+    """For a setting, i.e. a value the user chooses and the gateway keeps in the device's config
+    (see ``Gateway.set_device_config()``): its valid values and default. ``None`` for entities
+    which report values of the device or accept actions."""
 
     category: EntityCategory = EntityCategory.DEFAULT
     """Where an integration should present the entity: as a main entity, under settings or under diagnostics."""
