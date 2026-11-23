@@ -30,17 +30,38 @@ class EntityType(StrEnum):
     in EEP files.
     """
 
-    SENSOR = "sensor"  # read-only continuous scalar (temperature, illumination, …)
-    BINARY = "binary"  # read-only two-state (motion, contact, switch status, …)
-    SWITCH = "switch"  # controllable on/off relay
-    COVER = "cover"  # position-controllable cover / blind
-    BUTTON = "button"  # inbound: multi-value physical button events (a0, b1, …)
-    DIMMER = "dimmer"  # controllable dimmer / PWM output
-    FAN = "fan"  # fan speed control
-    TRIGGER = "trigger"  # outbound: one-shot command / query trigger
-    CONFIG_ENUM = "config_enum"  # integration-local enum config — ``config_spec`` is ``EnumOptions``
-    CONFIG_NUMBER = "config_number"  # integration-local numeric config — ``config_spec`` is ``NumberRange``
-    METADATA = "metadata"  # infrastructure: rssi, last_seen, telegram_count
+    SENSOR = "sensor"
+    """Read-only continuous scalar (temperature, illumination, …)."""
+
+    BINARY = "binary"
+    """Read-only two-state value (motion, contact, switch status, …)."""
+
+    SWITCH = "switch"
+    """Controllable on/off relay."""
+
+    COVER = "cover"
+    """Position-controllable cover / blind."""
+
+    BUTTON = "button"
+    """Inbound: multi-value physical button events (a0, b1, …)."""
+
+    DIMMER = "dimmer"
+    """Controllable dimmer / PWM output."""
+
+    FAN = "fan"
+    """Fan speed control."""
+
+    TRIGGER = "trigger"
+    """Outbound: one-shot command / query trigger."""
+
+    CONFIG_ENUM = "config_enum"
+    """Integration-local enum config; ``config_spec`` is ``EnumOptions``."""
+
+    CONFIG_NUMBER = "config_number"
+    """Integration-local numeric config; ``config_spec`` is ``NumberRange``."""
+
+    METADATA = "metadata"
+    """Infrastructure: rssi, last_seen, telegram_count."""
 
 
 @dataclass(frozen=True)
@@ -53,7 +74,10 @@ class EnumOptions:
     """
 
     options: tuple[str, ...]
+    """The valid values, in the order they should be presented."""
+
     default: str | None = None
+    """The value a device starts with, one of ``options``; ``None`` if there is no default."""
 
 
 @dataclass(frozen=True)
@@ -66,10 +90,19 @@ class NumberRange:
     """
 
     min_value: float
+    """Smallest valid value."""
+
     max_value: float
+    """Largest valid value."""
+
     step: float = 1.0
+    """Granularity of valid values, e.g. ``1.0`` for whole numbers."""
+
     unit: str | None = None
+    """Unit of the value for display, e.g. ``"%"`` or ``"s"``; ``None`` if it has no unit."""
+
     default: float | None = None
+    """The value a device starts with; ``None`` if there is no default."""
 
 
 def BoolOption(default: bool = False) -> EnumOptions:
@@ -105,7 +138,7 @@ class Entity:
 
     Declared statically in the EEP specification. Each entity has a stable string ``id``
     within the device, a set of ``observables`` it reports, and a set of ``actions`` it accepts.
-    A unique physical thing in the system is the pair ``(eurid, entity_id)``.
+    A unique physical thing in the system is the pair ``(device address, entity_id)``.
 
     **Config / auxiliary entities** use ``config_spec``:
 
@@ -116,10 +149,20 @@ class Entity:
     """
 
     id: str
+    """Stable identifier of the entity within its device, e.g. ``"temperature"``, ``"ch2_cover"`` or ``"a0"``.
+    Together with the device address it identifies the entity in the system."""
+
     observables: frozenset[Observable] = field(default_factory=frozenset)
+    """The quantities this entity reports, as keys of ``Observation.values``. Empty for entities which only accept actions."""
+
     actions: frozenset[Instructable] = field(default_factory=frozenset)
+    """The actions this entity accepts via ``Gateway.send_command()``. Empty for read-only entities."""
+
     config_spec: EnumOptions | NumberRange | None = None
+    """For a configuration entity: its valid values and default. ``None`` for all other entities."""
+
     category: EntityCategory = EntityCategory.DEFAULT
+    """Where an integration should present the entity: as a main entity, under settings or under diagnostics."""
 
     @property
     def entity_type(self) -> EntityType:
