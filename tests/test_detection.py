@@ -39,6 +39,9 @@ class FakeSerialPort:
         self.port_released = asyncio.Event()
         self.port_released.set()
         self.waiting_for_release = asyncio.Event()
+        self.may_open = asyncio.Event()
+        self.may_open.set()
+        self.open_error: Exception | None = None
 
     def write(self, data: bytes) -> None:
         self.written.append(data)
@@ -72,6 +75,9 @@ def connect(monkeypatch: pytest.MonkeyPatch):
         port = FakeSerialPort(module)
 
         async def create_serial_connection(loop, protocol_factory, url, baudrate):
+            await port.may_open.wait()
+            if port.open_error is not None:
+                raise port.open_error
             port.opened += 1
             port.baudrates.append(baudrate)
             port.protocol = protocol_factory()
@@ -164,3 +170,75 @@ async def test_answer_in_the_other_serial_protocol_is_not_taken_for_a_module(con
     port.write = write
 
     assert await detect_serial_protocol("/dev/null") is None
+
+
+async def let_the_late_open_end() -> None:
+    for _ in range(5):
+        await asyncio.sleep(0)
+
+
+async def test_port_that_does_not_open_in_time_has_no_module_and_is_closed_once_open(
+    connect, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr("enocean_async.protocol.detection._OPEN_TIMEOUT", 0.01)
+    port = connect(SerialProtocol.ESP2)
+    port.may_open.clear()
+
+    assert await detect_serial_protocol("/dev/null") is None
+
+    # nothing was sent, and the port is not left open when the open ends at last
+    assert port.opened == 0
+    # meanwhile the port is not opened a second time
+    assert await detect_serial_protocol("/dev/null") is None
+    port.may_open.set()
+    await let_the_late_open_end()
+    assert port.opened == 1
+    assert port.closed
+    assert not port.written
+
+
+async def test_port_that_fails_to_open_after_the_detection_gave_up(
+    connect, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr("enocean_async.protocol.detection._OPEN_TIMEOUT", 0.01)
+    port = connect(SerialProtocol.ESP2)
+    port.may_open.clear()
+    port.open_error = OSError("port is gone")
+
+    assert await detect_serial_protocol("/dev/null") is None
+
+    port.may_open.set()
+    await let_the_late_open_end()
+    assert port.opened == 0
+    assert not port.closed
+
+
+async def test_cancelled_detection_closes_the_port_once_it_is_open(connect):
+    port = connect(SerialProtocol.ESP2)
+    port.may_open.clear()
+
+    detection = asyncio.ensure_future(detect_serial_protocol("/dev/null"))
+    await asyncio.sleep(0)
+    detection.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await detection
+
+    port.may_open.set()
+    await let_the_late_open_end()
+    assert port.closed
+    assert not port.written
+
+
+async def test_port_is_detected_again_after_its_late_open_has_ended(
+    connect, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr("enocean_async.protocol.detection._OPEN_TIMEOUT", 0.01)
+    port = connect(SerialProtocol.ESP2)
+    port.may_open.clear()
+    assert await detect_serial_protocol("/dev/null") is None
+    port.may_open.set()
+    await let_the_late_open_end()
+
+    assert await detect_serial_protocol("/dev/null") is SerialProtocol.ESP2
+
+    assert port.opened == 2

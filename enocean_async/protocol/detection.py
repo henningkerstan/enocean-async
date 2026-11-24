@@ -17,11 +17,34 @@ _LOGGER = logging.getLogger(__name__)
 _ANSWER_TIMEOUT = 0.5
 """Seconds to wait for the module's answer in each serial protocol."""
 
+_OPEN_TIMEOUT = 2.0
+"""Seconds to wait for the serial port to open. A port opens at once, unless the operating system is still closing it: after output that never reached a module, that can take about 30 seconds."""
+
 _PORT_RELEASE_TIMEOUT = 1.0
 """Seconds to wait for the serial port to be released after a module was found, so that the port can be opened again right away."""
 
 _PROTOCOLS = (SerialProtocol.ESP3, SerialProtocol.ESP2)
 """The serial protocols in the order they are tried."""
+
+_late_opens: dict[str, asyncio.Task] = {}
+"""Opens the detection no longer waits for, by port. While a port has one, it is not opened again."""
+
+
+def _close_once_open(port: str, opening: asyncio.Task) -> None:
+    """Close a port that opened after the detection stopped waiting for it.
+
+    An open the operating system holds cannot be cancelled, so the port is closed as soon as it is open.
+    """
+
+    def close(opened: asyncio.Task) -> None:
+        del _late_opens[port]
+        if opened.cancelled() or opened.exception() is not None:
+            return
+        transport, _ = opened.result()
+        transport.close()
+
+    _late_opens[port] = opening
+    opening.add_done_callback(close)
 
 
 class _Probe(asyncio.Protocol):
@@ -61,18 +84,32 @@ def _parser_for(
 async def detect_serial_protocol(port: str) -> SerialProtocol | None:
     """Return the serial protocol the EnOcean module on the port speaks, or ``None`` if no module answers.
 
-    The port is opened once. Each serial protocol is tried at its own baudrate by asking the module for its base ID; ESP3 first, then ESP2. A port that cannot be opened counts as no module.
+    The port is opened once. Each serial protocol is tried at its own baudrate by asking the module for its base ID; ESP3 first, then ESP2. A port that cannot be opened, or does not open within two seconds, counts as no module.
 
-    Opening the port once matters: on a port whose output never reaches a module, the operating system can hold a close for a long time, and a second open would wait behind it.
+    Opening the port once matters: on a port whose output never reaches a module, the operating system can hold a close for about 30 seconds, and a second open waits behind it. The same happens to a detection that follows another one on such a port; it gives up after two seconds, and the port is closed again as soon as it has opened. Until then, further detections on that port report no module at once.
     """
+    if port in _late_opens:
+        _LOGGER.debug(f"{port} is still being opened by an earlier detection.")
+        return None
+
     loop = asyncio.get_running_loop()
     probe = _Probe()
     baudrate = _PROTOCOLS[0].default_baudrate
 
+    opening = loop.create_task(
+        serialx.create_serial_connection(loop, lambda: probe, port, baudrate=baudrate)
+    )
     try:
-        transport, _ = await serialx.create_serial_connection(
-            loop, lambda: probe, port, baudrate=baudrate
-        )
+        opened, _ = await asyncio.wait({opening}, timeout=_OPEN_TIMEOUT)
+    except asyncio.CancelledError:
+        _close_once_open(port, opening)
+        raise
+    if not opened:
+        _LOGGER.debug(f"{port} did not open within {_OPEN_TIMEOUT} s.")
+        _close_once_open(port, opening)
+        return None
+    try:
+        transport, _ = opening.result()
     except Exception as e:
         _LOGGER.debug(f"Cannot open {port} to detect the serial protocol: {e}")
         return None
