@@ -122,6 +122,8 @@ async def detect_serial_protocol(port: str) -> SerialProtocol | None:
                 await transport.reconfigure_port(baudrate=baudrate)
 
             probe.parser = _parser_for(protocol, probe)
+            # a late answer to the request in the previous protocol does not count
+            probe.ok_received.clear()
             transport.write(
                 probe.parser.serialize(
                     CommonCommandTelegram.CO_RD_IDBASE().to_esp3_packet()

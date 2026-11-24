@@ -191,6 +191,19 @@ async def test_answer_in_the_other_serial_protocol_is_not_taken_for_a_module(con
     assert await detect_serial_protocol("/dev/null") is None
 
 
+async def test_late_answer_is_not_taken_for_the_next_serial_protocol(connect):
+    port = connect(None)
+
+    async def reconfigure_port(*, baudrate: int) -> None:
+        port.baudrates.append(baudrate)
+        # the answer to the ESP3 request arrives only after the ESP3 attempt timed out
+        port.protocol.data_received(ANSWERS[SerialProtocol.ESP3])
+
+    port.reconfigure_port = reconfigure_port
+
+    assert await detect_serial_protocol("/dev/null") is None
+
+
 async def let_the_late_open_end() -> None:
     for _ in range(5):
         await asyncio.sleep(0)
