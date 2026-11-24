@@ -16,6 +16,7 @@ EEP_D5_00_01 = SimpleProfileSpecification(
             size=1,
             range_enum={0: "Open", 1: "Closed"},
             observable=Observable.CONTACT_STATE,
+            true_values=frozenset({0}),  # open
         )
     ],
     observers=[scalar_factory(Observable.CONTACT_STATE)],

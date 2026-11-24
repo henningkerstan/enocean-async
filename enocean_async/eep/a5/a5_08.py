@@ -81,6 +81,7 @@ class _EEP_A5_08(SimpleProfileSpecification):
                         1: "no motion",
                     },
                     observable=Observable.MOTION,
+                    true_values=frozenset({0}),
                 ),
                 EEPDataField(
                     id="OCC",
@@ -92,6 +93,7 @@ class _EEP_A5_08(SimpleProfileSpecification):
                         1: "released",
                     },
                     observable=Observable.OCCUPANCY_BUTTON,
+                    true_values=frozenset({0}),
                 ),
             ],
             observers=_FULL_FACTORIES,
@@ -137,6 +139,7 @@ EEP_A5_08_01_ELTAKO = SimpleProfileSpecification(
                 0x0F: "no motion",
             },
             observable=Observable.MOTION,
+            true_values=frozenset({0x0D}),
         ),
     ],
     observers=_ELTAKO_FACTORIES,
