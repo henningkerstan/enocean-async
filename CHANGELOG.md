@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.18.0-dev0] — 2026-11-24
+## [0.18.0] — 2026-11-24
 
 ### Breaking changes
 - **Two-state values are reported as booleans**: `motion`, `occupancy_button`, `day_night`, `contact_state` and the D2-01 `error_level` are observables of kind `BINARY`, but their value was the text of the field's enumeration, e.g. `"no motion"`. A text counts as true whatever it says, so a consumer reading the value as a boolean saw such an entity as always on. They are now `bool`: `True` means motion detected, button pressed (occupied for `A5-10-23`), day, contact open, and a hardware warning or failure. Consumers that compared these values with the texts must compare with `True`/`False`. The text is still available in `EEPMessage.decoded`. A raw value the enumeration does not list gives no value, as does "not supported" for the D2-01 error level. For new profiles, `EEPDataField` has the new `true_values` and `false_values`; a test fails for a `BINARY` field without `true_values` (see `docs/IMPLEMENT_EEP.md`). Contributed by eltakoal (#10).
