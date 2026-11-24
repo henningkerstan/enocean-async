@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.18.1-dev0] — 2026-11-24
+
+### Bug fixes
+- **Sender-addressed devices taught in by the gateway shared one sender** (#4): a device added with `add_device()` without a sender, such as an Eltako FSB61 shutter actuator, was given the default sender BaseID+0, and so was every other one. The learn telegram (`LearnTelegram`) then taught each of them BaseID+0, and a command to one of them moved all of them. Such a device now has no sender slot until the gateway teaches it in: the learn telegram assigns it the lowest free slot (BaseID+1…+127), as `docs/TEACHIN.md` describes for sender-addressed devices. Until then, commands to it are still sent from BaseID+0, so a device taught in by an earlier version keeps working. An integration must persist the assigned slot (read it from `gateway.sender_slots` after the learn telegram). A device that is taught in again still reacts to BaseID+0 until this sender is deleted from it (Eltako: rotary switch at `CLR`), see `docs/TEACHIN.md`.
+
 ## [0.18.0] — 2026-11-24
 
 ### Breaking changes

@@ -162,16 +162,22 @@ Rules:
 - **Device removal**: the slot is freed automatically.
 - **Pool exhaustion** (> 127 broadcast devices): the teach-in is rejected with an error.
 
+### Devices the gateway teaches in
+
+Some sender-addressed devices (e.g. Eltako actuators) are added with `add_device()` and then taught in by the gateway with `LearnTelegram`. Added without a sender (`sender_slot` `"auto"`), such a device has no sender slot yet: the learn telegram assigns it the lowest free slot, and the device keeps it. Until then, commands to it are sent from the default sender (BaseID+0), without assigning it, so that a device taught in by an earlier version, which learned BaseID+0, keeps working.
+
+A device remembers every sender it has learned. A device that is taught in again with its own slot still reacts to the sender it learned before, e.g. BaseID+0, and so to commands for other devices sent from it. Delete the old sender from the device: Eltako actuators do this with the rotary switch set to `CLR` and a telegram from the sender to delete (see the device's manual).
+
 ### Persistence
 
-Sender-addresseds must have their sender address persisted by the caller and restored on startup:
+Sender-addressed devices must have their sender address persisted by the caller and restored on startup:
 
 ```python
 gateway.add_device(
     address=EURID(stored["eurid"]),
-    eep=EEP(stored["eep"]),
-    sender=BaseAddress(stored["sender"]),  # None for addressed devices
+    device_type=device_type_for_eep(EEP(stored["eep"])),
+    sender=BaseAddress(stored["sender"]) if stored["sender"] else None,  # None for addressed devices
 )
 ```
 
-Persisting the full address (not a bare offset) avoids ambiguity if the base ID ever changes.
+Persisting the full address (not a bare offset) avoids ambiguity if the base ID ever changes. After a `LearnTelegram` has assigned a slot, read it from `gateway.sender_slots` (the address whose list contains the device) and persist it; otherwise the device has no slot again after a restart, and commands go to it from BaseID+0, which it has not learned.

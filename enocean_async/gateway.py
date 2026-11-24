@@ -862,8 +862,9 @@ class Gateway:
                 sender = device.sender
             else:
                 sender = self.__resolve_default_sender()
-                if sender is not None:
-                    # Backfill: device was registered before base ID was available
+                # Backfill: device was registered before base ID was available. Not for a
+                # sender-addressed device: it keeps no sender until it is taught in, see add_device().
+                if sender is not None and spec.uses_addressed_sending:
                     device.sender = sender
                     self._logger.debug(
                         f"Device {destination} did not have a sender configured; using default sender {sender}."
@@ -964,8 +965,17 @@ class Gateway:
             raise ValueError(f"Device {address} is already registered.")
 
         eep = device_type.eep
+        spec = EEP_SPECIFICATIONS.get(eep)
 
-        if sender is None:
+        if sender is None and spec is not None and not spec.uses_addressed_sending:
+            # A sender-addressed device reacts to every telegram from a sender it has learned, so it
+            # gets a sender slot of its own when the gateway teaches it in (LearnTelegram). Until then
+            # it sends from the default sender, which a device taught in by an earlier version learned.
+            self._logger.debug(
+                f"No sender provided when adding sender-addressed device {address}; "
+                "it gets its own sender slot when taught in."
+            )
+        elif sender is None:
             sender = self.__resolve_default_sender()
             if sender is None:
                 self._logger.debug(
