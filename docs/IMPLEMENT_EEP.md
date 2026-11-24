@@ -121,6 +121,8 @@ range_enum={
 }
 ```
 
+**Fields in the status byte**: some RPS profiles tell their telegrams apart by the T21 and NU bits of the status byte. Declare such a field with `in_status=True`; its `offset` then counts from bit 7 of the status byte, as in the "Statusfield" table of the EEP specification (T21 at offset 2, NU at offset 3). It is decoded only and never written by `EEPHandler.encode()`. Example: `F6-05-01.ELTAKO` in `eep/f6/f6_05_01.py`.
+
 **Last field** in each `EEPTelegram.datafields` must extend to the last meaningful bit; `EEPHandler.encode()` uses `max(f.offset + f.size)` to size the output buffer.
 
 ---

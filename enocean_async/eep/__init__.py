@@ -83,6 +83,10 @@ from .a5 import (
     EEP_A5_12_02,
     EEP_A5_12_03,
     EEP_A5_20_01,
+    EEP_A5_30_01,
+    EEP_A5_30_01_ELTAKO_FSM60B,
+    EEP_A5_30_03,
+    EEP_A5_30_03_ELTAKO_FSM60B,
     EEP_A5_38_08,
     EEP_A5_38_08_ELTAKO,
 )
@@ -117,7 +121,14 @@ from .d2 import (
 )
 from .d5 import EEP_D5_00_01
 from .device_type import _MANUFACTURER_TYPES, DeviceType
-from .f6 import EEP_F6_02_01, EEP_F6_02_02, EEP_F6_10_00, EEP_F6_10_00_ELTAKO
+from .f6 import (
+    EEP_F6_02_01,
+    EEP_F6_02_02,
+    EEP_F6_05_01,
+    EEP_F6_05_01_ELTAKO,
+    EEP_F6_10_00,
+    EEP_F6_10_00_ELTAKO,
+)
 from .id import EEP
 from .manufacturer import Manufacturer
 from .profile import EEPSpecification
@@ -200,11 +211,17 @@ EEP_SPECIFICATIONS: dict[EEP, EEPSpecification] = {
     EEP_A5_12_02.eep: EEP_A5_12_02,
     EEP_A5_12_03.eep: EEP_A5_12_03,
     EEP_A5_20_01.eep: EEP_A5_20_01,
+    EEP_A5_30_01.eep: EEP_A5_30_01,
+    EEP_A5_30_01_ELTAKO_FSM60B.eep: EEP_A5_30_01_ELTAKO_FSM60B,
+    EEP_A5_30_03.eep: EEP_A5_30_03,
+    EEP_A5_30_03_ELTAKO_FSM60B.eep: EEP_A5_30_03_ELTAKO_FSM60B,
     EEP_A5_38_08.eep: EEP_A5_38_08,
     EEP_A5_38_08_ELTAKO.eep: EEP_A5_38_08_ELTAKO,
     EEP_A5_7F_3F_ELTAKO_FSB.eep: EEP_A5_7F_3F_ELTAKO_FSB,
     EEP_F6_02_01.eep: EEP_F6_02_01,
     EEP_F6_02_02.eep: EEP_F6_02_02,
+    EEP_F6_05_01.eep: EEP_F6_05_01,
+    EEP_F6_05_01_ELTAKO.eep: EEP_F6_05_01_ELTAKO,
     EEP_F6_10_00.eep: EEP_F6_10_00,
     EEP_F6_10_00_ELTAKO.eep: EEP_F6_10_00_ELTAKO,
     EEP_D2_01_00.eep: EEP_D2_01_00,

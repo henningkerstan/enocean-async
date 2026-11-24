@@ -85,6 +85,16 @@ _MANUFACTURER_TYPES: list[DeviceType] = [
     _Eltako("FUD61NPN", EEP("A5-38-08.ELTAKO"), "Wireless universal dimmer 230V"),
     _Eltako("FLD61", EEP("A5-38-08.ELTAKO"), "PWM LED dimmer 12–36 V DC, up to 4 A"),
     _Eltako("FT55", EEP("F6-02-01"), "Battery-less wireless wall switch"),
+    _Eltako(
+        "FSM60B",
+        EEP("A5-30-03.ELTAKO.FSM60B"),
+        "Wireless transmitter module for the water probe FWS60 (factory setting)",
+    ),
+    _Eltako(
+        "FWS81",
+        EEP("F6-05-01", Manufacturer.ELTAKO),
+        "Battery-less wireless water sensor",
+    ),
     # Hoppe
     DeviceType(
         Manufacturer.HOPPE, "SecuSignal", EEP("F6-10-00"), "Wireless window handle"

@@ -5,6 +5,7 @@ import asyncio
 import pytest
 
 from enocean_async import EEP, EURID, BaseAddress, Gateway, Observable, Observation
+from enocean_async.eep import device_type_for_eep
 from enocean_async.eep.manufacturer import Manufacturer
 from enocean_async.protocol.erp1.rorg import RORG
 from enocean_async.protocol.erp1.telegram import ERP1Telegram
@@ -162,6 +163,38 @@ async def test_re_teach_in_with_another_eep_is_reported(module, gateway, taught_
 
     assert taught_in == [(SENSOR, EEP("A5-04-02")), (SENSOR, EEP("A5-02-05"))]
     assert gateway.device_spec(SENSOR).device_type.eep == EEP("A5-02-05")
+
+
+@pytest.mark.parametrize(
+    "manufacturer",
+    [Manufacturer.ELTAKO, Manufacturer.RESERVED, Manufacturer.AFRISO_EURO_INDEX],
+)
+async def test_re_teach_in_with_the_base_eep_keeps_the_registered_variant(
+    module, gateway, taught_in, manufacturer
+):
+    """A variant is not carried on the wire, so the teach-in cannot name it."""
+    variant = EEP("A5-30-03.ELTAKO.FSM60B")
+    gateway.add_device(address=SENSOR, device_type=device_type_for_eep(variant))
+
+    module.receive(teach_in_query(0x30, 0x03, manufacturer))
+    await settle()
+
+    assert taught_in == []
+    assert gateway.device_spec(SENSOR).device_type.eep == variant
+
+
+async def test_re_teach_in_with_another_eep_replaces_a_registered_variant(
+    module, gateway, taught_in
+):
+    gateway.add_device(
+        address=SENSOR, device_type=device_type_for_eep(EEP("A5-30-03.ELTAKO.FSM60B"))
+    )
+
+    module.receive(teach_in_query(0x30, 0x01, Manufacturer.ELTAKO))
+    await settle()
+
+    assert taught_in == [(SENSOR, EEP("A5-30-01"))]
+    assert gateway.device_spec(SENSOR).device_type.eep == EEP("A5-30-01")
 
 
 async def test_re_teach_in_with_another_eep_decodes_with_the_new_eep(module, gateway):

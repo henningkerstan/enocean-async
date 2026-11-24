@@ -1641,8 +1641,17 @@ class Gateway:
 
     @staticmethod
     def __erp1_fingerprint(erp1: ERP1Telegram) -> bytes:
-        """Compute the deduplication fingerprint for an ERP1 telegram (RORG + data + sender)."""
-        return bytes([erp1.rorg]) + erp1.telegram_data + bytes(erp1.sender.bytelist)
+        """Compute the deduplication fingerprint for an ERP1 telegram.
+
+        RORG + data + sender + the status byte without its repeater count: two RPS telegrams
+        may differ in the T21 and NU bits of the status only.
+        """
+        return (
+            bytes([erp1.rorg])
+            + erp1.telegram_data
+            + bytes(erp1.sender.bytelist)
+            + bytes([erp1.status & 0xF0])
+        )
 
     @staticmethod
     def __cache_fingerprint(
@@ -2174,6 +2183,19 @@ class Gateway:
             if existing.eep == eep:
                 self._logger.info(
                     f"4BS re-teach-in from {erp1.sender}: received EEP {teach_in_telegram.eep} matches existing registration ({existing.eep}); ignoring."
+                )
+                return
+
+            # a variant is never carried on the wire: a teach-in with the same RORG, FUNC and TYPE
+            # does not contradict the variant the device was registered with
+            if (
+                existing.eep.variant is not None
+                and eep is not None
+                and (existing.eep.rorg, existing.eep.func, existing.eep.type)
+                == (eep.rorg, eep.func, eep.type)
+            ):
+                self._logger.info(
+                    f"4BS re-teach-in from {erp1.sender}: received EEP {teach_in_telegram.eep} is the base of the registered variant ({existing.eep}); ignoring."
                 )
                 return
 

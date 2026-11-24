@@ -629,3 +629,47 @@ async def test_destination_addressed_device_gets_the_default_sender(gateway: Gat
 
     assert registered_device(gateway, address).sender == BASE_ID
     assert registered_device(gateway, address).config["sender_slot"] == "0"
+
+
+def received_rps(sender: EURID | BaseAddress, data: int, status: int) -> bytes:
+    """An RPS telegram as the module reports it when received over the air."""
+    return ESP2Packet(
+        ESP2HeaderSequence.RRT,
+        ESP2ORG.ORG_RPS,
+        bytes([data, 0, 0, 0]),
+        bytes(sender.bytelist),
+        status,
+    ).to_bytes()
+
+
+@pytest.mark.parametrize(
+    ("first", "second", "expected"),
+    [
+        pytest.param(0x30, 0x21, [True, False], id="water_then_repeated_no_water"),
+        pytest.param(0x20, 0x31, [False, True], id="no_water_then_repeated_water"),
+        pytest.param(0x30, 0x31, [True], id="repeated_copy_is_dropped"),
+    ],
+)
+async def test_telegrams_which_differ_in_the_status_only_are_not_repeats(
+    gateway: Gateway,
+    module: FakeESP2Module,
+    first: int,
+    second: int,
+    expected: list[bool],
+):
+    sensor = EURID("01:23:45:67")
+    observations: list[Observation] = []
+    gateway.add_device(
+        address=sensor, device_type=device_type_for_eep(EEP("F6-05-01.ELTAKO"))
+    )
+    gateway.add_observation_callback(observations.append)
+
+    module.receive(received_rps(sensor, 0x11, first))
+    module.receive(received_rps(sensor, 0x11, second))
+    await let_callbacks_run()
+
+    assert [
+        observation.values[Observable.WATER_DETECTED]
+        for observation in observations
+        if observation.entity == "water_detected"
+    ] == expected

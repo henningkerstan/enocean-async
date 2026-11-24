@@ -89,6 +89,12 @@ class Observable(str, Enum):
     DAY_NIGHT = ("day_night", None, _B)  # True = day
     OCCUPANCY_BUTTON = ("occupancy_button", None, _B)  # True = pressed / occupied
 
+    # Detectors
+    WATER_DETECTED = ("water_detected", None, _B)  # True = water / leakage
+
+    # Power supply of the device
+    BATTERY_LOW = ("battery_low", None, _B)  # True = battery low
+
     # Room operating panel controls
     FAN_SPEED = ("fan_speed", None, _S)
     SET_POINT = ("set_point", None, _S)
