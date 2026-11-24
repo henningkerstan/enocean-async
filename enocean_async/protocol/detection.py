@@ -26,25 +26,25 @@ _PORT_RELEASE_TIMEOUT = 1.0
 _PROTOCOLS = (SerialProtocol.ESP3, SerialProtocol.ESP2)
 """The serial protocols in the order they are tried."""
 
-_late_opens: dict[str, asyncio.Task] = {}
-"""Opens the detection no longer waits for, by port. While a port has one, it is not opened again."""
+_ports_in_use: dict[str, asyncio.Task] = {}
+"""Map from port name to the task opening that port, for the ports whose open a detection no longer waits for. While a port is here, it is not opened again."""
 
 
-def _close_once_open(port: str, opening: asyncio.Task) -> None:
+def _close_when_opened(port: str, open_task: asyncio.Task) -> None:
     """Close a port that opened after the detection stopped waiting for it.
 
     An open the operating system holds cannot be cancelled, so the port is closed as soon as it is open.
     """
 
-    def close(opened: asyncio.Task) -> None:
-        del _late_opens[port]
-        if opened.cancelled() or opened.exception() is not None:
+    def close(task: asyncio.Task) -> None:
+        del _ports_in_use[port]
+        if task.cancelled() or task.exception() is not None:
             return
-        transport, _ = opened.result()
+        transport, _ = task.result()
         transport.close()
 
-    _late_opens[port] = opening
-    opening.add_done_callback(close)
+    _ports_in_use[port] = open_task
+    open_task.add_done_callback(close)
 
 
 class _Probe(asyncio.Protocol):
@@ -55,7 +55,7 @@ class _Probe(asyncio.Protocol):
 
     def __init__(self) -> None:
         self.parser: EnOceanSerialProtocol2 | EnOceanSerialProtocol3 | None = None
-        self.answered = asyncio.Event()
+        self.ok_received = asyncio.Event()
 
     def data_received(self, data: bytes) -> None:
         if self.parser is not None:
@@ -70,7 +70,7 @@ class _Probe(asyncio.Protocol):
         except ValueError:
             return
         if response.return_code == ResponseCode.OK:
-            self.answered.set()
+            self.ok_received.set()
 
 
 def _parser_for(
@@ -88,7 +88,7 @@ async def detect_serial_protocol(port: str) -> SerialProtocol | None:
 
     Opening the port once matters: on a port whose output never reaches a module, the operating system can hold a close for about 30 seconds, and a second open waits behind it. The same happens to a detection that follows another one on such a port; it gives up after two seconds, and the port is closed again as soon as it has opened. Until then, further detections on that port report no module at once.
     """
-    if port in _late_opens:
+    if port in _ports_in_use:
         _LOGGER.debug(f"{port} is still being opened by an earlier detection.")
         return None
 
@@ -96,20 +96,20 @@ async def detect_serial_protocol(port: str) -> SerialProtocol | None:
     probe = _Probe()
     baudrate = _PROTOCOLS[0].default_baudrate
 
-    opening = loop.create_task(
+    open_task = loop.create_task(
         serialx.create_serial_connection(loop, lambda: probe, port, baudrate=baudrate)
     )
     try:
-        opened, _ = await asyncio.wait({opening}, timeout=_OPEN_TIMEOUT)
+        done, _ = await asyncio.wait({open_task}, timeout=_OPEN_TIMEOUT)
     except asyncio.CancelledError:
-        _close_once_open(port, opening)
+        _close_when_opened(port, open_task)
         raise
-    if not opened:
+    if not done:
         _LOGGER.debug(f"{port} did not open within {_OPEN_TIMEOUT} s.")
-        _close_once_open(port, opening)
+        _close_when_opened(port, open_task)
         return None
     try:
-        transport, _ = opening.result()
+        transport, _ = open_task.result()
     except Exception as e:
         _LOGGER.debug(f"Cannot open {port} to detect the serial protocol: {e}")
         return None
@@ -129,7 +129,7 @@ async def detect_serial_protocol(port: str) -> SerialProtocol | None:
             )
             try:
                 async with asyncio.timeout(_ANSWER_TIMEOUT):
-                    await probe.answered.wait()
+                    await probe.ok_received.wait()
             except TimeoutError:
                 _LOGGER.debug(f"No {protocol} module answered on {port}.")
                 continue
