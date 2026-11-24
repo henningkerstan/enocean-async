@@ -130,6 +130,25 @@ async def test_port_that_cannot_be_opened_has_no_module(
     assert await detect_serial_protocol("/dev/null") is None
 
 
+@pytest.mark.parametrize("failing", ["reconfigure_port", "write"])
+async def test_port_that_fails_during_the_detection_has_no_module(
+    connect, failing: str
+):
+    port = connect(SerialProtocol.ESP2)
+
+    def fail(*args, **kwargs):
+        raise OSError("module was unplugged")
+
+    async def fail_async(*args, **kwargs):
+        fail()
+
+    setattr(port, failing, fail_async if failing == "reconfigure_port" else fail)
+
+    assert await detect_serial_protocol("/dev/null") is None
+
+    assert port.closed
+
+
 async def test_detection_waits_until_the_port_of_a_found_module_is_released(connect):
     port = connect(SerialProtocol.ESP2)
     port.port_released.clear()

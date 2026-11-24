@@ -84,7 +84,7 @@ def _parser_for(
 async def detect_serial_protocol(port: str) -> SerialProtocol | None:
     """Return the serial protocol the EnOcean module on the port speaks, or ``None`` if no module answers.
 
-    The port is opened once. Each serial protocol is tried at its own baudrate by asking the module for its base ID; ESP3 first, then ESP2. A port that cannot be opened, or does not open within two seconds, counts as no module.
+    The port is opened once. Each serial protocol is tried at its own baudrate by asking the module for its base ID; ESP3 first, then ESP2. A port that cannot be opened, does not open within two seconds, or fails while the module is being asked, counts as "no module".
 
     Opening the port once matters: on a port whose output never reaches a module, the operating system can hold a close for about 30 seconds, and a second open waits behind it. The same happens to a detection that follows another one on such a port; it gives up after two seconds, and the port is closed again as soon as it has opened. Until then, further detections on that port report no module at once.
     """
@@ -136,6 +136,9 @@ async def detect_serial_protocol(port: str) -> SerialProtocol | None:
 
             detected = protocol
             break
+    except OSError as e:
+        # e.g. the module was unplugged during the detection
+        _LOGGER.debug(f"Serial port {port} failed during the detection: {e}")
     finally:
         transport.close()
 
