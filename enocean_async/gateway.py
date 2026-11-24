@@ -45,6 +45,9 @@ from .semantics.observers.metadata import MetaDataObserver
 
 type RSSI = int
 
+MAX_KNOWN_SENDERS = 4096
+"""Senders that are not registered devices and are remembered as seen. Any radio telegram can name a new sender, so the number must have a limit; the one seen first is forgotten first."""
+
 _PORT_RELEASE_TIMEOUT = 1.0
 """Seconds to wait for the serial port to be released after closing the connection. A port whose pending output cannot be sent is only released by the operating system much later."""
 
@@ -262,7 +265,8 @@ class Gateway:
         self.__base_id: BaseAddress | None = None
 
         # device and EEP management
-        self.__known_senders: set[SenderAddress] = set()
+        # insertion-ordered and bounded (MAX_KNOWN_SENDERS): senders come from unauthenticated radio telegrams
+        self.__known_senders: dict[SenderAddress, None] = {}
         self.__eep_handlers: dict[EEP, EEPHandler] = {}
         self.__devices: dict[DeviceAddress, Device] = {}
         self.__observation_callbacks: list[ObservationCallback] = []
@@ -353,6 +357,7 @@ class Gateway:
         """Add a callback that will be called for every newly detected EURID from incoming ERP1 telegrams.
 
         BaseAddress senders (other controllers/gateways) are silently tracked but do not trigger this callback.
+        Only the last `MAX_KNOWN_SENDERS` senders that are not registered devices are remembered: one that was forgotten and sends again is reported as new again.
         This can be useful for implementing custom handling of new devices."""
         self.__new_device_callbacks.append(cb)
 
@@ -1289,7 +1294,7 @@ class Gateway:
             for observer in self.__devices[address].capabilities:
                 observer.stop()
             del self.__devices[address]
-            self.__known_senders.discard(address)
+            self.__known_senders.pop(address, None)
             self._logger.info(f"Removed device with address {address}")
         else:
             self._logger.warning(
@@ -1715,7 +1720,10 @@ class Gateway:
 
         # check if sender is known; if not, track it and notify callbacks (EURIDs only)
         if not self.__is_sender_known(erp1.sender):
-            self.__known_senders.add(erp1.sender)
+            self.__known_senders[erp1.sender] = None
+            if len(self.__known_senders) > MAX_KNOWN_SENDERS:
+                # forget the sender seen first; if it sends again, it is new again
+                del self.__known_senders[next(iter(self.__known_senders))]
             if isinstance(erp1.sender, EURID):
                 self.__emit(self.__new_device_callbacks, erp1.sender)
                 self._logger.info(

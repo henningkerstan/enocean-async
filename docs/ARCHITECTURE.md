@@ -451,7 +451,7 @@ Layered callbacks for application code:
 - `add_erp1_received_callback` — parsed telegram (filterable by sender)
 - `add_eep_message_received_callback` — decoded EEP message (filterable by sender)
 - `add_observation_callback` — semantic entity state updates from observers
-- `add_new_device_callback` — first telegram seen from an unknown EURID
+- `add_new_device_callback` — first telegram seen from an unknown EURID (again, if the EURID was forgotten: only the last `MAX_KNOWN_SENDERS` unregistered senders are remembered)
 - `add_device_taught_in_callback` — fires after a device is successfully taught in and auto-registered, carrying `(address: EURID, eep: EEP)`
 
 `gateway.device_spec(address)` returns a `DeviceSpec` for one registered device. `gateway.device_specs` (property) returns `dict[EURID, DeviceSpec]` for all registered devices.

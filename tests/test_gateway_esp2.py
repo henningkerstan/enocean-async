@@ -252,6 +252,103 @@ async def test_received_radio_telegram_reaches_erp1_callback(gateway, module):
     assert telegrams[0].status == 0x30
 
 
+def sender_number(number: int) -> EURID:
+    return EURID(f"01:00:00:{number:02X}")
+
+
+def telegram_from(sender: EURID) -> bytes:
+    """A 4BS telegram (A5-04-02: 50 %, 20 °C) as the module reports it when received over the air."""
+    return ESP2Packet(
+        ESP2HeaderSequence.RRT,
+        ESP2ORG.ORG_4BS,
+        bytes([0x00, 125, 125, 0x0A]),
+        bytes(sender.bytelist),
+        0x00,
+    ).to_bytes()
+
+
+async def callbacks_have_run() -> None:
+    """Callbacks are dispatched via the event loop; a decoded telegram takes several turns."""
+    for _ in range(5):
+        await asyncio.sleep(0)
+
+
+async def test_new_sender_is_reported_once(gateway: Gateway, module: FakeESP2Module):
+    new: list[EURID] = []
+    gateway.add_new_device_callback(new.append)
+
+    module.receive(telegram_from(sender_number(1)))
+    module.receive(telegram_from(sender_number(1)))
+    await callbacks_have_run()
+
+    assert new == [sender_number(1)]
+
+
+async def test_only_a_limited_number_of_senders_is_remembered(
+    gateway: Gateway, module: FakeESP2Module, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr("enocean_async.gateway.MAX_KNOWN_SENDERS", 3)
+    new: list[EURID] = []
+    gateway.add_new_device_callback(new.append)
+
+    for number in range(1, 11):
+        module.receive(telegram_from(sender_number(number)))
+    await callbacks_have_run()
+
+    assert new == [sender_number(number) for number in range(1, 11)]
+    assert list(gateway._Gateway__known_senders) == [
+        sender_number(n) for n in (8, 9, 10)
+    ]
+
+
+async def test_forgotten_sender_is_new_again_and_a_remembered_one_is_not(
+    gateway: Gateway, module: FakeESP2Module, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr("enocean_async.gateway.MAX_KNOWN_SENDERS", 3)
+    new: list[EURID] = []
+    for number in range(1, 5):
+        module.receive(telegram_from(sender_number(number)))
+    await callbacks_have_run()
+    gateway.add_new_device_callback(new.append)
+
+    module.receive(telegram_from(sender_number(4)))
+    module.receive(telegram_from(sender_number(1)))
+    await callbacks_have_run()
+
+    assert new == [sender_number(1)]
+
+
+async def test_registered_device_is_never_reported_as_new(
+    gateway: Gateway, module: FakeESP2Module, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr("enocean_async.gateway.MAX_KNOWN_SENDERS", 3)
+    device = EURID("01:23:45:67")
+    gateway.add_device(address=device, device_type=device_type_for_eep(EEP("A5-04-02")))
+    new: list[EURID] = []
+    gateway.add_new_device_callback(new.append)
+
+    for number in range(1, 11):
+        module.receive(telegram_from(sender_number(number)))
+    module.receive(telegram_from(device))
+    await callbacks_have_run()
+
+    assert device not in new
+    assert device not in gateway._Gateway__known_senders
+
+
+async def test_removed_device_is_forgotten_as_a_sender(
+    gateway: Gateway, module: FakeESP2Module
+):
+    device = EURID("01:23:45:67")
+    module.receive(telegram_from(device))
+    await callbacks_have_run()
+    gateway.add_device(address=device, device_type=device_type_for_eep(EEP("A5-04-02")))
+
+    gateway.remove_device(device)
+
+    assert device not in gateway._Gateway__known_senders
+
+
 async def test_send_radio_telegram_as_transmit_request(gateway, module):
     telegram = ERP1Telegram(
         rorg=RORG.RORG_RPS, telegram_data=b"\x70", sender=BASE_ID, status=0x30
