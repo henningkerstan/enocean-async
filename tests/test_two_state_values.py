@@ -120,7 +120,7 @@ def test_no_two_state_field_reports_a_text():
     assert without == []
 
 
-def test_two_state_values_come_from_fields_only_but_for_the_switch_state():
+def test_switch_state_is_the_only_two_state_value_from_a_resolver():
     """A resolver could report a text too; the switch state is the only one that uses one."""
     resolved = {
         observable
