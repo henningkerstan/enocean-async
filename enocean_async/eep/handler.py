@@ -89,7 +89,26 @@ class EEPHandler:
         # Third pass: entity observable propagation — copy scaled values to semantic entity keys
         for field in self.__eep.telegrams[cmd_value].datafields:
             if field.observable is not None and field.id in msg.decoded:
-                msg.values[field.observable] = msg.decoded[field.id]
+                if field.true_values is None:
+                    msg.values[field.observable] = msg.decoded[field.id]
+                    continue
+                raw = msg.raw[field.id]
+                if field.range_enum is not None and raw not in field.range_enum:
+                    # a value the enumeration does not know says neither yes nor no
+                    continue
+                if (
+                    field.false_values is not None
+                    and raw not in field.true_values
+                    and raw not in field.false_values
+                ):
+                    # a value that is declared to mean neither
+                    continue
+                # a two-state value: a bool, not the text of the enumeration
+                msg.values[field.observable] = ValueWithContext(
+                    name=field.name or field.id,
+                    value=raw in field.true_values,
+                    unit=None,
+                )
 
         # Fourth pass: semantic resolvers — combine multiple fields into a single entity value
         cfg = config or {}

@@ -43,6 +43,7 @@ EEP_A5_07_03 = SimpleProfileSpecification(
                 1: "Motion detected",
             },
             observable=Observable.MOTION,
+            true_values=frozenset({1}),
         ),
     ],
     observers=[

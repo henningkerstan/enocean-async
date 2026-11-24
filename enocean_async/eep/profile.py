@@ -56,6 +56,20 @@ class EEPDataField:
     """Observable type to which this field's decoded value is propagated (e.g. Observable.TEMPERATURE).
     When set, EEPHandler copies msg.interpreted_values[field.id] → msg.values[observable] after decoding."""
 
+    true_values: frozenset[int] | None = None
+    """Raw values that mean ``True``, for a field whose observable is a two-state value
+    (``ValueKind.BINARY``): motion detected, contact open, button pressed, day.
+    When set, EEPHandler propagates ``raw in true_values`` (a ``bool``) to msg.values[observable]
+    instead of the decoded value, which for a field with ``range_enum`` is a text and would
+    count as true whatever it says. msg.decoded keeps the text. A raw value that ``range_enum``
+    does not list gives no value for the observable."""
+
+    false_values: frozenset[int] | None = None
+    """Raw values that mean ``False``, for a field with ``true_values`` that has more values
+    than yes and no. When set, a raw value that is in neither set gives no value for the
+    observable (e.g. "not supported"). When ``None``, every raw value that is not in
+    ``true_values`` means ``False``."""
+
     def __post_init__(self):
         if self.range_enum:
             # If an enumeration is provided, range_min and range_max are derived from the enum keys

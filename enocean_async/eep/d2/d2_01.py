@@ -321,6 +321,9 @@ _CMD_0x4_ActuatorStatusResponse = EEPTelegram(
                 0b11: "Not supported",
             },
             observable=Observable.ERROR_LEVEL,
+            # True = there is a problem; "not supported" says neither
+            true_values=frozenset({0b01, 0b10}),
+            false_values=frozenset({0b00}),
         ),
         _io(not_applicable_at_1e=True),
         EEPDataField(

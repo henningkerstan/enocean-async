@@ -211,6 +211,8 @@ _TELEGRAMS = {
 
 Annotate fields with `observable=Observable.XXX` where there is a clear 1:1 mapping from one EEP field to one observable. For a multi-field observable (e.g. combining a raw value with a range-select bit), use a `SemanticResolver` in `semantic_resolvers` instead.
 
+For an observable of kind `BINARY` (motion, contact, button, day/night), also give the field `true_values`: the raw values that mean `True`, e.g. `true_values=frozenset({1})`. The handler then reports a `bool`. Without it the observable would get the text of `range_enum`, and a text counts as true whatever it says. A test in `tests/test_two_state_values.py` fails for a `BINARY` field without `true_values`.
+
 ---
 
 ## 8. Semantic resolvers

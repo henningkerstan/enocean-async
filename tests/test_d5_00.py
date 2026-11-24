@@ -19,16 +19,16 @@ def telegram(db0: int) -> ERP1Telegram:
 @pytest.mark.parametrize(
     ("db0", "expected"),
     [
-        pytest.param(0x08, "Open", id="open"),
-        pytest.param(0x09, "Closed", id="closed"),
+        pytest.param(0x08, True, id="open"),
+        pytest.param(0x09, False, id="closed"),
     ],
 )
-def test_contact_state_is_decoded(db0: int, expected: str):
+def test_contact_state_is_decoded(db0: int, expected: bool):
     handler = EEPHandler(EEP_SPECIFICATIONS[EEP("D5-00-01")])
 
     message = handler.decode(telegram(db0))
 
-    assert message.values[Observable.CONTACT_STATE].value == expected
+    assert message.values[Observable.CONTACT_STATE].value is expected
 
 
 def test_lrn_bit_marks_teach_in_telegram():

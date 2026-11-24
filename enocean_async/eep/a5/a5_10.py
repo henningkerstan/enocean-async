@@ -327,6 +327,7 @@ def _occ() -> EEPDataField:
         size=1,
         range_enum=_BUTTON_ENUM,
         observable=Observable.OCCUPANCY_BUTTON,
+        true_values=frozenset({0}),  # pressed
     )
 
 
@@ -339,6 +340,7 @@ def _occ23() -> EEPDataField:
         size=1,
         range_enum=_OCC23_ENUM,
         observable=Observable.OCCUPANCY_BUTTON,
+        true_values=frozenset({1}),  # occupied
     )
 
 
@@ -350,6 +352,7 @@ def _slsw() -> EEPDataField:
         size=1,
         range_enum=_SLSW_ENUM,
         observable=Observable.DAY_NIGHT,
+        true_values=frozenset({1}),  # day/on
     )
 
 
@@ -361,6 +364,7 @@ def _ctst() -> EEPDataField:
         size=1,
         range_enum=_CTST_ENUM,
         observable=Observable.CONTACT_STATE,
+        true_values=frozenset({1}),  # open
     )
 
 
@@ -384,6 +388,7 @@ def _ob(offset: int) -> EEPDataField:
         size=1,
         range_enum=_BUTTON_ENUM,
         observable=Observable.OCCUPANCY_BUTTON,
+        true_values=frozenset({0}),  # pressed
     )
 
 

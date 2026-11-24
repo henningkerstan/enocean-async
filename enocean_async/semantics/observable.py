@@ -70,7 +70,7 @@ class Observable(str, Enum):
     SWITCH_STATE = ("switch_state", None, _B)
     OUTPUT_VALUE = ("output_value", "%", _S)
     DIMMER_OUTPUT = ("dimmer_output", "%", _S)
-    ERROR_LEVEL = ("error_level", None, _B)
+    ERROR_LEVEL = ("error_level", None, _B)  # True = hardware warning or failure
     PILOT_WIRE_MODE = (
         "pilot_wire_mode",
         None,
@@ -85,9 +85,9 @@ class Observable(str, Enum):
         _E,
         ["pressed", "clicked", "held", "released"],
     )
-    CONTACT_STATE = ("contact_state", None, _B)
-    DAY_NIGHT = ("day_night", None, _B)
-    OCCUPANCY_BUTTON = ("occupancy_button", None, _B)
+    CONTACT_STATE = ("contact_state", None, _B)  # True = open
+    DAY_NIGHT = ("day_night", None, _B)  # True = day
+    OCCUPANCY_BUTTON = ("occupancy_button", None, _B)  # True = pressed / occupied
 
     # Room operating panel controls
     FAN_SPEED = ("fan_speed", None, _S)
