@@ -28,13 +28,22 @@ This updates version files and commits. No tag is created for dev versions — o
 
 ### Releasing
 
-When the code is ready to release:
+When the code is ready to release, first give the release its section in `CHANGELOG.md` (e.g. rename `## [1.2.4-dev3] — …` to `## [1.2.4] — <today>`) and stage it, so that it goes into the release commit:
 
 ```bash
+git add CHANGELOG.md
 bump-my-version bump pre_l --tag
 ```
 
 This promotes the current dev version to a release (e.g. `1.2.4-dev3` → `1.2.4`), updates version files, commits, and creates a `v1.2.4` tag.
+
+A release needs its section in the changelog: the bump stops before committing if `CHANGELOG.md` has no notes for the new version (`scripts/release_notes.py` checks this; run the bump with `-v` to see its message). The version files are already changed at that point; undo that, add the section, and bump again:
+
+```bash
+git restore pyproject.toml enocean_async/__init__.py
+```
+
+Pushing the tag (`git push origin main && git push origin v1.2.4`) publishes the release to PyPI and creates a GitHub release with the notes from the changelog. The workflow checks the notes again before publishing.
 
 ### Checking the current version
 

@@ -99,7 +99,10 @@ message = "Bump version: {current_version} → {new_version}"
 moveable_tags = []
 commit_args = "--no-verify"
 setup_hooks = []
-pre_commit_hooks = []
+pre_commit_hooks = [
+    # a release (a version without "-dev") needs its section in CHANGELOG.md; the comment at the end is shown if the hook fails
+    'case "$BVHOOK_NEW_VERSION" in *-*) ;; *) python3 scripts/release_notes.py "$BVHOOK_NEW_VERSION" > /dev/null ;; esac  # CHANGELOG.md needs a section for this release, see VERSIONING.md',
+]
 post_commit_hooks = []
 
 [tool.bumpversion.parts.pre_l]
