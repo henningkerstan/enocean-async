@@ -673,3 +673,19 @@ async def test_telegrams_which_differ_in_the_status_only_are_not_repeats(
         for observation in observations
         if observation.entity == "water_detected"
     ] == expected
+
+
+async def test_own_telegram_echoed_by_a_repeater_is_dropped(
+    gateway: Gateway, module: FakeESP2Module
+):
+    received: list[ERP1Telegram] = []
+    gateway.add_erp1_received_callback(received.append)
+    telegram = ERP1Telegram(
+        rorg=RORG.RORG_RPS, telegram_data=b"\x70", sender=BASE_ID, status=0x30
+    )
+
+    await gateway.send_esp3_packet(telegram.to_esp3())
+    module.receive(received_rps(BASE_ID, 0x70, 0x31))
+    await let_callbacks_run()
+
+    assert received == []

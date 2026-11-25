@@ -1641,17 +1641,20 @@ class Gateway:
 
     @staticmethod
     def __erp1_fingerprint(erp1: ERP1Telegram) -> bytes:
-        """Compute the deduplication fingerprint for an ERP1 telegram.
+        """Compute the echo fingerprint for an ERP1 telegram: RORG + data + sender.
 
-        RORG + data + sender + the status byte without its repeater count: two RPS telegrams
+        Matches the fingerprint cached for a sent telegram (its ESP3 data without the status byte).
+        """
+        return bytes([erp1.rorg]) + erp1.telegram_data + bytes(erp1.sender.bytelist)
+
+    @classmethod
+    def __erp1_repeat_fingerprint(cls, erp1: ERP1Telegram) -> bytes:
+        """Compute the repeat-filter fingerprint for a received ERP1 telegram.
+
+        The echo fingerprint + the status byte without its repeater count: two RPS telegrams
         may differ in the T21 and NU bits of the status only.
         """
-        return (
-            bytes([erp1.rorg])
-            + erp1.telegram_data
-            + bytes(erp1.sender.bytelist)
-            + bytes([erp1.status & 0xF0])
-        )
+        return cls.__erp1_fingerprint(erp1) + bytes([erp1.status & 0xF0])
 
     @staticmethod
     def __cache_fingerprint(
@@ -1697,7 +1700,7 @@ class Gateway:
         """Cache an original received ERP1 telegram for repeat-filter tracking."""
         self.__cache_fingerprint(
             self.__received_erp1_cache,
-            self.__erp1_fingerprint(erp1),
+            self.__erp1_repeat_fingerprint(erp1),
             self.__received_erp1_cache_ttl,
             self.__received_erp1_cache_max,
         )
@@ -1706,7 +1709,7 @@ class Gateway:
         """Return True if this telegram is a repeated copy of one we already processed."""
         return self.__fingerprint_in_cache(
             self.__received_erp1_cache,
-            self.__erp1_fingerprint(erp1),
+            self.__erp1_repeat_fingerprint(erp1),
             self.__received_erp1_cache_ttl,
         )
 
