@@ -58,6 +58,11 @@ class EEPHandler:
 
         # First pass: collect all raw values
         for field in self.__eep.telegrams[cmd_value].datafields:
+            if field.in_status:
+                msg.raw[field.id] = (
+                    telegram.status >> (8 - field.offset - field.size)
+                ) & ((1 << field.size) - 1)
+                continue
             msg.raw[field.id] = telegram.bitstring_raw_value(
                 offset=field.offset, size=field.size
             )
@@ -69,6 +74,8 @@ class EEPHandler:
 
             if field.range_enum is not None:
                 value = field.range_enum.get(raw_value, f"Unknown({raw_value})")
+            elif field.in_status:
+                value = raw_value
             elif field.range_min is not None and field.range_max is not None:
                 value = telegram.bitstring_scaled_value(
                     offset=field.offset,
@@ -154,6 +161,8 @@ class EEPHandler:
 
         # Write each field's raw value
         for f in datafields:
+            if f.in_status:
+                continue
             raw = message.raw.get(f.id)
             if raw is None:
                 self.__logger.debug(

@@ -11,8 +11,10 @@ These entries represent known physical products.
 | Eltako | FAH65S | A5-06-01.ELTAKO | Wireless outdoor brightness sensor | `illumination` | — |
 | Eltako | FLD61 | A5-38-08.ELTAKO | PWM LED dimmer 12–36 V DC, up to 4 A | `light`, `ramp_mode`, `min_brightness`, `max_brightness`, `ramp_time`, `learn_telegram`, `dimmer_state`, `dimmer_output` | `central_switch`, `central_dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle`, `central_dim_off` |
 | Eltako | FSB61 | A5-7F-3F.ELTAKO.FSB | Eltako FSB roller-shutter / blind actuator (FSB14, FSB61, FSB71) | `cover`, `max_travel_time`, `learn_telegram` | `cover_stop`, `cover_open`, `cover_close` |
+| Eltako | FSM60B | A5-30-03.ELTAKO.FSM60B | Wireless transmitter module for the water probe FWS60 (factory setting) | `water_detected` | — |
 | Eltako | FT55 | F6-02-01 | Battery-less wireless wall switch | `a0`, `a1`, `b0`, `b1` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | Eltako | FUD61NPN | A5-38-08.ELTAKO | Wireless universal dimmer 230V | `light`, `ramp_mode`, `min_brightness`, `max_brightness`, `ramp_time`, `learn_telegram`, `dimmer_state`, `dimmer_output` | `central_switch`, `central_dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle`, `central_dim_off` |
+| Eltako | FWS81 | F6-05-01.ELTAKO | Battery-less wireless water sensor | `water_detected` | — |
 | Hoppe Holding AG | SecuSignal | F6-10-00 | Wireless window handle | `window_state` | — |
 | Jung | ENO | F6-02-01 | Wireless wall switch | `a0`, `a1`, `b0`, `b1` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | NodOn | PIR-2-1-01 | A5-07-03 | Motion sensor | `supply_voltage`, `illumination`, `motion` | — |
@@ -108,6 +110,10 @@ These entries cover any device implementing the given EEP.
 | A5-12-02 | Automated meter reading (AMR), gas | `gas_volume`, `gas_flow` | — |
 | A5-12-03 | Automated meter reading (AMR), water | `water_volume`, `water_flow` | — |
 | A5-20-01 | HVAC component – battery powered actuator (BI-DIR) | `valve_position`, `temperature` | — |
+| A5-30-01 | Single input contact, battery monitor | `battery_low`, `contact_state` | — |
+| A5-30-01.ELTAKO.FSM60B | Water sensor, Eltako FSM60B with FWS60 (A5-30-01) | `battery_low`, `water_detected` | — |
+| A5-30-03 | 4 digital inputs, wake and temperature | `temperature` | — |
+| A5-30-03.ELTAKO.FSM60B | Water sensor, Eltako FSM60B with FWS60 (A5-30-03, factory setting) | `water_detected` | — |
 | A5-38-08 | Central command - gateway | `light`, `cover` (angle, cover_state, position), `dimming_range`, `min_brightness`, `max_brightness`, `ramp_time`, `store` | `central_switch`, `central_dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle` |
 | A5-38-08.ELTAKO | Central command - gateway (Eltako FUD/FSR) | `light`, `ramp_mode`, `min_brightness`, `max_brightness`, `ramp_time`, `learn_telegram`, `dimmer_state`, `dimmer_output` | `central_switch`, `central_dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle`, `central_dim_off` |
 | A5-7F-3F.ELTAKO.FSB | Eltako FSB roller-shutter / blind actuator (FSB14, FSB61, FSB71) | `cover`, `max_travel_time`, `learn_telegram` | `cover_stop`, `cover_open`, `cover_close` |
@@ -141,5 +147,7 @@ These entries cover any device implementing the given EEP.
 | D5-00-01 | Single Input Contact | `contact_state` | — |
 | F6-02-01 | Light and blind control - application style 1 | `a0`, `a1`, `b0`, `b1` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | F6-02-02 | Light and blind control - application style 2 | `a0`, `a1`, `b0`, `b1` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
+| F6-05-01 | Liquid leakage sensor (mechanic harvester) | `water_detected` | — |
+| F6-05-01.ELTAKO | Liquid leakage sensor, Eltako variant (FWS81) | `water_detected` | — |
 | F6-10-00 | Window handle | `window_state` | — |
 | F6-10-00.ELTAKO | Window handle (Eltako variant) | `window_state` | — |

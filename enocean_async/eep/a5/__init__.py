@@ -76,6 +76,12 @@ from .a5_10 import (
 )
 from .a5_12_00_03 import EEP_A5_12_00, EEP_A5_12_01, EEP_A5_12_02, EEP_A5_12_03
 from .a5_20_01 import EEP_A5_20_01
+from .a5_30 import (
+    EEP_A5_30_01,
+    EEP_A5_30_01_ELTAKO_FSM60B,
+    EEP_A5_30_03,
+    EEP_A5_30_03_ELTAKO_FSM60B,
+)
 from .a5_38_08 import EEP_A5_38_08, EEP_A5_38_08_ELTAKO
 
 __all__ = [
@@ -156,6 +162,10 @@ __all__ = [
     "EEP_A5_12_02",
     "EEP_A5_12_03",
     "EEP_A5_20_01",
+    "EEP_A5_30_01",
+    "EEP_A5_30_01_ELTAKO_FSM60B",
+    "EEP_A5_30_03",
+    "EEP_A5_30_03_ELTAKO_FSM60B",
     "EEP_A5_38_08",
     "EEP_A5_38_08_ELTAKO",
     "EEP_A5_7F_3F_ELTAKO_FSB",

@@ -70,7 +70,20 @@ class EEPDataField:
     observable (e.g. "not supported"). When ``None``, every raw value that is not in
     ``true_values`` means ``False``."""
 
+    in_status: bool = False
+    """If True, the field lies in the status byte of the telegram, not in its data. ``offset``
+    then counts from bit 7 of the status byte, as in the "Statusfield" table of the EEP
+    specification (e.g. T21 at offset 2 and NU at offset 3 of an RPS telegram).
+    Such a field is only decoded; EEPHandler.encode() does not write it. Its value is the raw
+    value or the text of ``range_enum``; a scale is not applied."""
+
     def __post_init__(self):
+        if self.in_status and not (
+            self.offset >= 0 and self.size >= 1 and self.offset + self.size <= 8
+        ):
+            raise ValueError(
+                f"EEPDataField '{self.id}': a field in the status byte must lie within its 8 bits."
+            )
         if self.range_enum:
             # If an enumeration is provided, range_min and range_max are derived from the enum keys
             enum_keys = self.range_enum.keys()
@@ -108,7 +121,9 @@ class EEPTelegram:
     @property
     def byte_size(self) -> int:
         """Minimum number of bytes required to hold all data fields (including the CMD field if present)."""
-        max_bit = max((f.offset + f.size for f in self.datafields), default=0)
+        max_bit = max(
+            (f.offset + f.size for f in self.datafields if not f.in_status), default=0
+        )
         return math.ceil(max_bit / 8)
 
 
