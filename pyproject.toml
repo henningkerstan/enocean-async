@@ -4,14 +4,18 @@ version = "0.18.2-dev0"
 authors = [
   { name="Henning Kerstan", email="mail@henningkerstan.de" },
 ]
-description = "An async implementation of the EnOcean Serial Protocol Version 3."
+description = "An async Python library for EnOcean devices over ESP3 and ESP2 USB gateways."
 readme = "README.md"
 requires-python = ">=3.14"
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
     "Intended Audience :: Developers",
-    "Development Status :: 4 - Beta"
+    "Development Status :: 4 - Beta",
+    "Framework :: AsyncIO",
+    "Topic :: Home Automation",
+    "Typing :: Typed"
 ]
 license = "Apache-2.0"
 license-files = ["LICENSE*"]
@@ -25,7 +29,7 @@ dev = [
   "pre-commit",
   "pytest",
   "pytest-asyncio",
-  "ruff==0.17.6",  # keep in sync with required-version in [tool.ruff]
+  "ruff==0.17.6",  # the version pre-commit and CI use; required-version in [tool.ruff] is the oldest one accepted
 ]
 
 [project.urls]
@@ -44,7 +48,7 @@ where = [ "." ]
 include = [ "enocean_async*" ]
 
 [tool.setuptools.package-data]
-"enocean_async" = [ "*.xml", "py.typed" ]
+"enocean_async" = [ "py.typed" ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
