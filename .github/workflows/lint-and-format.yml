@@ -1,5 +1,6 @@
-name: Lint and format code
-on: push
+name: Lint, format and test
+# pull_request as well: a push to a contributor's fork does not run the workflows of this repository
+on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,4 +17,8 @@ jobs:
       # Update output format to enable automatic inline annotations.
       - name: Run Ruff
         run: ruff check --output-format=github .
-        
+      # the files the ruff-format hook in .pre-commit-config.yaml formats
+      - name: Check formatting
+        run: ruff format --check enocean_async
+      - name: Run tests
+        run: pytest -q
