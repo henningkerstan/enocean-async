@@ -1,6 +1,10 @@
 name: Lint, format and test
-# pull_request as well: a push to a contributor's fork does not run the workflows of this repository
-on: [push, pull_request]
+# pull_request as well: a push to a contributor's fork does not run the workflows of this repository;
+# push on main only, so that a branch with a pull request is not checked twice
+on:
+  push:
+    branches: [main]
+  pull_request:
 jobs:
   build:
     runs-on: ubuntu-latest
