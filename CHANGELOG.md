@@ -1,8 +1,13 @@
 # Changelog
 
-## [0.18.1-dev0] — 2026-11-24
+## [0.18.1] — 2026-11-25
+
+### New features
+- **Water sensors: `A5-30-01`, `A5-30-03` and `F6-05-01`**, with variants for the Eltako FSM60B with the water probe FWS60 (`A5-30-03.ELTAKO.FSM60B`, its factory setting, and `A5-30-01.ELTAKO.FSM60B`) and the Eltako FWS81 (`F6-05-01.ELTAKO`). New observables `water_detected` and `battery_low`. For `A5-30-01.ELTAKO.FSM60B`, "contact closed" is taken as water; this is not yet confirmed on a device. An `EEPDataField` can now lie in the status byte of a telegram (`in_status=True`); such a field is only decoded (see `docs/IMPLEMENT_EEP.md`). Contributed by eltakoal (#11).
 
 ### Bug fixes
+- **A telegram that differed from the previous one only in its status byte was dropped as a repeated copy**: e.g. the FWS81 sends water and no water with the same data byte and tells them apart by the NU bit of the status byte. The repeat filter now also compares the status byte, without its repeater count. Contributed by eltakoal (#11).
+- **A 4BS teach-in with the base EEP of a registered variant replaced the variant**: e.g. an FSM60B registered as `A5-30-03.ELTAKO.FSM60B` became a plain `A5-30-03` when it was taught in again. A variant is never sent over the air, so such a teach-in now keeps the registered variant. Contributed by eltakoal (#11).
 - **Sender-addressed devices taught in by the gateway shared one sender** (#4): a device added with `add_device()` without a sender, such as an Eltako FSB61 shutter actuator, was given the default sender BaseID+0, and so was every other one. The learn telegram (`LearnTelegram`) then taught each of them BaseID+0, and a command to one of them moved all of them. Such a device now has no sender slot until the gateway teaches it in: the learn telegram assigns it the lowest free slot (BaseID+1…+127), as `docs/TEACHIN.md` describes for sender-addressed devices. Until then, commands to it are still sent from BaseID+0, so a device taught in by an earlier version keeps working. An integration must persist the assigned slot (read it from `gateway.sender_slots` after the learn telegram). A device that is taught in again still reacts to BaseID+0 until this sender is deleted from it (Eltako: rotary switch at `CLR`), see `docs/TEACHIN.md`.
 
 ## [0.18.0] — 2026-11-24
