@@ -63,7 +63,7 @@ def test_profile_declares_no_other_rorg_telegrams_by_default():
 # Eltako FSB (FSB14, FSB61, FSB71): a 4BS profile with RPS confirmations
 # ---------------------------------------------------------------------------
 
-FSB = EEP("A5-7F-3F.ELTAKO.FSB")
+FSB = EEP("A5-3F-7F.ELTAKO.FSB")
 
 
 def decode_fsb(rorg: RORG, data: str, config: dict | None = None) -> dict:

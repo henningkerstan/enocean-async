@@ -42,7 +42,7 @@ class DeviceType:
 
         - Generic entries use ``EEP`` as the namespace: ``"EEP/A5-02-01"``.
         - Manufacturer-specific EEP entries: ``"ELTAKO/A5-08-01"``.
-        - Manufacturer-specific EEP entries with variant: ``"ELTAKO/A5-7F-3F/FSB"``.
+        - Manufacturer-specific EEP entries with variant: ``"ELTAKO/A5-3F-7F/FSB"``.
         - Named product entries: ``"ELTAKO/FAH65S"``, ``"TRIO_2_SYS/WALL-SWITCH"``.
         """
         if self.manufacturer is not None:
@@ -69,7 +69,7 @@ _MANUFACTURER_TYPES: list[DeviceType] = [
     # Eltako
     _Eltako(
         "FSB61",
-        EEP("A5-7F-3F.ELTAKO.FSB"),
+        EEP("A5-3F-7F.ELTAKO.FSB"),
         "Eltako FSB roller-shutter / blind actuator (FSB14, FSB61, FSB71)",
     ),
     _Eltako(
