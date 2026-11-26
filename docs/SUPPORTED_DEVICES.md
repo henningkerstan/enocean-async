@@ -9,6 +9,7 @@ These entries represent known physical products.
 |---|---|---|---|---|---|
 | Eltako | FABH65S | A5-08-01.ELTAKO | Wireless outdoor occupancy and brightness sensor | `supply_voltage`, `illumination`, `motion` | — |
 | Eltako | FAH65S | A5-06-01.ELTAKO | Wireless outdoor brightness sensor | `illumination` | — |
+| Eltako | FFG7B | A5-14-09 | Wireless window handle sensor (delivery state; not switched to F6-10-00) | `supply_voltage`, `window_state` | — |
 | Eltako | FLD61 | A5-38-08.ELTAKO | PWM LED dimmer 12–36 V DC, up to 4 A | `light`, `ramp_mode`, `min_brightness`, `max_brightness`, `ramp_time`, `learn_telegram`, `dimmer_state`, `dimmer_output` | `central_switch`, `central_dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle`, `central_dim_off` |
 | Eltako | FSB61 | A5-7F-3F.ELTAKO.FSB | Eltako FSB roller-shutter / blind actuator (FSB14, FSB61, FSB71) | `cover`, `max_travel_time`, `learn_telegram` | `cover_stop`, `cover_open`, `cover_close` |
 | Eltako | FSM60B | A5-30-03.ELTAKO.FSM60B | Wireless transmitter module for the water probe FWS60 (factory setting) | `water_detected` | — |
@@ -109,6 +110,7 @@ These entries cover any device implementing the given EEP.
 | A5-12-01 | Automated meter reading (AMR), electricity | `energy`, `power` | — |
 | A5-12-02 | Automated meter reading (AMR), gas | `gas_volume`, `gas_flow` | — |
 | A5-12-03 | Automated meter reading (AMR), water | `water_volume`, `water_flow` | — |
+| A5-14-09 | Window/door sensor with states open/closed/tilt, supply voltage monitor | `supply_voltage`, `window_state` | — |
 | A5-20-01 | HVAC component – battery powered actuator (BI-DIR) | `valve_position`, `temperature` | — |
 | A5-30-01 | Single input contact, battery monitor | `battery_low`, `contact_state` | — |
 | A5-30-01.ELTAKO.FSM60B | Water sensor, Eltako FSM60B with FWS60 (A5-30-01) | `battery_low`, `water_detected` | — |
