@@ -2,6 +2,13 @@
 
 ## [0.18.2-dev0] — 2026-11-25
 
+### New features
+- **Device catalog: Eltako F2T55E, F4T55E and FMH8** (`F6-02-01`), next to the FT55: the pushbuttons with one and two rockers (also the F2T55EOR and F4T55EOR without frame) and the mini hand-held transmitter with 8 buttons. The FMH8 contains two radio modules, each with its own sender ID (buttons 1–4 and 5–8): an application has to add both IDs as two devices. The catalog description says so, since nothing else would tell a user. No profile change; tested with the devices. Contributed by eltakoal (#16).
+
+### Bug fixes
+- **Eltako FAH65S brightness below 100 lx was reported too low** (`A5-06-01.ELTAKO`): the low range (data byte 3) holds 0 to 100 lx as the raw values 0 to 100, but was scaled as 0 to 255, so e.g. 50 lx was reported as 19.6 lx. It is now read as 0 to 100 lx; the high range is unchanged. Contributed by eltakoal (#14).
+- **A cover reported `stopped` about 1.5 s after it had reported `open` or `closed`** (`D2-05-xx`): the watchdog that reports `stopped` when no position telegram arrives during a movement was cancelled only at `stopped`, so a fully open or closed cover ended up as stopped. It is now cancelled at an end position as well. Contributed by eltakoal (#15).
+
 ## [0.18.1] — 2026-11-25
 
 ### New features
