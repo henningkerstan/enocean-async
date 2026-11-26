@@ -2,6 +2,18 @@
 
 ## [0.18.2-dev0] — 2026-11-25
 
+### New features
+- **Eltako FSB confirmations are read** (`A5-7F-3F.ELTAKO.FSB`, FSB14, FSB61, FSB71): the actuator confirms with RPS telegrams when a movement starts and when it reaches an end position. They are now reported as cover state `opening`, `closing`, `open` and `closed`; before, they were not decoded, and after a full movement no cover state arrived at all. The FSB61NP sends confirmation telegrams only once they are switched on (switched off as delivered; see its manual, "Bestätigungs-Telegramme einschalten"). Contributed by eltakoal (#18).
+- **`EEPSpecification.other_rorg_telegrams`**: a profile can declare telegrams its device sends with another RORG than the one of its EEP, with their own data fields; they are decoded and passed to the semantic resolvers. A profile that declares none behaves as before. Contributed by eltakoal (#18).
+- **New profiles `A5-14-09`, `A5-09-04` and `A5-07-01`**: a window/door sensor with the states open, closed and tilted and its supply voltage (`window_state`, `supply_voltage`), a CO2 sensor with humidity and temperature (`co2`, `humidity`, `temperature`; new observable `co2` in ppm), and occupancy with a supply voltage monitor (`motion`, `supply_voltage`). Device catalog: Eltako FFG7B (in its delivery state), FCO2TS and FB65B. Contributed by eltakoal (#17).
+- **Device catalog: Eltako F2T55E, F4T55E and FMH8** (`F6-02-01`), next to the FT55: the pushbuttons with one and two rockers (also the F2T55EOR and F4T55EOR without frame) and the mini hand-held transmitter with 8 buttons. The FMH8 contains two radio modules, each with its own sender ID (buttons 1–4 and 5–8): an application has to add both IDs as two devices. The catalog description says so, since nothing else would tell a user. No profile change; tested with the devices. Contributed by eltakoal (#16).
+
+### Bug fixes
+- **A stopped Eltako FSB cover was reported as `open` or `closed`** (`A5-7F-3F.ELTAKO.FSB`): the FSB sends its 4BS status telegram (travel time and direction) only when a movement is stopped before its run time is up, but the direction was taken as an end position. Such a cover is now reported as `stopped`. A consumer that handled `stopped` only for other covers now also gets it from an FSB. Contributed by eltakoal (#18).
+- **A reserved supply voltage value was reported as a voltage above 5 V** (`A5-07-03`, `A5-10-1A`, `A5-10-1B`, `A5-10-1E`): these profiles give the supply voltage a valid range of 0 to 250 (0 to 5.0 V) and reserve 251 to 255 for error codes, which were reported as up to 5.1 V. They now give no voltage, as in the new profiles `A5-07-01` and `A5-14-09`.
+- **Eltako FAH65S brightness below 100 lx was reported too low** (`A5-06-01.ELTAKO`): the low range (data byte 3) holds 0 to 100 lx as the raw values 0 to 100, but was scaled as 0 to 255, so e.g. 50 lx was reported as 19.6 lx. It is now read as 0 to 100 lx; the high range is unchanged. Contributed by eltakoal (#14).
+- **A cover reported `stopped` about 1.5 s after it had reported `open` or `closed`** (`D2-05-xx`): the watchdog that reports `stopped` when no position telegram arrives during a movement was cancelled only at `stopped`, so a fully open or closed cover ended up as stopped. It is now cancelled at an end position as well. Contributed by eltakoal (#15).
+
 ## [0.18.1] — 2026-11-25
 
 ### New features

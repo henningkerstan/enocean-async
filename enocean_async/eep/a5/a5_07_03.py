@@ -4,6 +4,7 @@ from ...semantics.observable import Observable
 from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
 from ..profile import EEPDataField, Entity, SimpleProfileSpecification
+from ._supply_voltage import SUPPLY_VOLTAGE_MAX, supply_voltage_resolver
 
 EEP_A5_07_03 = SimpleProfileSpecification(
     eep=EEP("A5-07-03"),
@@ -15,11 +16,10 @@ EEP_A5_07_03 = SimpleProfileSpecification(
             offset=0,
             size=8,
             range_min=0,
-            range_max=250,
+            range_max=SUPPLY_VOLTAGE_MAX,
             scale_min_fn=lambda _: 0.0,
             scale_max_fn=lambda _: 5.0,
             unit_fn=lambda _: "V",
-            observable=Observable.VOLTAGE,
         ),
         EEPDataField(
             id="ILL",
@@ -46,6 +46,7 @@ EEP_A5_07_03 = SimpleProfileSpecification(
             true_values=frozenset({1}),
         ),
     ],
+    semantic_resolvers={Observable.VOLTAGE: supply_voltage_resolver("SVC")},
     observers=[
         scalar_factory(Observable.VOLTAGE, entity_id="supply_voltage"),
         scalar_factory(Observable.ILLUMINATION),

@@ -84,7 +84,33 @@ _MANUFACTURER_TYPES: list[DeviceType] = [
     ),
     _Eltako("FUD61NPN", EEP("A5-38-08.ELTAKO"), "Wireless universal dimmer 230V"),
     _Eltako("FLD61", EEP("A5-38-08.ELTAKO"), "PWM LED dimmer 12–36 V DC, up to 4 A"),
+    _Eltako("FB65B", EEP("A5-07-01"), "Wireless motion sensor"),
+    _Eltako(
+        "FCO2TS",
+        EEP("A5-09-04"),
+        "Wireless CO2 table sensor with temperature and humidity",
+    ),
+    _Eltako(
+        "FFG7B",
+        EEP("A5-14-09"),
+        "Wireless window handle sensor (delivery state; not switched to F6-10-00)",
+    ),
     _Eltako("FT55", EEP("F6-02-01"), "Battery-less wireless wall switch"),
+    _Eltako(
+        "F2T55E",
+        EEP("F6-02-01"),
+        "Battery-less wireless pushbutton with one rocker (also F2T55EOR, without frame)",
+    ),
+    _Eltako(
+        "F4T55E",
+        EEP("F6-02-01"),
+        "Battery-less wireless pushbutton with two rockers (also F4T55EOR, without frame)",
+    ),
+    _Eltako(
+        "FMH8",
+        EEP("F6-02-01"),
+        "Battery-less mini hand-held transmitter with 8 buttons; two radio modules with a sender ID each (buttons 1–4 and 5–8), to be added as two devices",
+    ),
     _Eltako(
         "FSM60B",
         EEP("A5-30-03.ELTAKO.FSM60B"),
