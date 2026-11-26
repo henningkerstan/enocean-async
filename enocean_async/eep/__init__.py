@@ -47,7 +47,6 @@ from .a5 import (
     EEP_A5_08_03,
     EEP_A5_09_04,
     EEP_A5_3F_7F_ELTAKO_FSB,
-    EEP_A5_7F_3F_ELTAKO_FSB,  # former name of EEP_A5_3F_7F_ELTAKO_FSB  # noqa: F401
     EEP_A5_10_0A,
     EEP_A5_10_0B,
     EEP_A5_10_0C,
@@ -265,45 +264,13 @@ EEP_SPECIFICATIONS: dict[EEP, EEPSpecification] = {
 This allows for efficient lookup of the corresponding EEPSpecification for a given EEP when processing incoming telegrams. 
 """
 
-FORMER_DEVICE_TYPE_IDS: dict[str, str] = {
-    # the Eltako FSB profile was named with FUNC and TYPE swapped
-    "ELTAKO/A5-7F-3F/FSB": "ELTAKO/A5-3F-7F/FSB",
+DEVICE_TYPES: dict[str, DeviceType] = {
+    dt.id: dt
+    for dt in (
+        [DeviceType(None, spec.name, spec.eep) for spec in EEP_SPECIFICATIONS.values()]
+        + _MANUFACTURER_TYPES
+    )
 }
-"""IDs a device type had before, mapped to the ID it has now."""
-
-
-class _DeviceTypes(dict[str, DeviceType]):
-    """The device catalog. An ID a device type had before still leads to it.
-
-    The former IDs are found by ``[]``, ``get`` and ``in``, so that an ID an integration has
-    stored keeps working; they are not listed among the keys or values.
-    """
-
-    def __missing__(self, key: str) -> DeviceType:
-        return self[FORMER_DEVICE_TYPE_IDS[key]]
-
-    def __contains__(self, key: object) -> bool:
-        return super().__contains__(key) or (
-            isinstance(key, str)
-            and super().__contains__(FORMER_DEVICE_TYPE_IDS.get(key, ""))
-        )
-
-    def get(self, key: str, default=None):  # type: ignore[override]
-        return self[key] if key in self else default
-
-
-DEVICE_TYPES: dict[str, DeviceType] = _DeviceTypes(
-    {
-        dt.id: dt
-        for dt in (
-            [
-                DeviceType(None, spec.name, spec.eep)
-                for spec in EEP_SPECIFICATIONS.values()
-            ]
-            + _MANUFACTURER_TYPES
-        )
-    }
-)
 """Full catalog of supported devices keyed by :attr:`DeviceType.id` for O(1) lookup by stable string ID."""
 
 
@@ -324,7 +291,6 @@ def device_type_for_eep(eep: EEP) -> DeviceType:
 
 __all__ = [
     "DEVICE_TYPES",
-    "FORMER_DEVICE_TYPE_IDS",
     "DeviceType",
     "EEP_SPECIFICATIONS",
     "EEP",

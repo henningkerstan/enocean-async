@@ -6,8 +6,8 @@ different payloads; the variant ``FSB`` is the roller-shutter family (FSB14, FSB
 The learn telegram ``FF F8 0D 80`` carries exactly this profile: FUNC=0x3F, TYPE=0x7F,
 manufacturer Eltako.
 
-This profile was named ``A5-7F-3F.ELTAKO.FSB`` before, with FUNC and TYPE swapped. The old
-name is still accepted: ``EEP("A5-7F-3F.ELTAKO.FSB")`` gives this profile.
+Up to 0.18.1 this profile was named ``A5-7F-3F.ELTAKO.FSB``, with FUNC and TYPE swapped;
+that name is no longer accepted.
 
 Reference: Eltako "Inhalte der Eltako-Funktelegramme" (FSB61NP-230V, p. T-15/T-17).
 ORG=0x07 in Eltako ESP2 notation → RORG=0xA5 (4BS) in ESP3.

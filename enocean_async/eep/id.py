@@ -20,8 +20,6 @@ class EEP:
     family and the FRGBW colour dimmer).  Like ``manufacturer``, ``variant`` is a
     registration-time discriminator — it is never carried on the wire.
 
-    A profile that was registered under another identifier before is still found by it:
-    ``EEP("A5-7F-3F.ELTAKO.FSB")`` is ``EEP("A5-3F-7F.ELTAKO.FSB")`` (see ``_FORMER``).
     """
 
     def __init__(
@@ -86,12 +84,6 @@ class EEP:
                 "EEP requires a dash-separated string ('A5-08-01') or a 3-element int list ([0xA5, 0x08, 0x01])."
             )
 
-        current = _FORMER.get(
-            (self.rorg, self.func, self.type, self.manufacturer, self.variant)
-        )
-        if current is not None:
-            self.func, self.type = current
-
     def __str__(self) -> str:
         """Dash-separated hex string, e.g. ``'A5-08-01'``, ``'A5-08-01.ELTAKO'``, or ``'A5-3F-7F.ELTAKO.FSB'``."""
         base = f"{self.rorg:02X}-{self.func:02X}-{self.type:02X}"
@@ -117,12 +109,3 @@ class EEP:
             and self.manufacturer == other.manufacturer
             and self.variant == other.variant
         )
-
-
-_FORMER: dict[
-    tuple[int, int, int, Manufacturer | None, str | None], tuple[int, int]
-] = {
-    # the Eltako FSB profile was named with FUNC and TYPE swapped
-    (0xA5, 0x7F, 0x3F, Manufacturer.ELTAKO, "FSB"): (0x3F, 0x7F),
-}
-"""Identifiers a profile was registered under before, mapped to its (FUNC, TYPE) now."""
