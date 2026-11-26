@@ -11,6 +11,9 @@ These entries represent known physical products.
 | Eltako | F4T55E | F6-02-01 | Battery-less wireless pushbutton with two rockers (also F4T55EOR, without frame) | `a0`, `a1`, `b0`, `b1` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | Eltako | FABH65S | A5-08-01.ELTAKO | Wireless outdoor occupancy and brightness sensor | `supply_voltage`, `illumination`, `motion` | — |
 | Eltako | FAH65S | A5-06-01.ELTAKO | Wireless outdoor brightness sensor | `illumination` | — |
+| Eltako | FB65B | A5-07-01 | Wireless motion sensor | `supply_voltage`, `motion` | — |
+| Eltako | FCO2TS | A5-09-04 | Wireless CO2 table sensor with temperature and humidity | `co2`, `humidity`, `temperature` | — |
+| Eltako | FFG7B | A5-14-09 | Wireless window handle sensor (delivery state; not switched to F6-10-00) | `supply_voltage`, `window_state` | — |
 | Eltako | FLD61 | A5-38-08.ELTAKO | PWM LED dimmer 12–36 V DC, up to 4 A | `light`, `ramp_mode`, `min_brightness`, `max_brightness`, `ramp_time`, `learn_telegram`, `dimmer_state`, `dimmer_output` | `central_switch`, `central_dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle`, `central_dim_off` |
 | Eltako | FMH8 | F6-02-01 | Battery-less mini hand-held transmitter with 8 buttons; two radio modules with a sender ID each (buttons 1–4 and 5–8), to be added as two devices | `a0`, `a1`, `b0`, `b1` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | Eltako | FSB61 | A5-7F-3F.ELTAKO.FSB | Eltako FSB roller-shutter / blind actuator (FSB14, FSB61, FSB71) | `cover`, `max_travel_time`, `learn_telegram` | `cover_stop`, `cover_open`, `cover_close` |
@@ -70,11 +73,13 @@ These entries cover any device implementing the given EEP.
 | A5-06-03 | Light sensor, 10-bit measurement, range 0lx to 1000lx | `illumination` | — |
 | A5-06-04 | Curtain wall brightness sensor | `illumination`, `temperature` | — |
 | A5-06-05 | Light sensor, range 0.0lx to 10200.0lx | `illumination` | — |
+| A5-07-01 | Occupancy with supply voltage monitor | `supply_voltage`, `motion` | — |
 | A5-07-03 | Occupancy with supply voltage monitor and 10-bit illumination measurement | `supply_voltage`, `illumination`, `motion` | — |
 | A5-08-01 | Light, temperature and occupancy sensor, range 0lx to 510lx, 0.0°C to 51.0°C and occupancy button | `supply_voltage`, `illumination`, `temperature`, `motion`, `occupancy_button` | — |
 | A5-08-01.ELTAKO | Light and occupancy sensor, range 0lx to 510lx, Eltako variant (FABH65S, FBH65, FBH65TF, FBH65SB, FBH55SB, FBHF65SB, F4USM61B) | `supply_voltage`, `illumination`, `motion` | — |
 | A5-08-02 | Light, temperature and occupancy sensor, range 0lx to 1020lx, 0.0°C to 51.0°C and occupancy button | `supply_voltage`, `illumination`, `temperature`, `motion`, `occupancy_button` | — |
 | A5-08-03 | Light, temperature and occupancy sensor, range 0lx to 1530lx, -30.0°C to 50.0°C and occupancy button | `supply_voltage`, `illumination`, `temperature`, `motion`, `occupancy_button` | — |
+| A5-09-04 | CO2 sensor with humidity and temperature | `co2`, `humidity`, `temperature` | — |
 | A5-10-01 | Room operating panel – temperature sensor, set point, fan speed and occupancy control | `fan_speed`, `set_point`, `temperature`, `occupancy_button` | — |
 | A5-10-02 | Room operating panel – temperature sensor, set point, fan speed and day/night control | `fan_speed`, `set_point`, `temperature`, `day_night` | — |
 | A5-10-03 | Room operating panel – temperature sensor and set point control | `set_point`, `temperature` | — |
@@ -112,6 +117,7 @@ These entries cover any device implementing the given EEP.
 | A5-12-01 | Automated meter reading (AMR), electricity | `energy`, `power` | — |
 | A5-12-02 | Automated meter reading (AMR), gas | `gas_volume`, `gas_flow` | — |
 | A5-12-03 | Automated meter reading (AMR), water | `water_volume`, `water_flow` | — |
+| A5-14-09 | Window/door sensor with states open/closed/tilt, supply voltage monitor | `supply_voltage`, `window_state` | — |
 | A5-20-01 | HVAC component – battery powered actuator (BI-DIR) | `valve_position`, `temperature` | — |
 | A5-30-01 | Single input contact, battery monitor | `battery_low`, `contact_state` | — |
 | A5-30-01.ELTAKO.FSM60B | Water sensor, Eltako FSM60B with FWS60 (A5-30-01) | `battery_low`, `water_detected` | — |

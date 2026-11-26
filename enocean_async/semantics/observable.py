@@ -49,6 +49,7 @@ class Observable(str, Enum):
     # Sensor values
     TEMPERATURE = ("temperature", "°C", _S)
     HUMIDITY = ("humidity", "%", _S)
+    CO2 = ("co2", "ppm", _S)
     ILLUMINATION = ("illumination", "lx", _S)
     MOTION = ("motion", None, _B)
     VOLTAGE = ("voltage", "V", _S)
