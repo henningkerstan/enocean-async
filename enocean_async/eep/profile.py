@@ -182,6 +182,15 @@ class EEPSpecification:
     The gateway's send_command() detects LEARN_TELEGRAM and sends this payload directly as a 4BS ERP1
     telegram, bypassing EEPHandler.encode()."""
 
+    other_rorg_telegrams: dict[int, EEPTelegram] = field(default_factory=dict)
+    """Telegrams the device also sends with another RORG than the one of its EEP, keyed by that RORG.
+
+    Some devices confirm what they do with a telegram of another radio type than the one their
+    profile is named after: e.g. the Eltako FSB61 (a 4BS profile) reports the start of a movement
+    and an end position with an RPS telegram. The fields of such a telegram are decoded like any
+    other and passed to the semantic resolvers; a telegram with a RORG that is neither the EEP's
+    own nor listed here is decoded as before."""
+
 
 @dataclass
 class SimpleProfileSpecification(EEPSpecification):
@@ -198,6 +207,7 @@ class SimpleProfileSpecification(EEPSpecification):
         entities: list[Entity] | None = None,
         uses_addressed_sending: bool = True,
         learn_telegram_payload: bytes | None = None,
+        other_rorg_telegrams: dict[int, EEPTelegram] | None = None,
     ):
         """Initialize a single-telegram EEP.
 
@@ -211,6 +221,7 @@ class SimpleProfileSpecification(EEPSpecification):
             entities: Optional list of Entity declarations for this EEP.
             uses_addressed_sending: See EEPSpecification.uses_addressed_sending.
             learn_telegram_payload: See EEPSpecification.learn_telegram_payload.
+            other_rorg_telegrams: See EEPSpecification.other_rorg_telegrams.
         """
 
         super().__init__(
@@ -225,4 +236,5 @@ class SimpleProfileSpecification(EEPSpecification):
             entities=entities or [],
             uses_addressed_sending=uses_addressed_sending,
             learn_telegram_payload=learn_telegram_payload,
+            other_rorg_telegrams=other_rorg_telegrams or {},
         )

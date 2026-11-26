@@ -689,3 +689,34 @@ async def test_own_telegram_echoed_by_a_repeater_is_dropped(
     await let_callbacks_run()
 
     assert received == []
+
+
+async def test_telegram_with_another_rorg_of_a_registered_device_is_decoded(
+    gateway: Gateway, module: FakeESP2Module
+):
+    # the Eltako FSB has a 4BS profile and confirms an end position with an RPS telegram
+    actuator = EURID("01:23:45:67")
+    observations: list[Observation] = []
+    gateway.add_device(
+        address=actuator, device_type=device_type_for_eep(EEP("A5-7F-3F.ELTAKO.FSB"))
+    )
+    gateway.add_observation_callback(observations.append)
+
+    module.receive(
+        ESP2Packet(
+            ESP2HeaderSequence.RRT,
+            ESP2ORG.ORG_RPS,
+            bytes([0x70, 0x00, 0x00, 0x00]),
+            bytes(actuator.bytelist),
+            0x30,
+        ).to_bytes()
+    )
+    await let_callbacks_run()
+
+    cover_states = [
+        observation.values[Observable.COVER_STATE]
+        for observation in observations
+        if observation.device == actuator
+        and Observable.COVER_STATE in observation.values
+    ]
+    assert cover_states == ["open"]
