@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.19.0-dev0] — 2026-11-26
+## [0.19.0] — 2026-11-26
 
 ### Breaking changes
 - **The Eltako FSB profile is named `A5-3F-7F.ELTAKO.FSB`** (was `A5-7F-3F.ELTAKO.FSB`, with FUNC and TYPE swapped): the FSB's learn telegram `FF F8 0D 80` carries FUNC 0x3F and TYPE 0x7F ("universal"), as Eltako's telegram document names it too. The former name is not kept: `EEP("A5-7F-3F.ELTAKO.FSB")` is no longer the FSB profile, and the device type ID `ELTAKO/A5-7F-3F/FSB` and the import name `EEP_A5_7F_3F_ELTAKO_FSB` are gone. An integration that stored one of them must change it to `A5-3F-7F.ELTAKO.FSB`, `ELTAKO/A5-3F-7F/FSB` or `EEP_A5_3F_7F_ELTAKO_FSB`; the device type `ELTAKO/FSB61` is unchanged. Contributed by eltakoal (#19).
