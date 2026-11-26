@@ -21,21 +21,9 @@ from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
 from ..message import ValueWithContext
 from ..profile import EEPDataField, Entity, SimpleProfileSpecification
+from ._supply_voltage import SUPPLY_VOLTAGE_MAX, supply_voltage_resolver
 
-_SVC_MAX = 250
 _WINDOW_STATES = {0: "closed", 1: "tilted", 3: "open"}
-
-
-def _resolve_supply_voltage(
-    raw: dict, scaled: dict, _config: dict
-) -> ValueWithContext | None:
-    """Give the supply voltage only within its valid range 0–250.
-
-    A5-14-09 defines no meaning for 251–255; A5-14-01…06 reserve them for error codes.
-    """
-    if raw.get("SVC", _SVC_MAX + 1) > _SVC_MAX:
-        return None
-    return scaled.get("SVC")
 
 
 def _resolve_window_state(
@@ -59,7 +47,7 @@ EEP_A5_14_09 = SimpleProfileSpecification(
             name="Supply voltage",
             offset=0,
             size=8,
-            range_max=_SVC_MAX,
+            range_max=SUPPLY_VOLTAGE_MAX,
             scale_min_fn=lambda _: 0.0,
             scale_max_fn=lambda _: 5.0,
             unit_fn=lambda _: "V",
@@ -80,7 +68,7 @@ EEP_A5_14_09 = SimpleProfileSpecification(
         ),
     ],
     semantic_resolvers={
-        Observable.VOLTAGE: _resolve_supply_voltage,
+        Observable.VOLTAGE: supply_voltage_resolver("SVC"),
         Observable.WINDOW_STATE: _resolve_window_state,
     },
     observers=[

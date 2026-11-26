@@ -3,7 +3,8 @@
 from ...semantics.observable import Observable
 from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
-from ..profile import EEPDataField, Entity, SimpleProfileSpecification
+from ..profile import EEPDataField, Entity, SemanticResolver, SimpleProfileSpecification
+from ._supply_voltage import SUPPLY_VOLTAGE_MAX, supply_voltage_resolver
 
 # ---------------------------------------------------------------------------
 # Shared enumerations
@@ -294,19 +295,22 @@ def _illsp() -> EEPDataField:
 
 
 def _sv() -> EEPDataField:
-    """Supply voltage in DB3 (offset 0) for types 1A, 1B."""
+    """Supply voltage in DB3 (offset 0) for types 1A, 1B, 1E; reported through _SV_RESOLVER."""
     return EEPDataField(
         id="SV",
         name="Supply voltage",
         offset=0,
         size=8,
         range_min=0,
-        range_max=250,
+        range_max=SUPPLY_VOLTAGE_MAX,
         scale_min_fn=lambda _: 0.0,
         scale_max_fn=lambda _: 5.0,
         unit_fn=lambda _: "V",
-        observable=Observable.VOLTAGE,
     )
+
+
+# 251–255 are reserved for error codes and give no voltage
+_SV_RESOLVER = {Observable.VOLTAGE: supply_voltage_resolver("SV")}
 
 
 def _lrnb() -> EEPDataField:
@@ -530,11 +534,13 @@ def _spec(
     datafields: list[EEPDataField],
     observers: list,
     entities: list[Entity] | None = None,
+    semantic_resolvers: dict[Observable, SemanticResolver] | None = None,
 ) -> SimpleProfileSpecification:
     return SimpleProfileSpecification(
         eep=EEP(f"A5-10-{type_id:02X}"),
         name=name,
         datafields=datafields,
+        semantic_resolvers=semantic_resolvers,
         observers=observers,
         entities=entities or [],
     )
@@ -746,6 +752,7 @@ EEP_A5_10_1A = _spec(
     [_sv(), _tmpsp_inv250(), _tmp_inv250(), _fan3(25), _lrnb(), _oed(30), _ob(31)],
     [_CAP_VOLT, _CAP_TMPSP, _CAP_TMP, _CAP_FAN, _CAP_OCC],
     [_E_VOLT, _E_TMPSP, _E_TMP, _E_FAN, _E_OCC],
+    _SV_RESOLVER,
 )
 
 EEP_A5_10_1B = _spec(
@@ -754,6 +761,7 @@ EEP_A5_10_1B = _spec(
     [_sv(), _ill(), _tmp_inv250(), _fan3(25), _lrnb(), _oed(30), _ob(31)],
     [_CAP_VOLT, _CAP_ILL, _CAP_TMP, _CAP_FAN, _CAP_OCC],
     [_E_VOLT, _E_ILL, _E_TMP, _E_FAN, _E_OCC],
+    _SV_RESOLVER,
 )
 
 EEP_A5_10_1C = _spec(
@@ -778,6 +786,7 @@ EEP_A5_10_1E = _spec(
     [_sv(), _ill(), _tmp_inv250(), _fan3(25), _lrnb(), _oed(30), _ob(31)],
     [_CAP_VOLT, _CAP_ILL, _CAP_TMP, _CAP_FAN, _CAP_OCC],
     [_E_VOLT, _E_ILL, _E_TMP, _E_FAN, _E_OCC],
+    _SV_RESOLVER,
 )
 
 # ---------------------------------------------------------------------------

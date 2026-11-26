@@ -22,18 +22,19 @@ from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
 from ..message import ValueWithContext
 from ..profile import EEPDataField, Entity, SimpleProfileSpecification
+from ._supply_voltage import SUPPLY_VOLTAGE_MAX, supply_voltage_resolver
 
-_SVC_MAX = 250
 _PIR_ON = frozenset(range(128, 256))
+_supply_voltage_in_range = supply_voltage_resolver("SVC")
 
 
 def _resolve_supply_voltage(
     raw: dict, scaled: dict, _config: dict
 ) -> ValueWithContext | None:
     """Give the supply voltage only if the device supports it and reports no error code."""
-    if raw.get("SVA") != 1 or raw.get("SVC", _SVC_MAX + 1) > _SVC_MAX:
+    if raw.get("SVA") != 1:
         return None
-    return scaled.get("SVC")
+    return _supply_voltage_in_range(raw, scaled, _config)
 
 
 EEP_A5_07_01 = SimpleProfileSpecification(
@@ -45,7 +46,7 @@ EEP_A5_07_01 = SimpleProfileSpecification(
             name="Supply voltage",
             offset=0,
             size=8,
-            range_max=_SVC_MAX,
+            range_max=SUPPLY_VOLTAGE_MAX,
             scale_min_fn=lambda _: 0.0,
             scale_max_fn=lambda _: 5.0,
             unit_fn=lambda _: "V",
