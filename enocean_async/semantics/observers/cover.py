@@ -82,11 +82,11 @@ class CoverObserver(Observer):
                 # Restart watchdog timer if cover is moving
                 if cover_state in ("opening", "closing"):
                     self._restart_watchdog()
-
-                if cover_state == "stopped":
-                    if self._watchdog_handle is not None:
-                        self._watchdog_handle.cancel()
-                        self._watchdog_handle = None
+                elif self._watchdog_handle is not None:
+                    # stopped, or at an end position (open, closed): the movement is over,
+                    # and the watchdog must not report "stopped" after it
+                    self._watchdog_handle.cancel()
+                    self._watchdog_handle = None
             self._previous_position = pos_value
 
         if ang_value is not None:

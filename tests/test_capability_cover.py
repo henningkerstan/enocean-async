@@ -255,3 +255,33 @@ class TestCoverCapabilityFiltering:
         msg = _make_msg(device_address, position=50, message_type_id=1)
         cap.decode(msg)
         assert len(received) == 0
+
+
+class TestCoverCapabilityWatchdogAtAnEndPosition:
+    """A cover that has reached an end position must not be reported as stopped after it."""
+
+    async def test_no_stopped_after_closed(self, device_address):
+        received = []
+        cap = _make_cap(device_address, received)
+        for position in (50, 80, 100):
+            cap.decode(_make_msg(device_address, position=position))
+        await asyncio.sleep(COVER_WATCHDOG_TIMEOUT + 0.1)
+        assert _values_for(received, Observable.COVER_STATE) == ["closing", "closed"]
+
+    async def test_no_stopped_after_open(self, device_address):
+        received = []
+        cap = _make_cap(device_address, received)
+        for position in (50, 20, 0):
+            cap.decode(_make_msg(device_address, position=position))
+        await asyncio.sleep(COVER_WATCHDOG_TIMEOUT + 0.1)
+        assert _values_for(received, Observable.COVER_STATE) == ["opening", "open"]
+
+    async def test_stopped_still_reported_when_the_cover_stops_on_the_way(
+        self, device_address
+    ):
+        received = []
+        cap = _make_cap(device_address, received)
+        for position in (50, 80):
+            cap.decode(_make_msg(device_address, position=position))
+        await asyncio.sleep(COVER_WATCHDOG_TIMEOUT + 0.1)
+        assert _values_for(received, Observable.COVER_STATE) == ["closing", "stopped"]
