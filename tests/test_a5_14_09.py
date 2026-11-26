@@ -41,6 +41,14 @@ def test_reserved_contact_value_gives_no_window_state():
     assert values[Observable.VOLTAGE] == pytest.approx(3.0)
 
 
+@pytest.mark.parametrize("svc", ["FB", "FF"])
+def test_supply_voltage_outside_the_valid_range_gives_no_voltage(svc: str):
+    values = decode(f"{svc}000008")
+
+    assert Observable.VOLTAGE not in values
+    assert values[Observable.WINDOW_STATE] == "closed"
+
+
 def test_teach_in_telegram_gives_no_window_state():
     # the learn telegram of the Eltako FFG7B
     values = decode("50480D80")
