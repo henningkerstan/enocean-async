@@ -210,6 +210,9 @@ EEP_A5_06_01_ELTAKO = SimpleProfileSpecification(
             name="Illumination",
             offset=0,
             size=8,
+            # Eltako "Inhalte der Eltako-Funktelegramme" (FAH65S, p. T-11):
+            # DB3 holds 0–100 lx as the raw values 0–100, not 0–255
+            range_max=100,
             scale_min_fn=lambda _: 0.0,
             scale_max_fn=lambda _: 100.0,
             unit_fn=lambda _: "lx",
