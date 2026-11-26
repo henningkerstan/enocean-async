@@ -7,9 +7,12 @@ These entries represent known physical products.
 
 | Manufacturer | Model | EEP | Description | Entities | Instructions |
 |---|---|---|---|---|---|
+| Eltako | F2T55E | F6-02-01 | Battery-less wireless pushbutton with one rocker (also F2T55EOR, without frame) | `a0`, `a1`, `b0`, `b1` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
+| Eltako | F4T55E | F6-02-01 | Battery-less wireless pushbutton with two rockers (also F4T55EOR, without frame) | `a0`, `a1`, `b0`, `b1` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | Eltako | FABH65S | A5-08-01.ELTAKO | Wireless outdoor occupancy and brightness sensor | `supply_voltage`, `illumination`, `motion` | — |
 | Eltako | FAH65S | A5-06-01.ELTAKO | Wireless outdoor brightness sensor | `illumination` | — |
 | Eltako | FLD61 | A5-38-08.ELTAKO | PWM LED dimmer 12–36 V DC, up to 4 A | `light`, `ramp_mode`, `min_brightness`, `max_brightness`, `ramp_time`, `learn_telegram`, `dimmer_state`, `dimmer_output` | `central_switch`, `central_dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle`, `central_dim_off` |
+| Eltako | FMH8 | F6-02-01 | Battery-less mini hand-held transmitter with 8 buttons; two radio modules with a sender ID each (buttons 1–4 and 5–8), to be added as two devices | `a0`, `a1`, `b0`, `b1` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
 | Eltako | FSB61 | A5-7F-3F.ELTAKO.FSB | Eltako FSB roller-shutter / blind actuator (FSB14, FSB61, FSB71) | `cover`, `max_travel_time`, `learn_telegram` | `cover_stop`, `cover_open`, `cover_close` |
 | Eltako | FSM60B | A5-30-03.ELTAKO.FSM60B | Wireless transmitter module for the water probe FWS60 (factory setting) | `water_detected` | — |
 | Eltako | FT55 | F6-02-01 | Battery-less wireless wall switch | `a0`, `a1`, `b0`, `b1` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
