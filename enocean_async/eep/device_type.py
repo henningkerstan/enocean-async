@@ -84,6 +84,7 @@ _MANUFACTURER_TYPES: list[DeviceType] = [
     ),
     _Eltako("FUD61NPN", EEP("A5-38-08.ELTAKO"), "Wireless universal dimmer 230V"),
     _Eltako("FLD61", EEP("A5-38-08.ELTAKO"), "PWM LED dimmer 12–36 V DC, up to 4 A"),
+    _Eltako("FB65B", EEP("A5-07-01"), "Wireless motion sensor"),
     _Eltako(
         "FCO2TS",
         EEP("A5-09-04"),

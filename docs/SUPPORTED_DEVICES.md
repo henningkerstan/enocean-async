@@ -9,6 +9,7 @@ These entries represent known physical products.
 |---|---|---|---|---|---|
 | Eltako | FABH65S | A5-08-01.ELTAKO | Wireless outdoor occupancy and brightness sensor | `supply_voltage`, `illumination`, `motion` | — |
 | Eltako | FAH65S | A5-06-01.ELTAKO | Wireless outdoor brightness sensor | `illumination` | — |
+| Eltako | FB65B | A5-07-01 | Wireless motion sensor | `supply_voltage`, `motion` | — |
 | Eltako | FCO2TS | A5-09-04 | Wireless CO2 table sensor with temperature and humidity | `co2`, `humidity`, `temperature` | — |
 | Eltako | FFG7B | A5-14-09 | Wireless window handle sensor (delivery state; not switched to F6-10-00) | `supply_voltage`, `window_state` | — |
 | Eltako | FLD61 | A5-38-08.ELTAKO | PWM LED dimmer 12–36 V DC, up to 4 A | `light`, `ramp_mode`, `min_brightness`, `max_brightness`, `ramp_time`, `learn_telegram`, `dimmer_state`, `dimmer_output` | `central_switch`, `central_dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle`, `central_dim_off` |
@@ -69,6 +70,7 @@ These entries cover any device implementing the given EEP.
 | A5-06-03 | Light sensor, 10-bit measurement, range 0lx to 1000lx | `illumination` | — |
 | A5-06-04 | Curtain wall brightness sensor | `illumination`, `temperature` | — |
 | A5-06-05 | Light sensor, range 0.0lx to 10200.0lx | `illumination` | — |
+| A5-07-01 | Occupancy with supply voltage monitor | `supply_voltage`, `motion` | — |
 | A5-07-03 | Occupancy with supply voltage monitor and 10-bit illumination measurement | `supply_voltage`, `illumination`, `motion` | — |
 | A5-08-01 | Light, temperature and occupancy sensor, range 0lx to 510lx, 0.0°C to 51.0°C and occupancy button | `supply_voltage`, `illumination`, `temperature`, `motion`, `occupancy_button` | — |
 | A5-08-01.ELTAKO | Light and occupancy sensor, range 0lx to 510lx, Eltako variant (FABH65S, FBH65, FBH65TF, FBH65SB, FBH55SB, FBHF65SB, F4USM61B) | `supply_voltage`, `illumination`, `motion` | — |
