@@ -5,7 +5,7 @@ from enocean_async.address import BroadcastAddress
 
 from ..protocol.erp1.telegram import RORG, ERP1Telegram
 from .message import EEPMessage, EEPMessageType, RawEEPMessage, ValueWithContext
-from .profile import EEPSpecification
+from .profile import EEPDataField, EEPSpecification
 
 
 class EEPHandler:
@@ -28,6 +28,15 @@ class EEPHandler:
 
         if telegram.destination is not None and not telegram.destination.is_broadcast:
             msg.destination = telegram.destination
+
+        # a telegram with another RORG than the EEP's own, which the EEP declares: it has its own fields
+        other = self.__eep.other_rorg_telegrams.get(int(telegram.rorg))
+        if other is not None:
+            msg.message_type = EEPMessageType(
+                id=0, description=other.name or f"{telegram.rorg.simple_name} telegram"
+            )
+            self.__decode_fields(msg, telegram, other.datafields, config)
+            return msg
 
         # determine the command/telegram type based on the EEP's cmd_size and cmd_offset, if applicable
         cmd_value = 0
@@ -56,8 +65,22 @@ class EEPHandler:
             else f"Telegram {cmd_value}",
         )
 
+        self.__decode_fields(
+            msg, telegram, self.__eep.telegrams[cmd_value].datafields, config
+        )
+        return msg
+
+    def __decode_fields(
+        self,
+        msg: EEPMessage,
+        telegram: ERP1Telegram,
+        datafields: list[EEPDataField],
+        config: dict[str, Any] | None,
+    ) -> None:
+        """Decode the given fields of a telegram into the message and resolve its observables."""
+
         # First pass: collect all raw values
-        for field in self.__eep.telegrams[cmd_value].datafields:
+        for field in datafields:
             if field.in_status:
                 msg.raw[field.id] = (
                     telegram.status >> (8 - field.offset - field.size)
@@ -68,7 +91,7 @@ class EEPHandler:
             )
 
         # Second pass: decode scaled values with context (for field interdependencies)
-        for field in self.__eep.telegrams[cmd_value].datafields:
+        for field in datafields:
             raw_value = msg.raw[field.id]
             value = None
 
@@ -94,7 +117,7 @@ class EEPHandler:
             )
 
         # Third pass: entity observable propagation — copy scaled values to semantic entity keys
-        for field in self.__eep.telegrams[cmd_value].datafields:
+        for field in datafields:
             if field.observable is not None and field.id in msg.decoded:
                 if field.true_values is None:
                     msg.values[field.observable] = msg.decoded[field.id]
@@ -123,8 +146,6 @@ class EEPHandler:
             result = resolver(msg.raw, msg.decoded, cfg)
             if result is not None:
                 msg.values[observable] = result
-
-        return msg
 
     def encode(self, message: RawEEPMessage) -> ERP1Telegram:
         """Convert a RawEEPMessage into an ERP1Telegram.

@@ -22,7 +22,7 @@ Command telegram (gateway → FSB):
 │TUNIT │    30   │ DB0  │ Time unit: 0=seconds (RTL only), 1=100 ms (RTS+RTL)  │
 └──────┴─────────┴──────┴──────────────────────────────────────────────────────┘
 
-Status telegram (FSB → gateway, sent after movement completes):
+Status telegram (FSB → gateway, sent when a movement was stopped before its time was up):
 ┌──────┬─────────┬──────┬──────────────────────────────────────────────────────┐
 │ Name │  Bits   │  DB  │ Description                                          │
 ├──────┼─────────┼──────┼──────────────────────────────────────────────────────┤
@@ -34,9 +34,23 @@ Status telegram (FSB → gateway, sent after movement completes):
 │ BLK  │    29   │ DB0  │ Blocked: 0=not blocked (0x0A), 1=blocked (0x0E)      │
 └──────┴─────────┴──────┴──────────────────────────────────────────────────────┘
 
+Confirmation telegrams (FSB → gateway, RPS: ORG=0x05 in Eltako ESP2 notation, 1 data byte):
+┌──────┬─────────┬──────────────────────────────────────────────────────────────┐
+│ Name │  Bits   │ Description                                                  │
+├──────┼─────────┼──────────────────────────────────────────────────────────────┤
+│ CONF │  0– 7   │ 0x01=started moving up, 0x02=started moving down,            │
+│      │         │ 0x70=upper end position reached, 0x50=lower end position     │
+│      │         │ reached                                                      │
+└──────┴─────────┴──────────────────────────────────────────────────────────────┘
+
+A movement that runs for its whole time ends with the RPS telegram of an end position; one
+that is stopped before ends with the 4BS status telegram, which tells for how long and in
+which direction the FSB travelled.
+
 Learn telegram: DB3=0xFF, DB2=0xF8, DB1=0x0D, DB0=0x80
 """
 
+from ...protocol.erp1.rorg import RORG
 from ...semantics.entity import Entity, EntityCategory, NumberRange
 from ...semantics.instructable import Instructable
 from ...semantics.instructions.cover import CoverClose, CoverOpen, CoverStop
@@ -44,7 +58,7 @@ from ...semantics.observable import Observable
 from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
 from ..message import EEPMessageType, RawEEPMessage, ValueWithContext
-from ..profile import EEPDataField, Entity, SimpleProfileSpecification
+from ..profile import EEPDataField, EEPTelegram, Entity, SimpleProfileSpecification
 
 # --- Entities ----------------------------------------------------------------
 
@@ -73,23 +87,37 @@ _LEARN_TELEGRAM_ENTITY = Entity(
 # --- Semantic resolvers -------------------------------------------------------
 
 
+_CONFIRMED_STATES = {
+    0x01: "opening",
+    0x02: "closing",
+    0x70: "open",
+    0x50: "closed",
+}
+
+
 def _resolve_cover_state(
     raw: dict, _scaled: dict, _config: dict
 ) -> ValueWithContext | None:
-    """Derive cover state from a completed-movement status telegram.
+    """Derive the cover state from a confirmation or a status telegram.
 
-    The FSB sends this telegram *after* movement finishes:
-      DIR=1 → traveled up  → cover is now open
-      DIR=2 → traveled down → cover is now closed
+    RPS confirmation: the movement has started (opening, closing) or an end position
+    is reached (open, closed).
+
+    4BS status telegram: the FSB sends it only when a movement was stopped before its
+    time was up, so the cover stands somewhere between the end positions.
     """
+    confirmation = raw.get("CONF")
+    if confirmation is not None:
+        state = _CONFIRMED_STATES.get(confirmation)
+        if state is None:
+            return None
+        return ValueWithContext(name="Cover state", value=state, unit=None)
+
     if raw.get("LRNB") == 0:
         return None  # teach-in telegram, ignore
-    dir_val = raw.get("DIR")
-    if dir_val == 1:
-        return ValueWithContext(name="Cover state", value="open", unit=None)
-    if dir_val == 2:
-        return ValueWithContext(name="Cover state", value="closed", unit=None)
-    return None
+    if raw.get("DIR") not in (1, 2):
+        return None
+    return ValueWithContext(name="Cover state", value="stopped", unit=None)
 
 
 # --- Encoders ----------------------------------------------------------------
@@ -209,4 +237,23 @@ EEP_A5_7F_3F_ELTAKO_FSB = SimpleProfileSpecification(
     entities=[_COVER_ENTITY, _MAX_TRAVEL_TIME, _LEARN_TELEGRAM_ENTITY],
     uses_addressed_sending=False,
     learn_telegram_payload=bytes([0xFF, 0xF8, 0x0D, 0x80]),
+    other_rorg_telegrams={
+        RORG.RORG_RPS: EEPTelegram(
+            name="Confirmation",
+            datafields=[
+                EEPDataField(
+                    id="CONF",
+                    name="Confirmation",
+                    offset=0,
+                    size=8,
+                    range_enum={
+                        0x01: "Started up",
+                        0x02: "Started down",
+                        0x70: "Upper end position",
+                        0x50: "Lower end position",
+                    },
+                ),
+            ],
+        ),
+    },
 )

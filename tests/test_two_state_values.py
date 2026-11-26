@@ -109,7 +109,10 @@ def test_no_two_state_field_reports_a_text():
         {
             f"{spec.eep}: {field.id}"
             for spec in EEP_SPECIFICATIONS.values()
-            for telegram in spec.telegrams.values()
+            for telegram in (
+                *spec.telegrams.values(),
+                *spec.other_rorg_telegrams.values(),
+            )
             for field in telegram.datafields
             if field.observable is not None
             and field.observable.kind == ValueKind.BINARY
