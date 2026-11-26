@@ -9,16 +9,17 @@ class EEP:
         EEP("A5-08-01")
         EEP("A5-08-01", Manufacturer.ELTAKO)
         EEP("A5-08-01.ELTAKO")               # manufacturer embedded in string
-        EEP("A5-7F-3F.ELTAKO.FSB")           # manufacturer + variant embedded
+        EEP("A5-3F-7F.ELTAKO.FSB")           # manufacturer + variant embedded
         EEP([0xA5, 0x08, 0x01])
         EEP([0xA5, func, type_], mfr)         # used internally when parsing telegrams
-        EEP([0xA5, 0x7F, 0x3F], Manufacturer.ELTAKO, variant="FSB")
+        EEP([0xA5, 0x3F, 0x7F], Manufacturer.ELTAKO, variant="FSB")
 
     The ``variant`` field disambiguates manufacturer-specific EEPs where the same
     three EEP bytes are reused for physically different devices with incompatible
-    payload layouts (e.g. Eltako A5-7F-3F is used by both the FSB roller-shutter
+    payload layouts (e.g. Eltako A5-3F-7F is used by both the FSB roller-shutter
     family and the FRGBW colour dimmer).  Like ``manufacturer``, ``variant`` is a
     registration-time discriminator — it is never carried on the wire.
+
     """
 
     def __init__(
@@ -84,7 +85,7 @@ class EEP:
             )
 
     def __str__(self) -> str:
-        """Dash-separated hex string, e.g. ``'A5-08-01'``, ``'A5-08-01.ELTAKO'``, or ``'A5-7F-3F.ELTAKO.FSB'``."""
+        """Dash-separated hex string, e.g. ``'A5-08-01'``, ``'A5-08-01.ELTAKO'``, or ``'A5-3F-7F.ELTAKO.FSB'``."""
         base = f"{self.rorg:02X}-{self.func:02X}-{self.type:02X}"
         if self.manufacturer is not None:
             base = f"{base}.{self.manufacturer.name}"

@@ -453,7 +453,7 @@ Add it to `entities=[..., _TEACH_IN_ENTITY]`.
 The caller issues `TeachIn()` after `add_device()`:
 
 ```python
-gateway.add_device(address, EEP("A5-7F-3F.ELTAKO.FSB"), name="Living room blind")
+gateway.add_device(address, EEP("A5-3F-7F.ELTAKO.FSB"), name="Living room blind")
 await gateway.send_command(address, TeachIn())
 ```
 

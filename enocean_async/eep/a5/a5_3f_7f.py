@@ -1,8 +1,13 @@
-"""A5-7F-3F: Eltako FSB61 motorised roller-shutter / blind actuator.
+"""A5-3F-7F: Eltako FSB61 motorised roller-shutter / blind actuator.
 
-A5-7F-xx is the manufacturer-specific 4BS range (FUNC=0x7F = manufacturer-defined).
-TYPE=0x3F is Eltako's identifier for the FSB roller-shutter family
-(FSB14, FSB61, FSB71).
+A5-3F-7F is the "universal" 4BS profile (FUNC=0x3F, TYPE=0x7F), which leaves the meaning of
+the data bytes to the manufacturer. Eltako uses it for several device families with
+different payloads; the variant ``FSB`` is the roller-shutter family (FSB14, FSB61, FSB71).
+The learn telegram ``FF F8 0D 80`` carries exactly this profile: FUNC=0x3F, TYPE=0x7F,
+manufacturer Eltako.
+
+Up to 0.18.1 this profile was named ``A5-7F-3F.ELTAKO.FSB``, with FUNC and TYPE swapped;
+that name is no longer accepted.
 
 Reference: Eltako "Inhalte der Eltako-Funktelegramme" (FSB61NP-230V, p. T-15/T-17).
 ORG=0x07 in Eltako ESP2 notation → RORG=0xA5 (4BS) in ESP3.
@@ -172,8 +177,8 @@ def _encode_cover_close(_action: CoverClose, config: dict) -> RawEEPMessage:
 
 # --- Profile specification ---------------------------------------------------
 
-EEP_A5_7F_3F_ELTAKO_FSB = SimpleProfileSpecification(
-    eep=EEP("A5-7F-3F.ELTAKO.FSB"),
+EEP_A5_3F_7F_ELTAKO_FSB = SimpleProfileSpecification(
+    eep=EEP("A5-3F-7F.ELTAKO.FSB"),
     name="Eltako FSB roller-shutter / blind actuator (FSB14, FSB61, FSB71)",
     datafields=[
         EEPDataField(

@@ -116,7 +116,7 @@ Every outbound telegram carries a sender address. The gateway selects it as foll
 | Device type | Default sender | Reason |
 |---|---|---|
 | Destination-addressed (`uses_addressed_sending=True`, e.g. D2-01, D2-05) | BaseID+0 (the base ID itself) | Device is addressed by EURID in the destination field; the sender is irrelevant to routing |
-| Sender-addressed (`uses_addressed_sending=False`, e.g. A5-38-08, A5-7F-3F Eltako) | Next free BaseID+n slot (1–127) | Device filters incoming telegrams by the sender address it learned at teach-in time |
+| Sender-addressed (`uses_addressed_sending=False`, e.g. A5-38-08, A5-3F-7F Eltako) | Next free BaseID+n slot (1–127) | Device filters incoming telegrams by the sender address it learned at teach-in time |
 
 The slot is allocated at teach-in time (or at `add_device()` time if `sender=None`) and stored in `device.sender`. The `sender_slot` config entity reflects this as `"0"`–`"127"` or `"eurid"` (not available on ESP2 modules). `"auto"` means no sender has been assigned yet — the first `send_command()` or `TeachIn()` that needs one will allocate the next free slot from the pool and backfill `device.sender` and `device.config["sender_slot"]`.
 - **`DeviceSpec.gateway_entities`**: for sender-addressed devices that need an inbound teach-in from the device (no fixed teach-in payload), `device_spec()` populates this list with `learning_toggle` and `learning_remaining` so integrations can surface them on the device's config page (observed/commanded via `gateway.device_address`).
@@ -155,7 +155,7 @@ Limitations of ESP2:
 - Per-device `sender_slot` config entity; runtime slot change updates `device.sender` with collision detection
 - `DeviceSpec.gateway_entities` for gateway-sourced entities rendered on device config pages
 - Parsing of all EEPs listed in [SUPPORTED_DEVICES.md](https://github.com/henningkerstan/enocean-async/blob/main/docs/SUPPORTED_DEVICES.md)
-- Sending instructions for: D2-05-00 (covers), D2-20-02 (fan), A5-38-08 (dim gateway + cover status receive + teach-in), A5-7F-3F Eltako FSB (shutter + teach-in), D2-01 (switches/dimmers)
+- Sending instructions for: D2-05-00 (covers), D2-20-02 (fan), A5-38-08 (dim gateway + cover status receive + teach-in), A5-3F-7F Eltako FSB (shutter + teach-in), D2-01 (switches/dimmers)
 
 
 ## What is missing / not yet implemented

@@ -530,7 +530,7 @@ async def test_telegram_of_unregistered_base_address_is_not_decoded(
 # FSB61 shutter actuator, reacts to every telegram from a sender it has learned. Devices that learned
 # the same sender all react to it, so each one needs a slot of its own (BaseID+1…+127).
 
-FSB = device_type_for_eep(EEP("A5-7F-3F.ELTAKO.FSB"))
+FSB = device_type_for_eep(EEP("A5-3F-7F.ELTAKO.FSB"))
 """A sender-addressed device which the gateway teaches in with a learn telegram."""
 
 SHUTTERS = [EURID("04:2C:42:C1"), EURID("04:2C:45:28"), EURID("04:2D:A2:E3")]
@@ -698,7 +698,7 @@ async def test_telegram_with_another_rorg_of_a_registered_device_is_decoded(
     actuator = EURID("01:23:45:67")
     observations: list[Observation] = []
     gateway.add_device(
-        address=actuator, device_type=device_type_for_eep(EEP("A5-7F-3F.ELTAKO.FSB"))
+        address=actuator, device_type=device_type_for_eep(EEP("A5-3F-7F.ELTAKO.FSB"))
     )
     gateway.add_observation_callback(observations.append)
 
