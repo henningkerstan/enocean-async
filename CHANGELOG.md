@@ -2,6 +2,9 @@
 
 ## [0.19.1-dev0] — 2026-11-26
 
+### New features
+- **New profile `A5-10-06.ELTAKO`** for Eltako temperature controllers with a hand wheel in their operating mode FHK (FTR55ESB and its siblings): they send the set point as a temperature (0 to 255 for 0 to 40 °C) and no day/night switch. The set point is now reported as `temperature_setpoint` in °C, next to `temperature`; the generic `A5-10-06` is unchanged. A teach-in resolves to the new profile. A device registered earlier keeps the generic profile with its unitless `set_point` until it is taught in again. Device catalog: Eltako FTR55ESB. Contributed by eltakoal (#20).
+
 ## [0.19.0] — 2026-11-26
 
 ### Breaking changes
