@@ -19,6 +19,7 @@ These entries represent known physical products.
 | Eltako | FSB61 | A5-3F-7F.ELTAKO.FSB | Eltako FSB roller-shutter / blind actuator (FSB14, FSB61, FSB71) | `cover`, `max_travel_time`, `learn_telegram` | `cover_stop`, `cover_open`, `cover_close` |
 | Eltako | FSM60B | A5-30-03.ELTAKO.FSM60B | Wireless transmitter module for the water probe FWS60 (factory setting) | `water_detected` | — |
 | Eltako | FT55 | F6-02-01 | Battery-less wireless wall switch | `a0`, `a1`, `b0`, `b1` (button_event: `pressed`, `clicked`, `held`, `released`) | — |
+| Eltako | FTR55ESB | A5-10-06.ELTAKO | Wireless temperature controller with hand wheel (operating mode FHK) | `temperature_setpoint`, `temperature` | — |
 | Eltako | FUD61NPN | A5-38-08.ELTAKO | Wireless universal dimmer 230V | `light`, `ramp_mode`, `min_brightness`, `max_brightness`, `ramp_time`, `learn_telegram`, `dimmer_state`, `dimmer_output` | `central_switch`, `central_dim`, `cover_stop`, `cover_open`, `cover_close`, `cover_set_position_and_angle`, `central_dim_off` |
 | Eltako | FWS81 | F6-05-01.ELTAKO | Battery-less wireless water sensor | `water_detected` | — |
 | Hoppe Holding AG | SecuSignal | F6-10-00 | Wireless window handle | `window_state` | — |
@@ -86,6 +87,7 @@ These entries cover any device implementing the given EEP.
 | A5-10-04 | Room operating panel – temperature sensor, set point and fan speed control | `fan_speed`, `set_point`, `temperature` | — |
 | A5-10-05 | Room operating panel – temperature sensor, set point and occupancy control | `set_point`, `temperature`, `occupancy_button` | — |
 | A5-10-06 | Room operating panel – temperature sensor, set point and day/night control | `set_point`, `temperature`, `day_night` | — |
+| A5-10-06.ELTAKO | Room operating panel – temperature sensor and temperature set point (Eltako FTR) | `temperature_setpoint`, `temperature` | — |
 | A5-10-07 | Room operating panel – temperature sensor and fan speed control | `fan_speed`, `temperature` | — |
 | A5-10-08 | Room operating panel – temperature sensor, fan speed and occupancy control | `fan_speed`, `temperature`, `occupancy_button` | — |
 | A5-10-09 | Room operating panel – temperature sensor, fan speed and day/night control | `fan_speed`, `temperature`, `day_night` | — |

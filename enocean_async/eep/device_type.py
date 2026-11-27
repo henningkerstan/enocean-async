@@ -95,6 +95,11 @@ _MANUFACTURER_TYPES: list[DeviceType] = [
         EEP("A5-14-09"),
         "Wireless window handle sensor (delivery state; not switched to F6-10-00)",
     ),
+    _Eltako(
+        "FTR55ESB",
+        EEP("A5-10-06", Manufacturer.ELTAKO),
+        "Wireless temperature controller with hand wheel (operating mode FHK)",
+    ),
     _Eltako("FT55", EEP("F6-02-01"), "Battery-less wireless wall switch"),
     _Eltako(
         "F2T55E",

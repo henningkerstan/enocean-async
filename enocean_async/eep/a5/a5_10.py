@@ -3,6 +3,7 @@
 from ...semantics.observable import Observable
 from ...semantics.observers.scalar import scalar_factory
 from ..id import EEP
+from ..manufacturer import Manufacturer
 from ..profile import EEPDataField, Entity, SemanticResolver, SimpleProfileSpecification
 from ._supply_voltage import SUPPLY_VOLTAGE_MAX, supply_voltage_resolver
 
@@ -596,6 +597,35 @@ EEP_A5_10_06 = _spec(
     [_sp8(8), _tmp_inv(), _lrnb(), _slsw()],
     [_CAP_SP, _CAP_TMP, _CAP_SLSW],
     [_E_SP, _E_TMP, _E_SLSW],
+)
+
+# Eltako temperature controllers with a hand wheel in the operating mode FHK (FTR55ESB and
+# its siblings) send A5-10-06 with their own reading of two bytes: the set point is a
+# temperature, 0→255 raw ↦ 0→40°C (adjustable from 12 to 28°C; the frost position sends
+# 8°C), and DB0 is always 0x0F, so there is no day/night switch.
+# Learn telegram: 0x40300D87 (FUNC=0x10, TYPE=0x06, manufacturer Eltako).
+# Reference: Eltako "Inhalte der Eltako-Funktelegramme", p. T-13.
+EEP_A5_10_06_ELTAKO = SimpleProfileSpecification(
+    eep=EEP("A5-10-06", Manufacturer.ELTAKO),
+    name="Room operating panel – temperature sensor and temperature set point (Eltako FTR)",
+    datafields=[
+        EEPDataField(
+            id="TMPSP",
+            name="Temperature set point",
+            offset=8,
+            size=8,
+            range_min=0,
+            range_max=255,
+            scale_min_fn=lambda _: 0.0,
+            scale_max_fn=lambda _: 40.0,
+            unit_fn=lambda _: "°C",
+            observable=Observable.TEMPERATURE_SETPOINT,
+        ),
+        _tmp_inv(),
+        _lrnb(),
+    ],
+    observers=[_CAP_TMPSP, _CAP_TMP],
+    entities=[_E_TMPSP, _E_TMP],
 )
 
 EEP_A5_10_07 = _spec(
